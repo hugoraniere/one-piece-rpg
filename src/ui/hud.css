@@ -1,0 +1,182 @@
+/* HUD de exploração (vida, Berries, moodles) — sobreposto ao canvas do
+   Phaser via #hud-overlay. Portado do wireframe de UI (Diário de Bordo),
+   mesma linguagem visual de madeira + pergaminho do resto do jogo. */
+
+#hud-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none; /* deixa clique/teclado passar pro canvas por baixo */
+  z-index: 20;
+  font-family: 'Archivo', sans-serif;
+}
+
+#hud-overlay .icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
+  flex-shrink: 0;
+  vertical-align: middle;
+}
+
+.hud-topleft {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.hp-frame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  border: 1px solid #241708;
+  border-radius: 6px;
+  padding: 5px 9px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+.hp-label {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  color: #e6c66e;
+  text-transform: uppercase;
+}
+.hp-bar {
+  width: 120px;
+  height: 11px;
+  background: #4a2020;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.hp-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #c94b4b, #9c2b2b);
+  transition: width 0.2s ease;
+}
+.hp-num {
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: #ece2c8;
+  min-width: 46px;
+}
+
+.berries {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  border: 1px solid #241708;
+  border-radius: 6px;
+  padding: 5px 10px;
+  width: fit-content;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+.coin {
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #e6c66e, #8a6a1f 75%);
+  box-shadow: 0 0 0 1px #5c4614;
+}
+.berries span:last-child {
+  font-size: 12px;
+  font-weight: 700;
+  color: #e6c66e;
+  font-variant-numeric: tabular-nums;
+}
+
+.moodle-tray {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 5px;
+}
+.moodle {
+  position: relative;
+  pointer-events: auto; /* precisa receber hover mesmo com o resto do HUD passando clique adiante */
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
+  border: 2px solid #3b2415;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.35), inset 0 -2px 3px rgba(0, 0, 0, 0.12);
+  opacity: 0;
+  transform: scale(0.6);
+  transition: opacity 0.15s ease, transform 0.15s ease, box-shadow 0.15s ease;
+  cursor: default;
+}
+.moodle.show {
+  opacity: 1;
+  transform: scale(1);
+}
+.moodle.bad-1 {
+  border-color: #b8752e;
+}
+.moodle.bad-1 .moodle-icon {
+  color: #b8752e;
+}
+.moodle.bad-2 {
+  border-color: #9c2b2b;
+}
+.moodle.bad-2 .moodle-icon {
+  color: #9c2b2b;
+}
+.moodle.good {
+  border-color: #4f7942;
+}
+.moodle.good .moodle-icon {
+  color: #4f7942;
+}
+.moodle:hover {
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.35), inset 0 -2px 3px rgba(0, 0, 0, 0.12),
+    0 0 0 3px rgba(230, 198, 110, 0.35);
+}
+.moodle-icon {
+  display: flex;
+}
+.moodle-icon .icon {
+  width: 18px;
+  height: 18px;
+}
+.moodle .tip {
+  position: absolute;
+  top: 50%;
+  right: 38px;
+  left: auto;
+  transform: translateY(-50%);
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  color: #ece2c8;
+  font-size: 10.5px;
+  font-weight: 600;
+  padding: 6px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+  border: 1px solid #caa23d;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.moodle .tip::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 100%;
+  transform: translateY(-50%);
+  border: 5px solid transparent;
+  border-left-color: #caa23d;
+}
+.moodle:hover .tip {
+  opacity: 1;
+}

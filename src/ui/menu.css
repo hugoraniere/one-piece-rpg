@@ -1,0 +1,571 @@
+/* Telas de menu (Personagem, Inventário) — modal centralizado por cima do
+   jogo, mesma linguagem de madeira + pergaminho do HUD. Portado do
+   wireframe de UI (Diário de Bordo). */
+
+.menu-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 6, 3, 0.6);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+  font-family: 'Archivo', sans-serif;
+}
+.menu-backdrop.show {
+  display: flex;
+}
+
+.menu-frame {
+  background: linear-gradient(155deg, #8a5a34, #3b2415 60%);
+  border-radius: 16px;
+  padding: 14px;
+  box-shadow: 0 24px 60px -20px rgba(0, 0, 0, 0.8);
+  width: min(760px, 92vw);
+  max-height: 86vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-panel {
+  background: radial-gradient(ellipse at 20% 15%, rgba(255, 255, 255, 0.1), transparent 40%), radial-gradient(ellipse at 85% 90%, rgba(0, 0, 0, 0.1), transparent 45%), #e8d9b0;
+  color: #2b1b12;
+  border-radius: 8px;
+  padding: 18px 22px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.menu-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 4px;
+}
+.menu-title {
+  font-family: 'Pirata One', serif;
+  font-size: 22px;
+  letter-spacing: 0.03em;
+}
+.menu-hint {
+  font-size: 10.5px;
+  color: #5a4632;
+  white-space: nowrap;
+}
+
+/* ---- abas de Personagem ---- */
+.char-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 10px 0 14px;
+  border-bottom: 2px solid #c7b280;
+}
+.char-tab {
+  font-family: 'Archivo', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  background: none;
+  border: none;
+  color: #5a4632;
+  padding: 7px 4px;
+  margin-right: 16px;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+}
+.char-tab.active {
+  color: #2b1b12;
+  border-bottom-color: #3b2415;
+}
+.char-tab[hidden] {
+  display: none;
+}
+.char-page {
+  display: none;
+}
+.char-page.active {
+  display: block;
+}
+
+.sheet-section {
+  margin-top: 14px;
+}
+.sheet-section:first-child {
+  margin-top: 0;
+}
+.sheet-section-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.sheet-section-head h4 {
+  font-family: 'Pirata One', serif;
+  font-size: 15px;
+  font-weight: 400;
+  margin: 0;
+}
+.sheet-section-head .hint {
+  font-size: 10.5px;
+  color: #5a4632;
+}
+.sheet-section-head::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #c7b280;
+}
+
+/* ---- atributos ---- */
+.attr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+}
+.attr-card {
+  background: #dccb9c;
+  border: 1px solid #c7b280;
+  border-radius: 9px;
+  padding: 10px 12px;
+}
+.attr-top {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.attr-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
+  border: 2px solid #caa23d;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.35), inset 0 0 0 1px rgba(255, 255, 255, 0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b2415;
+}
+.attr-icon .icon {
+  width: 15px;
+  height: 15px;
+}
+.attr-name {
+  font-size: 12.5px;
+  font-weight: 800;
+  flex: 1;
+}
+.attr-value {
+  font-size: 18px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.attr-effects {
+  font-size: 10.5px;
+  color: #5a4632;
+  margin-top: 2px;
+  line-height: 1.45;
+}
+.attr-track {
+  height: 6px;
+  background: #c7b280;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 7px;
+}
+.attr-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #6b4226, #3b2415);
+}
+.attr-caption {
+  font-size: 9.5px;
+  color: #5a4632;
+  margin-top: 4px;
+}
+
+/* ---- perícias ---- */
+.skill-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 2px 14px;
+}
+.skill-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 3px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+}
+.skill-icon {
+  width: 19px;
+  height: 19px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
+  border: 1.5px solid #6b4226;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b2415;
+}
+.skill-icon .icon {
+  width: 12px;
+  height: 12px;
+}
+.skill-name {
+  font-size: 11.5px;
+  font-weight: 700;
+  flex: 1;
+}
+.skill-lvl {
+  font-size: 11px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  width: 32px;
+  text-align: right;
+}
+.skill-lvl small {
+  font-weight: 600;
+  color: #5a4632;
+}
+.skill-xp {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  height: 2px;
+  background: #c7b280;
+}
+.skill-xp-fill {
+  height: 100%;
+  background: #3b2415;
+}
+.skill-row .tip {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  margin-bottom: 6px;
+  background: #100a06;
+  color: #ece2c8;
+  font-size: 10.5px;
+  padding: 6px 8px;
+  border-radius: 5px;
+  white-space: normal;
+  width: 200px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 2;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+.skill-row:hover .tip {
+  opacity: 1;
+}
+
+/* ---- haki ---- */
+.haki-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: linear-gradient(180deg, #efe2b8, #dccb9c);
+  border: 1px solid #caa23d;
+  border-radius: 9px;
+  padding: 9px 12px;
+}
+.haki-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e8d9b0;
+  border: 1px solid #caa23d;
+  flex-shrink: 0;
+  color: #3b2415;
+}
+.haki-icon .icon {
+  width: 17px;
+  height: 17px;
+}
+.haki-body {
+  flex: 1;
+}
+.haki-name {
+  font-size: 12.5px;
+  font-weight: 800;
+}
+.haki-track {
+  height: 7px;
+  background: #c7b280;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.haki-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #5b7a9e, #31506e);
+}
+.haki-caption {
+  font-size: 10px;
+  color: #5a4632;
+  margin-top: 3px;
+}
+
+/* ---- tripulação ---- */
+.crew-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: #dccb9c;
+  border: 1px solid #c7b280;
+  border-radius: 9px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+}
+.crew-card .icon-badge {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #c9b378;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #2b1b12;
+}
+.crew-card .icon-badge .icon {
+  width: 18px;
+  height: 18px;
+}
+.crew-card .name {
+  font-size: 13px;
+  font-weight: 800;
+}
+.crew-card .meta {
+  font-size: 10.5px;
+  color: #5a4632;
+}
+.crew-card .badge {
+  margin-left: auto;
+  font-size: 9.5px;
+  font-weight: 700;
+  background: #b8752e;
+  color: #2b1b06;
+  padding: 4px 8px;
+  border-radius: 999px;
+}
+.crew-card.empty {
+  justify-content: center;
+  opacity: 0.6;
+  border-style: dashed;
+}
+
+/* ---- inventário ---- */
+.inv-layout {
+  display: flex;
+  gap: 18px;
+  flex: 1;
+  min-height: 0;
+}
+.inv-equip {
+  width: 150px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.inv-equip h4 {
+  font-family: 'Pirata One', serif;
+  font-size: 13px;
+  font-weight: 400;
+  margin: 0 0 2px;
+}
+.inv-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.paperdoll-silhouette {
+  width: 96px;
+  height: 170px;
+  background: linear-gradient(180deg, #4a3a2a, #2e2318);
+  border-radius: 44% 44% 30% 30% / 30% 30% 20% 20%;
+  margin: 0 auto;
+}
+.eq-slots {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.eq-slot {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #dccb9c;
+  border: 1px solid #c7b280;
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.eq-slot .icon-badge {
+  width: 30px;
+  height: 30px;
+  border-radius: 6px;
+  background: #c9b378;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #2b1b12;
+}
+.eq-slot .icon-badge .icon {
+  width: 16px;
+  height: 16px;
+}
+.eq-slot .label {
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #5a4632;
+  font-weight: 700;
+}
+.eq-slot .value {
+  font-size: 12.5px;
+  font-weight: 700;
+}
+
+.filters {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+.filter-pill {
+  font-size: 11.5px;
+  font-weight: 700;
+  background: #dccb9c;
+  border: 1px solid #c7b280;
+  color: #5a4632;
+  padding: 6px 12px;
+  border-radius: 999px;
+  cursor: pointer;
+}
+.filter-pill.active {
+  background: #3b2415;
+  color: #e8d9b0;
+  border-color: #3b2415;
+}
+
+.inv-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(56px, 1fr));
+  gap: 7px;
+  flex: 1;
+  align-content: start;
+}
+.slot {
+  position: relative;
+  background: linear-gradient(180deg, #d8c68e, #c9b378);
+  border: 1px solid #c7b280;
+  border-radius: 6px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  aspect-ratio: 1;
+}
+.slot.empty {
+  background: repeating-linear-gradient(45deg, #cdbb85, #cdbb85 4px, #c2af79 4px, #c2af79 8px);
+  opacity: 0.55;
+}
+.slot .qty {
+  position: absolute;
+  bottom: 2px;
+  right: 4px;
+  font-size: 9.5px;
+  font-weight: 800;
+  background: rgba(255, 255, 255, 0.55);
+  border-radius: 3px;
+  padding: 0 3px;
+}
+.slot.dim {
+  opacity: 0.18;
+}
+
+.inv-footer {
+  margin-top: 12px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #5a4632;
+  font-weight: 600;
+}
+.inv-footer span {
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- mapa ---- */
+.menu-panel.map-mode {
+  background: radial-gradient(ellipse at 50% 40%, #2c5f66 0%, #173a3d 75%);
+  color: #ece2c8;
+  min-height: 380px;
+  position: relative;
+  overflow: hidden;
+}
+.map-fog {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 45% 45%, transparent 0, transparent 150px, #1f140d 230px);
+  opacity: 0.85;
+}
+.map-island {
+  position: absolute;
+  top: 45%;
+  left: 45%;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+}
+.map-island-shape {
+  width: 90px;
+  height: 60px;
+  background: #7a8a4c;
+  border-radius: 52% 48% 60% 40% / 60% 55% 45% 50%;
+}
+.map-ship {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  color: #3b2415;
+}
+.map-caption {
+  position: absolute;
+  bottom: 14px;
+  left: 14px;
+  right: 14px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(0, 0, 0, 0.4);
+  padding: 8px 10px;
+  border-radius: 6px;
+  text-align: center;
+}
+.map-header {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  padding: 4px 4px 0;
+}
+.map-header .menu-title {
+  color: #ece2c8;
+}
+.map-header .menu-hint {
+  color: rgba(255, 255, 255, 0.7);
+}

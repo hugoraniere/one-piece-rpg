@@ -1,0 +1,78 @@
+/* HUD de combate (turno, mensagem, encerrar turno) — sobreposto ao canvas,
+   mesma linguagem de madeira/pergaminho do resto da UI. Só aparece enquanto
+   uma luta está ativa (ver combatHud.js). */
+
+.combat-hud {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  z-index: 20;
+  font-family: 'Archivo', sans-serif;
+}
+.combat-hud.show {
+  display: flex;
+}
+
+.combat-turn-order {
+  display: flex;
+  gap: 6px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 5px;
+  border-radius: 8px;
+}
+.combat-turn-chip {
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 800;
+  color: #fff;
+  background: #4a3018;
+  border: 2px solid transparent;
+}
+.combat-turn-chip.enemy {
+  background: #6e2626;
+}
+.combat-turn-chip.current {
+  border-color: #e6c66e;
+  box-shadow: 0 0 0 2px rgba(230, 198, 110, 0.4);
+}
+
+.combat-banner {
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  border: 1px solid #241708;
+  border-radius: 6px;
+  padding: 7px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #ece2c8;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+.combat-endturn-btn {
+  font-family: 'Archivo', sans-serif;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #2b1b12;
+  background: linear-gradient(180deg, #efe2b8, #dccb9c);
+  border: 1px solid #caa23d;
+  border-radius: 6px;
+  padding: 7px 16px;
+  cursor: pointer;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+.combat-endturn-btn:hover {
+  background: linear-gradient(180deg, #f5ebc8, #e8d9b0);
+}
+.combat-endturn-btn[hidden] {
+  display: none;
+}
