@@ -237,3 +237,63 @@
   width: 19px;
   height: 19px;
 }
+
+/* Minimapa — moldura de "vigia de latão" só em CSS (gradiente simulando
+   metal + rebites), mesmo tratamento rápido do resto do HUD. O fundo é só
+   uma faixa grama/água na proporção MEDIDA da linha d'água real do mundo
+   (~86%/14%, ver scene_background_water_line.json e
+   tools/recolor_ground_palette.py pras cores) — não tenta traçar a costa de
+   verdade, só dar noção de "onde no mapa" até existir mais de uma
+   localização (ver conversa de design: baixa prioridade por ora). Canto
+   inferior esquerdo, único que ainda estava livre; acima da barra de dicas
+   do Phaser (texto fixo no rodapé, fora deste overlay). */
+.minimap-wrap {
+  position: absolute;
+  bottom: 40px;
+  left: 12px;
+}
+.minimap-frame {
+  position: relative;
+  width: 108px;
+  height: 108px;
+  border-radius: 50%;
+  padding: 9px;
+  background: radial-gradient(circle at 32% 26%, #f0d9a0, #b8863f 42%, #6b4a22 76%, #422e14 100%);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(0, 0, 0, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4);
+}
+.minimap-rivet {
+  position: absolute;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #f5deb0, #8a6a30 70%);
+  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
+  transform: translate(-50%, -50%);
+}
+.minimap {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  background: linear-gradient(180deg, #2b731d 0%, #2b731d 86%, #2e6887 86%, #2e6887 100%);
+  box-shadow: inset 0 0 0 3px #2a1c0e, inset 0 0 14px rgba(0, 0, 0, 0.55);
+  overflow: hidden;
+}
+.minimap::after {
+  /* brilho de vidro/lente, mesmo truque do resto do HUD com radial-gradient */
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at 28% 22%, rgba(255, 255, 255, 0.3), transparent 40%);
+  pointer-events: none;
+}
+.minimap-dot {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #e6c66e;
+  box-shadow: 0 0 0 2px #3b2415, 0 0 4px rgba(0, 0, 0, 0.6);
+  transform: translate(-50%, -50%);
+  transition: left 0.1s linear, top 0.1s linear;
+}

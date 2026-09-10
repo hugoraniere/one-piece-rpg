@@ -25,6 +25,7 @@ let hpNumEl;
 let berriesFrameEl;
 let berriesEl;
 let moodleTrayEl;
+let minimapDotEl;
 let lastHp = null;
 let lastBerries = null;
 
@@ -48,6 +49,17 @@ export function initHud() {
       <div class="berries"><span class="coin"></span><span id="hud-berries">0</span></div>
     </div>
     <div class="moodle-tray" id="hud-moodle-tray"></div>
+    <div class="minimap-wrap">
+      <div class="minimap-frame">
+        <div class="minimap-rivet" style="left:99px;top:54px"></div>
+        <div class="minimap-rivet" style="left:76.5px;top:93px"></div>
+        <div class="minimap-rivet" style="left:31.5px;top:93px"></div>
+        <div class="minimap-rivet" style="left:9px;top:54px"></div>
+        <div class="minimap-rivet" style="left:31.5px;top:15px"></div>
+        <div class="minimap-rivet" style="left:76.5px;top:15px"></div>
+        <div class="minimap"><div class="minimap-dot" id="hud-minimap-dot"></div></div>
+      </div>
+    </div>
     <div class="menu-buttons" id="hud-menu-buttons">
       <div class="menu-btn" data-menu="personagem" title="Personagem (C)"><svg class="icon" aria-hidden="true"><use href="#i-personagem"></use></svg></div>
       <div class="menu-btn" data-menu="inventario" title="Inventário (I)"><svg class="icon" aria-hidden="true"><use href="#i-inventario"></use></svg></div>
@@ -61,6 +73,7 @@ export function initHud() {
   berriesFrameEl = overlay.querySelector('.berries');
   berriesEl = overlay.querySelector('#hud-berries');
   moodleTrayEl = overlay.querySelector('#hud-moodle-tray');
+  minimapDotEl = overlay.querySelector('#hud-minimap-dot');
   lastHp = null;
   lastBerries = null;
 
@@ -100,6 +113,14 @@ export function setBerries(amount) {
 export function setMoodle(key, active) {
   const el = moodleTrayEl.querySelector(`[data-key="${key}"]`);
   if (el) el.classList.toggle('show', active);
+}
+
+// Recebe a posição do jogador já normalizada (0..1 de largura/altura do
+// mundo) — hud.js não sabe nada de WORLD_WIDTH/WORLD_HEIGHT, quem chama
+// (villageScene.js) que faz a conta, igual já faz pra tudo mais aqui.
+export function setMinimapPos(fracX, fracY) {
+  minimapDotEl.style.left = `${Math.max(0, Math.min(1, fracX)) * 100}%`;
+  minimapDotEl.style.top = `${Math.max(0, Math.min(1, fracY)) * 100}%`;
 }
 
 // Liga os botões clicáveis de Personagem/Inventário/Mapa aos MESMOS

@@ -35,7 +35,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindMenuButtons, initHud, setBerries, setHp } from '../ui/hud.js';
+import { bindMenuButtons, initHud, setBerries, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -86,6 +86,7 @@ export function create() {
 
   // Na praia, na frente do caminho descendo da praça.
   ({ player, shadow } = createPlayerCharacter(this, 1280, 1517));
+  setMinimapPos(player.x / WORLD_WIDTH, player.y / WORLD_HEIGHT);
   animState = createAnimationState();
   playerHealth = createHealth(PLAYER_MAX_HP);
   progression = createProgression();
@@ -413,6 +414,11 @@ function handleFishingResult(scene, outcome, baitId) {
 }
 
 export function update(time, delta) {
+  // Sempre em dia, mesmo parado (menu/pesca/editor) ou depois de um
+  // teleporte via __gameDebug.setPlayerPos — mais simples que replicar essa
+  // chamada em cada branch abaixo.
+  setMinimapPos(player.x / WORLD_WIDTH, player.y / WORLD_HEIGHT);
+
   if (isMenuOpen()) {
     // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
     // Phaser própria (ver ui/menuManager.js).
