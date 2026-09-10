@@ -38,12 +38,17 @@ export const VILLAGE_PROPS = [
   { key: 'village-tree-small', x: 2406, y: 182, scale: 1.71 },
   { key: 'village-tree-ancient', x: 2266, y: 144, scale: 1.16 },
 
-  // "arbustos" — sem asset dedicado ainda, árvore pequena numa escala mais baixa
-  { key: 'village-tree-small', x: 461, y: 202, scale: 1.0 },
-  { key: 'village-tree-small', x: 666, y: 202, scale: 1.0 },
-  { key: 'village-tree-small', x: 1587, y: 202, scale: 1.0 },
-  { key: 'village-tree-small', x: 1792, y: 202, scale: 1.0 },
-  { key: 'village-tree-small', x: 2304, y: 202, scale: 1.0 },
+  // Arbustos de verdade — achados em assets/water_new/ (pacote v5, ver
+  // BEACH_SCENE_ANALYSIS.md seção 4), nunca tinham sido registrados em
+  // lugar nenhum. Substituem o placeholder antigo (árvore pequena reduzida,
+  // que tinha tronco visível e não parecia um arbusto de verdade — ver
+  // SCENE_ASSETS_TODO.md, item de prioridade alta). Alternando as duas
+  // variantes pra não repetir o mesmo arbusto 5 vezes seguidas.
+  { key: 'prop-bush-flower', x: 461, y: 202, scale: 0.46 },
+  { key: 'prop-bush-large', x: 666, y: 202, scale: 0.52 },
+  { key: 'prop-bush-flower', x: 1587, y: 202, scale: 0.46 },
+  { key: 'prop-bush-large', x: 1792, y: 202, scale: 0.52 },
+  { key: 'prop-bush-flower', x: 2304, y: 202, scale: 0.46 },
   { key: 'prop-flower', x: 256, y: 221, scale: 0.28 },
   { key: 'prop-flower', x: 870, y: 221, scale: 0.28 },
   { key: 'prop-flower', x: 1690, y: 221, scale: 0.28 },
@@ -100,9 +105,14 @@ export const VILLAGE_PROPS = [
   { key: 'village-rock-cluster', x: 192, y: 1354, scale: 0.35 },
 
   // --- Praia ---
-  { key: 'prop-log', x: 1024, y: 1450, scale: 0.69 },
-  { key: 'water-boat-row', x: 2266, y: 1498, scale: 0.85, rotation: -12 },
-  { key: 'prop-log', x: 2163, y: 1526, scale: 0.40 },
+  // Y destes reajustado depois de regenerar scene_background.png (ver
+  // tools/build_terrain_background.py — usar só a tile de água 1 pra tirar
+  // a emenda moveu a linha d'água até ~480px em alguns trechos). Mantido o
+  // MESMO tipo de posição relativa à água (tronco na beira, barco encostado)
+  // que o layout original pretendia, só recalculado pra curva nova.
+  { key: 'prop-log', x: 1024, y: 1707, scale: 0.69 },
+  { key: 'water-boat-row', x: 2266, y: 1607, scale: 0.85, rotation: -12 },
+  { key: 'prop-log', x: 2163, y: 1696, scale: 0.40 },
 
   // PLACEHOLDER: estrela-do-mar não existe em nenhum catálogo — flor
   // tingida de laranja só pra marcar "tem um objeto pequeno aqui".
@@ -111,15 +121,26 @@ export const VILLAGE_PROPS = [
   // PLACEHOLDER: pedrinha solta também não existe — rock-cluster reduzido.
   { key: 'village-rock-cluster', x: 768, y: 1469, scale: 0.09 },
   { key: 'village-rock-cluster', x: 1536, y: 1517, scale: 0.09 },
-  { key: 'village-rock-cluster', x: 1818, y: 1565, scale: 0.09 },
+  { key: 'village-rock-cluster', x: 1818, y: 1789, scale: 0.09 },
   { key: 'village-rock-cluster', x: 614, y: 1536, scale: 0.09 },
 
   // --- Doca + pedra-d'água (recortados do Pack07) ---
   { key: 'water-dock-pier', x: 154, y: 1795, scale: 1.35 },
   { key: 'water-rock', x: 51, y: 1363, scale: 0.85 },
-  { key: 'water-rock', x: 2470, y: 1450, scale: 0.55 },
+  { key: 'water-rock', x: 2470, y: 1795, scale: 0.55 },
   { key: 'water-lilypad-flower', x: 768, y: 1824, scale: 0.55 },
   { key: 'water-lilypad-plain', x: 1178, y: 1872, scale: 0.45 },
+
+  // Peças do pacote v5 (assets/water_new/, ver BEACH_SCENE_ANALYSIS.md) que
+  // nunca tinham sido cadastradas — mesma história dos arbustos. Estendem a
+  // doca existente e dão mais variedade de vitória-régia/pedra na água.
+  // `dock_module.png` do mesmo pacote ficou de fora: apesar do nome, o
+  // conteúdo dela é outra vitória-régia (arquivo mal nomeado no pacote
+  // original), redundante com `lilypad.png` — sem uso real de doca nela.
+  { key: 'prop-dock-platform', x: 280, y: 1741, scale: 1.3 },
+  { key: 'prop-lilypad-reed', x: 1450, y: 1715, scale: 0.36 },
+  { key: 'prop-lilypad-reed', x: 2000, y: 1869, scale: 0.36 },
+  { key: 'prop-rock-cluster-water', x: 900, y: 1743, scale: 1.03 },
 ];
 
 // `defaultScale` de cada item é calculado a partir do tamanho real do
@@ -154,6 +175,8 @@ export const EDITOR_PROP_PALETTE = [
   { key: 'village-tree-stump', label: 'Toco de árvore', defaultScale: 0.22 },
   { key: 'prop-log', label: 'Tronco caído (praia)', defaultScale: 0.69 },
   { key: 'prop-flower', label: 'Flores', defaultScale: 0.28 },
+  { key: 'prop-bush-flower', label: 'Arbusto (com flor)', defaultScale: 0.46 },
+  { key: 'prop-bush-large', label: 'Arbusto (denso)', defaultScale: 0.52 },
 
   // Recortados do Pack07 (A Pedra do Sol) — ver BEACH_SCENE_ANALYSIS.md.
   { key: 'water-boat-row', label: 'Barco a remo', defaultScale: 0.85 },
@@ -161,6 +184,9 @@ export const EDITOR_PROP_PALETTE = [
   { key: 'water-rock', label: 'Pedra de água', defaultScale: 0.85 },
   { key: 'water-lilypad-flower', label: 'Vitória-régia (com flor)', defaultScale: 0.55 },
   { key: 'water-lilypad-plain', label: 'Vitória-régia (lisa)', defaultScale: 0.45 },
+  { key: 'prop-dock-platform', label: 'Plataforma de doca (pequena)', defaultScale: 1.3 },
+  { key: 'prop-lilypad-reed', label: 'Vitória-régia (com taboa)', defaultScale: 0.36 },
+  { key: 'prop-rock-cluster-water', label: 'Pedras na água (grupo)', defaultScale: 1.03 },
   { key: 'water-bridge-wood-arch', label: 'Ponte de madeira (arco)', defaultScale: 0.55 },
   { key: 'water-bridge-wood-straight', label: 'Ponte de madeira (reta)', defaultScale: 0.55 },
   { key: 'water-bridge-stone-arch', label: 'Ponte de pedra (arco)', defaultScale: 0.55 },
@@ -191,6 +217,13 @@ export function preloadVillageAssets(scene) {
   scene.load.image('village-tree-stump', 'assets/village/tree_stump.png');
   scene.load.image('prop-log', 'assets/props/log.png');
   scene.load.image('prop-flower', 'assets/props/flower.png');
+  // Arbustos — mesmo pacote v5 do resto de assets/water_new/ (ver
+  // BEACH_SCENE_ANALYSIS.md seção 4), nunca tinham sido carregados.
+  scene.load.image('prop-bush-flower', 'assets/water_new/bush_flower.png');
+  scene.load.image('prop-bush-large', 'assets/water_new/bush_large.png');
+  scene.load.image('prop-dock-platform', 'assets/water_new/dock_platform.png');
+  scene.load.image('prop-lilypad-reed', 'assets/water_new/lilypad.png');
+  scene.load.image('prop-rock-cluster-water', 'assets/water_new/water_rock.png');
   scene.load.image('village-tree-ancient', 'assets/village/tree_ancient.png');
   scene.load.image('village-path-straight-h', 'assets/village/path_straight_h.png');
   scene.load.image('village-path-straight-v', 'assets/village/path_straight_v.png');

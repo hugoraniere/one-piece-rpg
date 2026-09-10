@@ -33,6 +33,15 @@ export const LAYER_DEFS = {
       attack: ['weapon-sword-side'],
     },
   },
+  // Vara de pescar — sem golpe de ataque de verdade (não é arma), então
+  // 'attack' nem precisa existir aqui: resolveModeFrames() já cai pro idle
+  // sozinho quando falta (ver frameCycle.js).
+  'vara-de-pescar': {
+    down: { idle: ['rod-front'], walk: ['rod-front'] },
+    up: { idle: ['rod-back'], walk: ['rod-back'] },
+    right: { idle: ['rod-side'], idleFlip: false, walk: ['rod-side'], walkFlip: false },
+    left: { idle: ['rod-side'], idleFlip: true, walk: ['rod-side'], walkFlip: true },
+  },
 };
 
 // Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md)
@@ -48,6 +57,41 @@ export function generatePlaceholderWeaponTextures(scene) {
   drawPlaceholderSword(scene, 'weapon-sword-front', 128, 118, -35);
   drawPlaceholderSword(scene, 'weapon-sword-back', 76, 108, -35);
   drawPlaceholderSword(scene, 'weapon-sword-side', 122, 118, -20);
+}
+
+// PLACEHOLDER na mesma linha da espada acima: uma vara marrom simples (sem
+// arte de verdade ainda) só pra provar que o equip funciona. Ângulo mais
+// vertical que a espada — uma vara de pescar descansa quase reta, não
+// inclinada como uma lâmina embainhada.
+export function generatePlaceholderRodTextures(scene) {
+  drawPlaceholderRod(scene, 'rod-front', 128, 150, -12);
+  drawPlaceholderRod(scene, 'rod-back', 76, 140, -12);
+  drawPlaceholderRod(scene, 'rod-side', 122, 145, -6);
+}
+
+function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
+  const size = PLACEHOLDER_CANVAS_SIZE;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  ctx.save();
+  ctx.translate(gripX, gripY);
+  ctx.rotate(Phaser.Math.DegToRad(angleDeg));
+  ctx.fillStyle = '#8a5a34';
+  ctx.fillRect(-3, -95, 6, 95); // vareta
+  ctx.strokeStyle = '#e8d9b0';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0, -95);
+  ctx.lineTo(18, -20);
+  ctx.stroke(); // linha de pesca
+  ctx.fillStyle = '#3b2415';
+  ctx.fillRect(-5, -6, 10, 20); // cabo
+  ctx.restore();
+
+  scene.textures.addCanvas(key, canvas);
 }
 
 function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {

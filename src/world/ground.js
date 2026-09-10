@@ -98,3 +98,33 @@ export function buildWaterCollision(scene, player) {
     scene.physics.add.collider(player, zone);
   }
 }
+
+// "Perto o bastante da água pra pescar" — reaproveita a mesma curva de
+// buildWaterCollision em vez de mais uma zona física: só compara uma
+// posição com a altura da linha d'água na coluna dela.
+const FISHING_DISTANCE = 90; // pixels
+
+// Altura (Y) da linha areia/água na coluna de `x` — base pra isNearWater
+// (proximidade do jogador) e isWaterPoint (o alvo de um arremesso é água de
+// verdade?). `null` se o JSON ainda não carregou.
+export function getWaterLineY(scene, x) {
+  const data = scene.cache.json.get('water-line');
+  if (!data) return null;
+  const col = Math.max(0, Math.min(Math.floor(x), data.line.length - 1));
+  return data.line[col];
+}
+
+export function isNearWater(scene, x, y) {
+  const waterY = getWaterLineY(scene, x);
+  if (waterY === null) return false;
+  return Math.abs(y - waterY) <= FISHING_DISTANCE;
+}
+
+// Um ponto de arremesso precisa estar do lado da ÁGUA da linha (Y maior,
+// já que o mundo cresce pra baixo), não na areia — pequena tolerância pra
+// cliques em cima da própria borda não serem rejeitados por 1px.
+export function isWaterPoint(scene, x, y) {
+  const waterY = getWaterLineY(scene, x);
+  if (waterY === null) return false;
+  return y >= waterY - 10;
+}

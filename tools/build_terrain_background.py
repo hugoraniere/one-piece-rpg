@@ -121,10 +121,18 @@ def build(world_width, world_height, output_path):
     # buraco transparente numa das pontas (foi exatamente esse buraco —
     # tile do tamanho exato da janela, deslocada, sem sobra nenhuma pra
     # cobrir — que causou os blocos/degraus dos testes anteriores).
+    # SÓ 1.png aqui de propósito — ciclar 1/2/3 deixava DUAS emendas visíveis
+    # (1↔2 e 2↔3), porque as três texturas não são a mesma água: 1 tem um
+    # brilho mais liso e mostra bem mais areia seca: 2 e 3 têm um padrão de
+    # "diamante" mais forte e a água cobre quase toda a faixa. Testei usar só
+    # 2+3 pra eliminar a emenda, mas isso empurrou a linha d'água muito pra
+    # cima (média de 180px, pico de 417px) e sumiu com a praia quase toda —
+    # pior que o problema original. Repetir só a 1 remove a emenda (mesma
+    # fonte o tempo todo) sem perder a proporção de areia já calibrada.
     tall_h = band_height + 2 * rich_margin
     rich_tiles_tall = [
         Image.open(os.path.join(WATER_SRC_DIR, f'{i}.png')).convert('RGBA').resize((rich_tile_w, tall_h), Image.LANCZOS)
-        for i in (1, 2, 3)
+        for i in (1,)
     ]
     profiles = [boundary_profile(t) for t in rich_tiles_tall]
     edge_sample = 12
@@ -133,7 +141,7 @@ def build(world_width, world_height, output_path):
     i = 0
     running_right_edge = None
     for tx in range(0, world_width, rich_tile_w):
-        idx = i % 3
+        idx = i % 1
         tall_tile = rich_tiles_tall[idx]
         prof = profiles[idx]
 

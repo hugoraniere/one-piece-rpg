@@ -1,10 +1,5 @@
 import Phaser from 'phaser';
 import {
-  ATTACK_DURATION_MS,
-  COMBAT_ATTACK_DAMAGE,
-  COMBAT_ATTACK_RANGE,
-  COMBAT_MOVE_RANGE,
-  ENCOUNTER_TRIGGER_RANGE,
   PLAYER_MAX_HP,
   PLAYER_SPEED,
   SHADOW_OFFSET_Y,
@@ -16,45 +11,63 @@ import {
   createLayerSprite,
   createLayerState,
   equipLayer,
+  generatePlaceholderRodTextures,
   generatePlaceholderWeaponTextures,
   unequipLayer,
   updateLayerVisual,
 } from '../character/layers.js';
 import { isEditorModeActive, panEditorCamera, setupEditor } from '../editor/editorMode.js';
-import { buildVillageProps, preloadVillageAssets } from '../world/propRegistry.js';
-import { buildGround, buildWaterCollision, preloadGroundAssets } from '../world/ground.js';
-import { createEnemy, damageEnemy, generatePlaceholderEnemyTexture, updateEnemy } from '../world/enemy.js';
-import { spawnFloatingDamage, spawnLevelUpText } from '../world/floatingText.js';
-import { createTileHighlight, clearTileHighlight, drawTileHighlight, isTileBlocked } from '../world/combatGrid.js';
-import { reachableTiles, tileDistance, tileToWorld, worldToTile } from '../sim/grid.js';
-import { createEncounterState, endEncounter, passTurn, startEncounter } from '../sim/encounter.js';
-import { applyDamage, createHealth, isDead, resetHealth } from '../sim/health.js';
-import { createProgression, getForcaDamageBonus, getVitalidadeMaxHpBonus, trainAttribute, trainSkill } from '../sim/progression.js';
+import { buildVillageProps, preloadVillageAssets, VILLAGE_PROPS } from '../world/propRegistry.js';
+import { buildGround, buildWaterCollision, isNearWater, isWaterPoint, preloadGroundAssets } from '../world/ground.js';
+import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
+import { createHealth } from '../sim/health.js';
+import { createProgression, trainSkill } from '../sim/progression.js';
+import { createInventory, addItem, removeItem } from '../sim/inventory.js';
+import { ITEM_DEFS } from '../sim/itemDefs.js';
+import { RECIPES, craft } from '../sim/crafting.js';
+import {
+  CAST_DEFAULT_DIST,
+  CAST_DEFAULT_QUALITY,
+  CAST_MAX_RANGE,
+  MAX_WAIT_TICKS,
+  computeCastQuality,
+  getBestBait,
+  getBiteChance,
+  getReactionWindowMs,
+} from '../sim/fishing.js';
 import { initHud, setBerries, setHp } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
 import { toggleMapMenu } from '../ui/mapMenu.js';
-import { hideCombatHud, onEndTurnClick, setCombatMessage, setCombatTurn, showCombatHud } from '../ui/combatHud.js';
-import { createHpBar, setHpBarPosition, setHpBarVisible, updateHpBar } from '../world/hpBar.js';
+import { cancelFishingAttempt, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
 
 let player; // Sprite com física — a posição/colisão "de verdade"
 let shadow; // elipse sob os pés, sincronizada com o player todo frame
-let weaponSprite; // camada de arma, sincronizada com o player todo frame (ver layers.js)
+let weaponSprite; // camada de arma/ferramenta, sincronizada com o player todo frame (ver layers.js)
 let cursors;
 let wasd;
 let facing = 'down'; // 'up' | 'down' | 'left' | 'right'
 let animState;
 let equipState;
-let isAttacking = false;
-let attackTimer = 0; // ms restantes do modo 'attack' antes de voltar pra idle/walk
-let enemy;
 let playerHealth;
-let encounterState;
-let combatHighlight; // Graphics com os tiles verdes de alcance de movimento
-let lastReachableTiles = []; // último cálculo, usado pra validar o clique de movimento
-let playerHpBar; // só visível durante combate — fora dele a vida mora no HUD do canto (ver ui/hud.js)
 let progression; // atributos/perícias — ver sim/progression.js
+let inventory; // itens de verdade — ver sim/inventory.js
+let berries = 0; // primeira fonte de renda real é pesca — ver keydown-F em create()
+
+const FISH_REWARD = 8; // Berries por peixe fisgado — valor de referência, fácil de reequilibrar
+
+// Árvores da vila servem de ponto de coleta de graveto — ver handleGather().
+// Reaproveita as posições já cadastradas em propRegistry.js em vez de ter
+// uma segunda lista de "onde tem árvore" pra manter sincronizada na mão.
+const TREE_KEYS = ['village-tree-ancient', 'village-tree-small', 'village-tree-stump'];
+const GATHER_TREE_RANGE = 90; // pixels
+const GATHER_COOLDOWN_MS = 2500;
+const MINHOCA_SUCCESS_CHANCE = 0.7;
+let treePositions = [];
+let lastGatherAt = -Infinity;
+let lastNoRodHintAt = -Infinity;
+const NO_ROD_HINT_COOLDOWN_MS = 1500; // evita spam de "precisa de vara" com F segurado (key-repeat)
 
 export function preload() {
   preloadGroundAssets(this);
@@ -71,12 +84,17 @@ export function create() {
   animState = createAnimationState();
   playerHealth = createHealth(PLAYER_MAX_HP);
   progression = createProgression();
-  refreshPlayerHpText();
-  setBerries(0); // sem economia ainda — só deixa o HUD pronto pra quando existir
+  // Linha de nylon de graça, como ponte temporária até existir comércio de
+  // verdade (ver conversa de design) — sem ela a receita da vara nunca
+  // completa e o jogador trava antes mesmo de começar a pescar.
+  inventory = createInventory({ 'linha-de-nylon': 2 });
+  setHp(playerHealth.current, playerHealth.max);
+  setBerries(berries);
 
-  // Camada de equipamento (arma) — ver EQUIPMENT_ASSETS_TODO.md pro plano de
-  // trocar o placeholder roxo pela arte de verdade.
+  // Camada de equipamento (arma/ferramenta) — ver EQUIPMENT_ASSETS_TODO.md
+  // pro plano de trocar os placeholders pela arte de verdade.
   generatePlaceholderWeaponTextures(this);
+  generatePlaceholderRodTextures(this);
   weaponSprite = createLayerSprite(this, 'weapon-sword-front');
   equipState = createLayerState();
   equipLayer(equipState, 'sword'); // equipada por padrão só pra já dar pra ver funcionando
@@ -84,27 +102,53 @@ export function create() {
     equipState.equippedLayerId ? unequipLayer(equipState) : equipLayer(equipState, 'sword');
   });
 
-  // Menus (Personagem/Inventário) — ver ui/menuManager.js. Não abrem durante
-  // combate nem no editor, pra não empilhar estado de UI incompatível.
+  treePositions = VILLAGE_PROPS.filter((p) => TREE_KEYS.includes(p.key)).map((p) => ({ x: p.x, y: p.y }));
+
+  // Menus (Personagem/Inventário) — ver ui/menuManager.js. Não abrem no
+  // editor nem com uma pescaria em andamento, pra não empilhar estado de UI
+  // incompatível.
   this.input.keyboard.on('keydown-C', () => {
-    if (isEditorModeActive() || encounterState.active) return;
+    if (isEditorModeActive() || isFishingActive()) return;
     toggleCharacterMenu(progression);
   });
   this.input.keyboard.on('keydown-I', () => {
-    if (isEditorModeActive() || encounterState.active) return;
-    toggleInventoryMenu(equipState);
+    if (isEditorModeActive() || isFishingActive()) return;
+    toggleInventoryMenu({ inventory, equipState, onEquip: handleEquip, onCraft: handleCraft });
   });
   this.input.keyboard.on('keydown-M', () => {
-    if (isEditorModeActive() || encounterState.active) return;
+    if (isEditorModeActive() || isFishingActive()) return;
     toggleMapMenu();
   });
 
-  // Barra de vida ancorada no personagem — só aparece durante combate (ver
-  // tryStartEncounter/winEncounter/loseEncounter). Fora de combate a vida já
-  // está sempre visível no HUD do canto, então mostrar aqui também seria
-  // redundante.
-  playerHpBar = createHpBar(this, player.x, player.y - 70, 'Você');
-  setHpBarVisible(playerHpBar, false);
+  // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
+  // atalho do modo editor, ver editor/editorMode.js — os dois listeners
+  // dispararIAM juntos se usássemos a mesma tecla). Contexto decide o verbo
+  // (ver handleGather): grudado numa árvore = graveto, na beira d'água =
+  // isca improvisada, em qualquer outro chão = caçar minhoca.
+  this.input.keyboard.on('keydown-G', () => {
+    if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+    handleGather(this);
+  });
+
+  // Pesca — primeira fonte de renda real do jogo (ver conversa de design:
+  // combate deveria ser raro, o dinheiro vem de trabalho/ofício, não de
+  // matar). Segurar F (ou clicar na água e segurar) joga a vara; soltar
+  // puxa — ver sim/fishing.js pras fórmulas e ui/fishingHud.js pro
+  // minigame de duas fases (espera + mordida).
+  this.input.keyboard.on('keydown-F', () => {
+    if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+    tryStartFishing(this, null);
+  });
+  this.input.keyboard.on('keyup-F', () => {
+    if (isFishingActive()) releaseFishingAttempt();
+  });
+  this.input.on('pointerdown', (pointer) => {
+    if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+    tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
+  });
+  this.input.on('pointerup', () => {
+    if (isFishingActive()) releaseFishingAttempt();
+  });
 
   this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
 
@@ -121,21 +165,13 @@ export function create() {
   buildWaterCollision(this, player);
   setupEditor(this, player);
 
-  // Boneco de treino — ver EQUIPMENT_ASSETS_TODO.md sobre o mesmo tipo de
-  // placeholder já usado pra arma. Perto do spawn do jogador, na areia.
-  generatePlaceholderEnemyTexture(this);
-  enemy = createEnemy(this, 1430, 1467);
-  this.physics.add.collider(player, enemy.sprite);
-
-  setupCombatUI(this);
-  encounterState = createEncounterState();
-  combatHighlight = createTileHighlight(this);
-
-  this.input.keyboard.on('keydown-SPACE', () => tryStartEncounter(this));
-  this.input.on('pointerdown', (pointer) => handleCombatClick(this, pointer));
+  // Se a cena for destruída com uma pescaria em andamento (recarregar em
+  // dev, futura troca de cena), encerra o timer em vez de deixar rodando
+  // sozinho sem ninguém pra receber o resultado.
+  this.events.once('shutdown', () => cancelFishingAttempt());
 
   this.add
-    .text(12, window.innerHeight - 34, 'ESPAÇO perto do inimigo: entrar em combate   Q: equipar/desequipar arma', {
+    .text(12, window.innerHeight - 34, 'Q: equipar/desequipar arma   G: coletar   F: pescar (segure e solte)', {
       font: '13px monospace',
       color: '#ffffff',
       backgroundColor: '#000000aa',
@@ -145,266 +181,176 @@ export function create() {
     .setDepth(9999);
 
   // Ganchos de depuração só em dev (o build de produção elimina este bloco
-  // inteiro) — pra inspecionar/disparar o combate pelo console sem precisar
-  // acertar coordenada de clique na tela.
+  // inteiro) — pra inspecionar o estado do jogo pelo console.
   if (import.meta.env.DEV) {
-    window.__combatDebug = {
+    window.__gameDebug = {
       getState: () => ({
-        encounterState,
-        reachableTiles: lastReachableTiles,
         playerHealth,
-        enemyHealth: enemy.health,
         player: { x: player.x, y: player.y },
-        enemy: { x: enemy.sprite.x, y: enemy.sprite.y },
+        berries,
+        progression,
+        inventory,
+        equipState,
       }),
-      clickWorld: (x, y) => handleCombatClick(this, { worldX: x, worldY: y }),
-      startEncounter: () => tryStartEncounter(this),
     };
   }
 }
 
-function setupCombatUI(scene) {
-  onEndTurnClick(() => {
-    if (encounterState.active && encounterState.turn === 'player') endPlayerTurn(scene);
-  });
-}
-
-function refreshPlayerHpText() {
-  setHp(playerHealth.current, playerHealth.max);
-  if (playerHpBar) updateHpBar(playerHpBar, playerHealth.current, playerHealth.max);
-}
-
 // ============================================================================
-// COMBATE POR TURNOS — estilo tático (grade só existe enquanto a luta dura).
-// Fora de combate o mundo é 100% movimento livre; ver update() lá embaixo
-// pra onde a exploração normal fica suspensa enquanto isso está ativo.
+// COLETA — graveto (árvore), isca improvisada (beira d'água) e minhoca
+// (caça, em qualquer outro chão) alimentam a receita da vara e a pesca em
+// si. Uma tecla só (G), contexto decide o verbo — ver comentário no
+// keydown-G acima.
 // ============================================================================
 
-function isMoveBlockedForCombat(scene, col, row, ignoreBody) {
-  const world = tileToWorld(col, row);
-  const outOfBounds = col < 0 || row < 0 || world.x >= WORLD_WIDTH || world.y >= WORLD_HEIGHT;
-  if (outOfBounds) return true;
-  return isTileBlocked(scene, col, row, ignoreBody);
-}
+function handleGather(scene) {
+  const now = scene.time.now;
+  if (now - lastGatherAt < GATHER_COOLDOWN_MS) return;
+  lastGatherAt = now;
 
-function snapToGrid(sprite) {
-  const tile = worldToTile(sprite.x, sprite.y);
-  const { x, y } = tileToWorld(tile.col, tile.row);
-  if (sprite.body) sprite.body.reset(x, y);
-  else sprite.setPosition(x, y);
-  sprite.setDepth(y);
-}
-
-function tryStartEncounter(scene) {
-  if (isEditorModeActive() || encounterState.active || enemy.respawnTimer > 0) return;
-  const dist = Phaser.Math.Distance.Between(player.x, player.y, enemy.sprite.x, enemy.sprite.y);
-  if (dist > ENCOUNTER_TRIGGER_RANGE) return;
-
-  startEncounter(encounterState);
-  player.body.setVelocity(0, 0);
-  // Encaixa os dois na grade antes de começar — assim ela nunca fica
-  // desalinhada com onde os sprites realmente estavam no mundo livre.
-  snapToGrid(player);
-  snapToGrid(enemy.sprite);
-  showCombatHud();
-  setHpBarVisible(playerHpBar, true);
-  setHpBarPosition(playerHpBar, player.x, player.y - 70);
-  beginPlayerTurn(scene);
-}
-
-function beginPlayerTurn(scene) {
-  setCombatMessage('Seu turno — clique num tile verde pra andar, no boneco pra atacar');
-  setCombatTurn('player');
-  const playerTile = worldToTile(player.x, player.y);
-  lastReachableTiles = reachableTiles(playerTile, COMBAT_MOVE_RANGE, (col, row) => isMoveBlockedForCombat(scene, col, row, player.body));
-  drawTileHighlight(combatHighlight, lastReachableTiles, 0x22c55e);
-}
-
-function handleCombatClick(scene, pointer) {
-  if (isEditorModeActive() || !encounterState.active || encounterState.turn !== 'player') return;
-
-  const clickedTile = worldToTile(pointer.worldX, pointer.worldY);
-  const enemyTile = worldToTile(enemy.sprite.x, enemy.sprite.y);
-  const playerTile = worldToTile(player.x, player.y);
-
-  if (clickedTile.col === enemyTile.col && clickedTile.row === enemyTile.row) {
-    if (!encounterState.hasActed && tileDistance(playerTile, enemyTile) <= COMBAT_ATTACK_RANGE) {
-      performPlayerAttack(scene);
-    }
+  const nearTree = treePositions.some((t) => Phaser.Math.Distance.Between(player.x, player.y, t.x, t.y) <= GATHER_TREE_RANGE);
+  if (nearTree) {
+    addItem(inventory, 'graveto', 1);
+    spawnItemText(scene, player.x, player.y - 60, '+1 Graveto');
     return;
   }
 
-  if (!encounterState.hasMoved) {
-    const isReachable = lastReachableTiles.some((t) => t.col === clickedTile.col && t.row === clickedTile.row);
-    if (isReachable) movePlayerToTile(scene, clickedTile);
-  }
-}
-
-function movePlayerToTile(scene, tile) {
-  const { x, y } = tileToWorld(tile.col, tile.row);
-  player.body.reset(x, y);
-  player.setDepth(y);
-  shadow.setPosition(x, y + SHADOW_OFFSET_Y);
-  shadow.setDepth(y - 1);
-  setHpBarPosition(playerHpBar, x, y - 70);
-  encounterState.hasMoved = true;
-  clearTileHighlight(combatHighlight);
-}
-
-// Treino real de verdade: espada equipada treina Espadas, sem nada
-// equipado treina Luta — os dois também treinam um pouco de Força, já que
-// golpear (com ou sem arma) exercita o corpo do mesmo jeito. Ver
-// sim/progression.js pro porquê disso ser a única perícia/atributo que já
-// sobe de verdade hoje.
-function performPlayerAttack(scene) {
-  encounterState.hasActed = true;
-  isAttacking = true;
-  attackTimer = ATTACK_DURATION_MS;
-  swingWeapon(scene); // tween cosmético da arma, roda em cima da animação por frame
-
-  const skillKey = equipState.equippedLayerId === 'sword' ? 'espada' : 'luta';
-  const skillResult = trainSkill(progression, skillKey);
-  const forcaResult = trainAttribute(progression, 'forca');
-  if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 90, skillKey === 'espada' ? 'Espadas' : 'Luta');
-  if (forcaResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 106, 'Força');
-
-  const damage = Math.round(COMBAT_ATTACK_DAMAGE + getForcaDamageBonus(progression));
-  damageEnemy(scene, enemy, damage);
-  endPlayerTurn(scene);
-}
-
-function endPlayerTurn(scene) {
-  clearTileHighlight(combatHighlight);
-  if (isDead(enemy.health)) {
-    winEncounter(scene);
+  if (isNearWater(scene, player.x, player.y)) {
+    addItem(inventory, 'isca-improvisada', 1);
+    spawnItemText(scene, player.x, player.y - 60, '+1 Isca Improvisada');
     return;
   }
-  passTurn(encounterState); // agora é 'enemy'
-  setCombatMessage('Turno do inimigo...');
-  setCombatTurn('enemy');
-  runEnemyTurn(scene);
-}
 
-function runEnemyTurn(scene) {
-  const playerTile = worldToTile(player.x, player.y);
-  const enemyTile = worldToTile(enemy.sprite.x, enemy.sprite.y);
-
-  if (tileDistance(enemyTile, playerTile) <= COMBAT_ATTACK_RANGE) {
-    applyDamage(playerHealth, COMBAT_ATTACK_DAMAGE);
-    refreshPlayerHpText();
-    spawnFloatingDamage(scene, player.x, player.y - 60, COMBAT_ATTACK_DAMAGE);
-    player.setTintFill(0xffffff);
-    scene.time.delayedCall(120, () => player.clearTint());
-
-    if (isDead(playerHealth)) {
-      loseEncounter(scene);
-      return;
-    }
-
-    // Só treina Vitalidade se sobreviveu ao golpe — "aguentar e continuar
-    // de pé" é a ação real por trás disso (ver sim/progression.js).
-    const vitResult = trainAttribute(progression, 'vitalidade');
-    if (vitResult.leveledUp) {
-      const previousMax = playerHealth.max;
-      playerHealth.max = PLAYER_MAX_HP + getVitalidadeMaxHpBonus(progression);
-      playerHealth.current = Math.min(playerHealth.max, playerHealth.current + (playerHealth.max - previousMax));
-      refreshPlayerHpText();
-      spawnLevelUpText(scene, player.x, player.y - 90, 'Vitalidade');
-    }
+  if (Math.random() < MINHOCA_SUCCESS_CHANCE) {
+    addItem(inventory, 'minhoca', 1);
+    spawnItemText(scene, player.x, player.y - 60, '+1 Minhoca');
+    const skillResult = trainSkill(progression, 'caca');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Caça');
   } else {
-    const step = reachableTiles(enemyTile, 1, (col, row) => isMoveBlockedForCombat(scene, col, row, enemy.sprite.body)).sort(
-      (a, b) => tileDistance(a, playerTile) - tileDistance(b, playerTile)
-    )[0];
-    if (step) {
-      const { x, y } = tileToWorld(step.col, step.row);
-      enemy.sprite.body.reset(x, y);
-      enemy.sprite.setDepth(y);
-      // A barra de vida em si já é reposicionada todo frame em updateEnemy().
+    spawnMissText(scene, player.x, player.y - 60, 'Não achou nada pra caçar.');
+  }
+}
+
+// ============================================================================
+// EQUIPAR / FABRICAR — chamados pelo Inventário (ver ui/inventoryMenu.js);
+// este módulo só sabe fazer, quem monta a UI e delega de volta é lá.
+// ============================================================================
+
+function handleEquip(itemId) {
+  const def = ITEM_DEFS[itemId];
+  if (!def || !def.equipLayerId) return;
+  if (equipState.equippedLayerId === def.equipLayerId) {
+    unequipLayer(equipState);
+  } else {
+    equipLayer(equipState, def.equipLayerId);
+  }
+}
+
+function handleCraft(recipeId) {
+  const recipe = RECIPES.find((r) => r.id === recipeId);
+  if (!recipe) return false;
+  return craft(inventory, recipe);
+}
+
+// ============================================================================
+// PESCA — arremesso (mira/qualidade) + espera/mordida (ver sim/fishing.js
+// pras fórmulas e ui/fishingHud.js pro minigame). `targetPoint` é o clique
+// n'água, ou null se foi F sem mirar (arremesso reto, qualidade fixa).
+// ============================================================================
+
+function facingVector(dir) {
+  if (dir === 'up') return { x: 0, y: -1 };
+  if (dir === 'left') return { x: -1, y: 0 };
+  if (dir === 'right') return { x: 1, y: 0 };
+  return { x: 0, y: 1 }; // 'down'
+}
+
+function tryStartFishing(scene, targetPoint) {
+  if (equipState.equippedLayerId !== 'vara-de-pescar') {
+    const now = scene.time.now;
+    if (now - lastNoRodHintAt >= NO_ROD_HINT_COOLDOWN_MS) {
+      lastNoRodHintAt = now;
+      spawnMissText(scene, player.x, player.y - 60, 'Você precisa de uma vara equipada.');
     }
+    return;
+  }
+  if (!isNearWater(scene, player.x, player.y)) return;
+
+  let target;
+  let castQuality;
+  if (targetPoint) {
+    const dist = Phaser.Math.Distance.Between(player.x, player.y, targetPoint.x, targetPoint.y);
+    const clampedDist = Math.min(dist, CAST_MAX_RANGE);
+    const angle = Phaser.Math.Angle.Between(player.x, player.y, targetPoint.x, targetPoint.y);
+    target = { x: player.x + Math.cos(angle) * clampedDist, y: player.y + Math.sin(angle) * clampedDist };
+    castQuality = computeCastQuality(clampedDist);
+  } else {
+    const dir = facingVector(facing);
+    target = { x: player.x + dir.x * CAST_DEFAULT_DIST, y: player.y + dir.y * CAST_DEFAULT_DIST };
+    castQuality = CAST_DEFAULT_QUALITY;
   }
 
-  passTurn(encounterState); // agora é 'player' de novo
-  beginPlayerTurn(scene);
-}
+  if (!isWaterPoint(scene, target.x, target.y)) {
+    spawnMissText(scene, player.x, player.y - 60, 'Aí não tem água pra pescar.');
+    return;
+  }
 
-function winEncounter(scene) {
-  endEncounter(encounterState);
-  clearTileHighlight(combatHighlight);
-  hideCombatHud();
-  setHpBarVisible(playerHpBar, false);
-  // damageEnemy() já cuidou de esconder o boneco e agendar o respawn dele.
-}
-
-// Sem penalidade de derrota de verdade ainda (sem game over/checkpoint) —
-// só cura o jogador e devolve o controle. Decidir isso direito (voltar pro
-// último ponto seguro? perder algo?) é trabalho pra quando tiver progressão
-// de verdade em jogo.
-function loseEncounter(scene) {
-  endEncounter(encounterState);
-  clearTileHighlight(combatHighlight);
-  hideCombatHud();
-  setHpBarVisible(playerHpBar, false);
-  resetHealth(playerHealth);
-  refreshPlayerHpText();
-}
-
-// Complemento cosmético do modo 'attack' (que já troca o frame/textura da
-// arma via updateLayerVisual): gira a camada de arma rapidamente e volta.
-// `updateLayerVisual` nunca mexe em `rotation`, só em
-// posição/escala/textura/flip — por isso dá pra animar a rotação aqui sem
-// conflitar com o que roda todo frame no update().
-function swingWeapon(scene) {
-  weaponSprite.rotation = Phaser.Math.DegToRad(-30);
-  scene.tweens.add({
-    targets: weaponSprite,
-    rotation: Phaser.Math.DegToRad(50),
-    duration: 140,
-    yoyo: true,
-    ease: 'Quad.out',
+  const baitId = getBestBait(inventory);
+  startFishingAttempt({
+    biteChance: getBiteChance(baitId),
+    reactionMs: getReactionWindowMs(castQuality),
+    maxWaitTicks: MAX_WAIT_TICKS,
+    onResult: (outcome) => handleFishingResult(scene, outcome, baitId),
   });
 }
 
-// 'attack' tem prioridade sobre tudo — enquanto o timer não zera, o
-// personagem mostra a animação de golpe mesmo se `isMoving` for true (o
-// jogador não anda durante o próprio ataque, mas outros estados podem vir a
-// se sobrepor no futuro, daí a prioridade explícita em vez de assumir).
-function currentAnimMode(isMoving) {
-  if (isAttacking) return 'attack';
-  return isMoving ? 'walk' : 'idle';
+function handleFishingResult(scene, outcome, baitId) {
+  // Isca só se perde se um peixe chegou a morder (sucesso ou escapou) —
+  // "nada mordeu"/"cedo demais" significam que ela ainda está no anzol.
+  if (baitId && (outcome === 'sucesso' || outcome === 'escapou')) {
+    removeItem(inventory, baitId, 1);
+  }
+
+  if (outcome === 'sucesso') {
+    berries += FISH_REWARD;
+    setBerries(berries);
+    spawnMoneyText(scene, player.x, player.y - 60, FISH_REWARD);
+    const skillResult = trainSkill(progression, 'pesca');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Pesca');
+    return;
+  }
+
+  const message = {
+    escapou: 'O peixe escapou...',
+    'nada-mordeu': 'Nada mordeu a isca.',
+    'cedo-demais': 'Você puxou cedo demais.',
+  }[outcome];
+  spawnMissText(scene, player.x, player.y - 60, message ?? 'Nada aconteceu.');
 }
 
 export function update(time, delta) {
-  updateEnemy(enemy, delta);
-
-  if (isAttacking) {
-    attackTimer -= delta;
-    if (attackTimer <= 0) isAttacking = false;
+  if (isMenuOpen()) {
+    // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
+    // Phaser própria (ver ui/menuManager.js).
+    player.body.setVelocity(0, 0);
+    updateCharacterVisual(player, animState, delta, 'idle', facing);
+    updateLayerVisual(weaponSprite, equipState, player, delta, 'idle', facing);
+    return;
   }
 
-  if (isMenuOpen()) {
-    // Personagem/Inventário abertos — mundo congela igual ao editor/combate,
-    // só que sem nenhuma UI de Phaser própria (ver ui/menuManager.js).
+  if (isFishingActive()) {
+    // Parado olhando a água enquanto a barra de reação roda — ver keydown-F.
     player.body.setVelocity(0, 0);
-    updateCharacterVisual(player, animState, delta, currentAnimMode(false), facing);
-    updateLayerVisual(weaponSprite, equipState, player, delta, currentAnimMode(false), facing);
+    updateCharacterVisual(player, animState, delta, 'idle', facing);
+    updateLayerVisual(weaponSprite, equipState, player, delta, 'idle', facing);
     return;
   }
 
   if (isEditorModeActive()) {
     player.body.setVelocity(0, 0);
-    updateCharacterVisual(player, animState, delta, currentAnimMode(false), facing);
-    updateLayerVisual(weaponSprite, equipState, player, delta, currentAnimMode(false), facing);
+    updateCharacterVisual(player, animState, delta, 'idle', facing);
+    updateLayerVisual(weaponSprite, equipState, player, delta, 'idle', facing);
     panEditorCamera(this, delta, cursors, wasd);
-    return;
-  }
-
-  if (encounterState.active) {
-    // Sem movimento livre durante o combate — tudo acontece por clique
-    // (ver handleCombatClick). O personagem só fica parado, "respirando" —
-    // ou atacando, se `isAttacking` estiver ativo (ver performPlayerAttack).
-    player.body.setVelocity(0, 0);
-    updateCharacterVisual(player, animState, delta, currentAnimMode(false), facing);
-    updateLayerVisual(weaponSprite, equipState, player, delta, currentAnimMode(false), facing);
     return;
   }
 
@@ -448,6 +394,6 @@ export function update(time, delta) {
     }
   }
 
-  updateCharacterVisual(player, animState, delta, currentAnimMode(isMoving), facing);
-  updateLayerVisual(weaponSprite, equipState, player, delta, currentAnimMode(isMoving), facing);
+  updateCharacterVisual(player, animState, delta, isMoving ? 'walk' : 'idle', facing);
+  updateLayerVisual(weaponSprite, equipState, player, delta, isMoving ? 'walk' : 'idle', facing);
 }
