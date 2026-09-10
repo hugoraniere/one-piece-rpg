@@ -1,0 +1,85 @@
+/* Aviso de "essa ação não aconteceu, e é por isso" — sem vara, longe
+   d'água, em cooldown de coleta. Diferente do texto flutuante (que é pra
+   resultado de uma ação que JÁ rolou): fica fixo na tela (não preso ao
+   personagem que pode estar se mexendo) e dura tempo real de leitura, não
+   600ms. Ver conversa de design — os dois buracos que geraram isto (F longe
+   d'água, G em cooldown) eram completamente mudos antes. */
+
+.block-toast {
+  position: fixed;
+  bottom: 90px;
+  left: 50%;
+  transform: translateX(-50%) translateY(8px);
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  border: 1px solid #241708;
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+  opacity: 0;
+  transition: opacity 0.18s ease, transform 0.18s ease;
+  min-width: 240px;
+  z-index: 21;
+  font-family: 'Archivo', sans-serif;
+  pointer-events: none;
+}
+.block-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
+.block-toast .row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+.block-toast .badge-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
+  border: 1.5px solid #b8752e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.block-toast .badge-circle .icon {
+  width: 14px;
+  height: 14px;
+  color: #3b2415;
+}
+.block-toast .msg {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #ece2c8;
+}
+
+.block-toast .drain-track {
+  height: 3px;
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.block-toast .drain-fill {
+  height: 100%;
+  width: 100%;
+  background: #b8752e;
+  transform-origin: left;
+}
+/* A transição/duração é montada por código a cada chamada (ver
+   blockToast.js) — precisa ser reiniciada do zero toda vez, senão um
+   segundo aviso rápido herda a barra já pela metade do anterior. */
+.block-toast.drain-anim .drain-fill {
+  animation: block-drain 2.6s linear forwards;
+}
+@keyframes block-drain {
+  from {
+    transform: scaleX(1);
+  }
+  to {
+    transform: scaleX(0);
+  }
+}

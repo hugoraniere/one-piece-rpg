@@ -86,5 +86,12 @@ export const OFICIO_SKILLS = [
   { key: 'arqueologia', icon: 'arqueologia', name: 'Arqueologia', real: false, trainedBy: 'Sem ruínas escaváveis ainda.' },
 ];
 
+// Acha o ícone/nome de qualquer atributo ou perícia pelo key — usado pelo
+// chip de progressão (ver ui/progressChip.js) pra não precisar de um mapa
+// separado toda vez que um novo verbo de jogo treinar algo.
+export function findStatMeta(key) {
+  return ATTRIBUTES.find((m) => m.key === key) ?? COMBAT_SKILLS.find((m) => m.key === key) ?? OFICIO_SKILLS.find((m) => m.key === key);
+}
+
 // Haki não aparece em lugar nenhum da UI até ser despertado — nenhum dado
 // aqui, de propósito (ver characterMenu.js).

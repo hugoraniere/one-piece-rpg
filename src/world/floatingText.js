@@ -1,19 +1,38 @@
 // Texto flutuando e sumindo — usado pra dano e pra avisos de progressão
 // (subiu de nível). Mesma animação pros dois, só muda o texto/cor.
+//
+// Dois ajustes em cima da versão original (ver conversa de design —
+// "muito rápidas e invisíveis"):
+//   - `activeCount` desloca cada texto novo um pouco mais acima do que o
+//     anterior enquanto ainda houver algum na tela, pra dois nascendo quase
+//     juntos (ex: pescou + subiu de nível) não ficarem exatamente um em
+//     cima do outro.
+//   - a duração escala com o tamanho da mensagem — "+8 Berries" continua
+//     rápido, mas uma frase tipo "Não achou nada pra caçar." fica tempo
+//     real de leitura em vez dos mesmos 600ms fixos.
+let activeCount = 0;
+
 function spawnFloatingText(scene, x, y, message, color, size) {
-  const text = scene.add.text(x, y, message, {
+  const startY = y - activeCount * 20;
+  const duration = Math.min(1400, 600 + Math.max(0, message.length - 10) * 25);
+
+  const text = scene.add.text(x, startY, message, {
     font: `bold ${size}px monospace`,
     color,
   });
   text.setOrigin(0.5, 0.5);
   text.setDepth(9001);
+  activeCount += 1;
   scene.tweens.add({
     targets: text,
-    y: y - 40,
+    y: startY - 40,
     alpha: 0,
-    duration: 600,
+    duration,
     ease: 'Cubic.out',
-    onComplete: () => text.destroy(),
+    onComplete: () => {
+      text.destroy();
+      activeCount = Math.max(0, activeCount - 1);
+    },
   });
 }
 

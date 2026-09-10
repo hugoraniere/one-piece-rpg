@@ -40,7 +40,10 @@ import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
 import { toggleMapMenu } from '../ui/mapMenu.js';
+import { findStatMeta } from '../ui/menuData.js';
 import { cancelFishingAttempt, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
+import { showBlocked } from '../ui/blockToast.js';
+import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
 
 let player; // Sprite com física — a posição/colisão "de verdade"
 let shadow; // elipse sob os pés, sincronizada com o player todo frame
@@ -66,8 +69,9 @@ const GATHER_COOLDOWN_MS = 2500;
 const MINHOCA_SUCCESS_CHANCE = 0.7;
 let treePositions = [];
 let lastGatherAt = -Infinity;
-let lastNoRodHintAt = -Infinity;
-const NO_ROD_HINT_COOLDOWN_MS = 1500; // evita spam de "precisa de vara" com F segurado (key-repeat)
+let lastGatherBlockHintAt = -Infinity;
+let lastFishBlockHintAt = -Infinity;
+const BLOCK_HINT_COOLDOWN_MS = 1500; // evita reiniciar a animação do aviso a cada repetição de tecla segurada
 
 export function preload() {
   preloadGroundAssets(this);
@@ -204,28 +208,54 @@ export function create() {
 // keydown-G acima.
 // ============================================================================
 
+// Treina uma perícia E acende o chip de progressão (ver ui/progressChip.js)
+// — helper só pra não repetir "acha o ícone/nome e decide se foi treino
+// normal ou subiu de nível" nos dois lugares que já treinam algo (pesca,
+// caça). O texto flutuante de "subiu de nível" continua por conta de quem
+// chamou — o chip é o complemento persistente, não substitui o flutuante.
+function trainAndNotify(key) {
+  const result = trainSkill(progression, key);
+  const meta = findStatMeta(key);
+  if (meta) {
+    if (result.leveledUp) showLevelUp(meta);
+    else showTrainingProgress(meta, progression.skills[key]);
+  }
+  return result;
+}
+
+function itemLabel(itemId, qty) {
+  const def = ITEM_DEFS[itemId];
+  return `${def.icon} +${qty} ${def.name}`;
+}
+
 function handleGather(scene) {
   const now = scene.time.now;
-  if (now - lastGatherAt < GATHER_COOLDOWN_MS) return;
+  if (now - lastGatherAt < GATHER_COOLDOWN_MS) {
+    if (now - lastGatherBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
+      lastGatherBlockHintAt = now;
+      showBlocked('sobrevivencia', 'Ainda recuperando fôlego da coleta.');
+    }
+    return;
+  }
   lastGatherAt = now;
 
   const nearTree = treePositions.some((t) => Phaser.Math.Distance.Between(player.x, player.y, t.x, t.y) <= GATHER_TREE_RANGE);
   if (nearTree) {
     addItem(inventory, 'graveto', 1);
-    spawnItemText(scene, player.x, player.y - 60, '+1 Graveto');
+    spawnItemText(scene, player.x, player.y - 60, itemLabel('graveto', 1));
     return;
   }
 
   if (isNearWater(scene, player.x, player.y)) {
     addItem(inventory, 'isca-improvisada', 1);
-    spawnItemText(scene, player.x, player.y - 60, '+1 Isca Improvisada');
+    spawnItemText(scene, player.x, player.y - 60, itemLabel('isca-improvisada', 1));
     return;
   }
 
   if (Math.random() < MINHOCA_SUCCESS_CHANCE) {
     addItem(inventory, 'minhoca', 1);
-    spawnItemText(scene, player.x, player.y - 60, '+1 Minhoca');
-    const skillResult = trainSkill(progression, 'caca');
+    spawnItemText(scene, player.x, player.y - 60, itemLabel('minhoca', 1));
+    const skillResult = trainAndNotify('caca');
     if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Caça');
   } else {
     spawnMissText(scene, player.x, player.y - 60, 'Não achou nada pra caçar.');
@@ -269,13 +299,20 @@ function facingVector(dir) {
 function tryStartFishing(scene, targetPoint) {
   if (equipState.equippedLayerId !== 'vara-de-pescar') {
     const now = scene.time.now;
-    if (now - lastNoRodHintAt >= NO_ROD_HINT_COOLDOWN_MS) {
-      lastNoRodHintAt = now;
-      spawnMissText(scene, player.x, player.y - 60, 'Você precisa de uma vara equipada.');
+    if (now - lastFishBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
+      lastFishBlockHintAt = now;
+      showBlocked('pesca', 'Você precisa de uma vara equipada.');
     }
     return;
   }
-  if (!isNearWater(scene, player.x, player.y)) return;
+  if (!isNearWater(scene, player.x, player.y)) {
+    const now = scene.time.now;
+    if (now - lastFishBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
+      lastFishBlockHintAt = now;
+      showBlocked('pesca', 'Muito longe da água pra pescar.');
+    }
+    return;
+  }
 
   let target;
   let castQuality;
@@ -316,7 +353,7 @@ function handleFishingResult(scene, outcome, baitId) {
     berries += FISH_REWARD;
     setBerries(berries);
     spawnMoneyText(scene, player.x, player.y - 60, FISH_REWARD);
-    const skillResult = trainSkill(progression, 'pesca');
+    const skillResult = trainAndNotify('pesca');
     if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Pesca');
     return;
   }

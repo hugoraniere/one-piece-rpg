@@ -19,10 +19,14 @@ const MOODLE_DEFS = [
   { key: 'ferido', severity: 'bad-2', label: 'Ferido — sangrando aos poucos' },
 ];
 
+let hpFrameEl;
 let hpFillEl;
 let hpNumEl;
+let berriesFrameEl;
 let berriesEl;
 let moodleTrayEl;
+let lastHp = null;
+let lastBerries = null;
 
 export function initHud() {
   injectMoodleIcons();
@@ -46,10 +50,14 @@ export function initHud() {
     <div class="moodle-tray" id="hud-moodle-tray"></div>
   `;
 
+  hpFrameEl = overlay.querySelector('.hp-frame');
   hpFillEl = overlay.querySelector('#hud-hp-fill');
   hpNumEl = overlay.querySelector('#hud-hp-num');
+  berriesFrameEl = overlay.querySelector('.berries');
   berriesEl = overlay.querySelector('#hud-berries');
   moodleTrayEl = overlay.querySelector('#hud-moodle-tray');
+  lastHp = null;
+  lastBerries = null;
 
   MOODLE_DEFS.forEach(({ key, severity, label }) => {
     const el = document.createElement('div');
@@ -60,14 +68,28 @@ export function initHud() {
   });
 }
 
+// Pisca o chip (escala + brilho dourado, ver hud.css) só quando o valor
+// realmente muda — evita piscar já na primeira chamada de create() (que só
+// está preenchendo o estado inicial, não é uma "mudança" de verdade pro
+// jogador ver).
+function pulse(el) {
+  el.classList.remove('pulse');
+  void el.offsetWidth; // reflow — sem isso o navegador não reinicia a animação numa segunda pulsação rápida
+  el.classList.add('pulse');
+}
+
 export function setHp(current, max) {
   const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
   hpFillEl.style.width = `${pct}%`;
   hpNumEl.textContent = `${current}/${max}`;
+  if (lastHp !== null && current !== lastHp) pulse(hpFrameEl);
+  lastHp = current;
 }
 
 export function setBerries(amount) {
   berriesEl.textContent = amount;
+  if (lastBerries !== null && amount !== lastBerries) pulse(berriesFrameEl);
+  lastBerries = amount;
 }
 
 export function setMoodle(key, active) {

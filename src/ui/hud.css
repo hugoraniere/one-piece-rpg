@@ -90,6 +90,28 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Pulso de "o valor mudou" — dispara em setHp/setBerries (ver hud.js) só
+   quando o número é diferente do anterior, não em toda chamada. Resolve
+   "ganhei Berries e não percebi porque só o número trocou". */
+@keyframes hud-pulse {
+  0% {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(230, 198, 110, 0.7);
+    transform: scale(1);
+  }
+  30% {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), 0 0 0 6px rgba(230, 198, 110, 0);
+    transform: scale(1.05);
+  }
+  100% {
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), 0 0 0 0 rgba(230, 198, 110, 0);
+    transform: scale(1);
+  }
+}
+.hp-frame.pulse,
+.berries.pulse {
+  animation: hud-pulse 0.5s ease;
+}
+
 .moodle-tray {
   position: absolute;
   top: 12px;

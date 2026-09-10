@@ -1,0 +1,81 @@
+/* Chip de progressão — some/aparece perto da HUD (canto onde vida/Berries
+   já moram) toda vez que uma perícia/atributo treina, não só quando sobe
+   de nível. Resolve "ganhei XP? passou de nível? como eu vejo isso sem
+   abrir a ficha?" — ver conversa de design. Reaproveita a mesma linguagem
+   de chip de madeira do resto da HUD (ver hud.css). */
+
+.progress-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  border: 1px solid #241708;
+  border-radius: 6px;
+  padding: 5px 9px 5px 5px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  width: fit-content;
+  opacity: 0;
+  transform: translateX(-8px) scale(0.94);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  pointer-events: none;
+}
+.progress-chip.show {
+  opacity: 1;
+  transform: translateX(0) scale(1);
+}
+.progress-chip.levelup {
+  animation: progress-chip-pop 0.6s ease;
+}
+@keyframes progress-chip-pop {
+  0% {
+    transform: scale(1);
+  }
+  35% {
+    transform: scale(1.12);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4), 0 0 14px 2px rgba(230, 198, 110, 0.9);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+.progress-chip .badge-circle {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
+  border: 1.5px solid #3b2415;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.progress-chip .badge-circle .icon {
+  width: 14px;
+  height: 14px;
+  color: #3b2415;
+}
+.progress-chip .info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.progress-chip .skill-name {
+  font-size: 10px;
+  font-weight: 700;
+  color: #ece2c8;
+  letter-spacing: 0.02em;
+}
+.progress-chip .bar-track {
+  width: 96px;
+  height: 7px;
+  background: #4a3a1a;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.progress-chip .bar-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #e6c66e, #b8752e);
+  transition: width 0.2s ease;
+}

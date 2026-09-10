@@ -143,18 +143,37 @@ function mountInventoryMenu(panel, ctx) {
 
   panel.querySelectorAll('.slot.equipable').forEach((slot) => {
     slot.addEventListener('click', () => {
-      ctx.onEquip(slot.dataset.item);
+      const itemId = slot.dataset.item;
+      ctx.onEquip(itemId);
       mountInventoryMenu(panel, ctx);
+      // Só pisca se o clique EQUIPOU (não desequipar) — "acabei de equipar
+      // algo" merece destaque, "guardei de volta" não precisa.
+      const newSlot = panel.querySelector(`.slot[data-item="${itemId}"]`);
+      flashOnce(newSlot?.classList.contains('equipped') ? newSlot : null);
     });
   });
 
   panel.querySelectorAll('.craft-btn').forEach((btn) => {
     btn.addEventListener('click', () => {
       if (btn.disabled) return;
-      ctx.onCraft(btn.dataset.recipe);
+      const recipeId = btn.dataset.recipe;
+      const success = ctx.onCraft(recipeId);
       mountInventoryMenu(panel, ctx);
+      const newRow = success ? panel.querySelector(`.craft-btn[data-recipe="${recipeId}"]`)?.closest('.craft-row') : null;
+      flashOnce(newRow);
     });
   });
+}
+
+// Confirmação de "isso acabou de acontecer" sem precisar de um toast por
+// cima do menu — pisca a própria linha/slot que mudou (ver conversa de
+// design: fabricar/equipar não davam nenhum feedback antes disso).
+function flashOnce(el) {
+  if (!el) return;
+  el.classList.remove('just-changed');
+  void el.offsetWidth;
+  el.classList.add('just-changed');
+  setTimeout(() => el.classList.remove('just-changed'), 700);
 }
 
 // `onEquip(itemId)` alterna equipar/desequipar (chamando de novo no mesmo
