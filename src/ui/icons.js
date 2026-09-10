@@ -43,6 +43,9 @@ const MENU_SYMBOLS = `
 <symbol id="i-vazio" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
 <symbol id="i-tripulante" viewBox="0 0 24 24"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="2" x2="12" y2="6" stroke="currentColor" stroke-width="1.6"/><line x1="12" y1="18" x2="12" y2="22" stroke="currentColor" stroke-width="1.6"/><line x1="2" y1="12" x2="6" y2="12" stroke="currentColor" stroke-width="1.6"/><line x1="18" y1="12" x2="22" y2="12" stroke="currentColor" stroke-width="1.6"/></symbol>
 <symbol id="i-navio" viewBox="0 0 24 24"><path d="M4 15l2 5h12l2-5H4z" fill="currentColor"/><line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" stroke-width="1.6"/><path d="M12 4l6 6H12V4z" fill="currentColor"/></symbol>
+<symbol id="i-personagem" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="4" fill="currentColor"/><path d="M4 21c0-4.4 3.6-7.2 8-7.2s8 2.8 8 7.2" fill="currentColor"/></symbol>
+<symbol id="i-inventario" viewBox="0 0 24 24"><path d="M8 9.5V7a4 4 0 018 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="4.5" y="9.5" width="15" height="10.5" rx="2" fill="currentColor"/></symbol>
+<symbol id="i-mapa" viewBox="0 0 24 24"><path d="M9 4.5L4.5 6.3v13.2L9 17.7l6 1.8 4.5-1.8V4.5L15 6.3l-6-1.8z" fill="currentColor"/><path d="M9 4.5v13.2M15 6.3v13.2" stroke="rgba(0,0,0,0.25)" stroke-width="0.8"/></symbol>
 `;
 
 let injected = false;

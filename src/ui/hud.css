@@ -45,8 +45,8 @@
   text-transform: uppercase;
 }
 .hp-bar {
-  width: 120px;
-  height: 11px;
+  width: 170px;
+  height: 14px;
   background: #4a2020;
   border-radius: 3px;
   overflow: hidden;
@@ -201,4 +201,39 @@
 }
 .moodle:hover .tip {
   opacity: 1;
+}
+
+/* Botões clicáveis de Personagem/Inventário/Mapa — mesma função dos
+   atalhos C/I/M, só que clicável (ver hud.js#bindMenuButtons). Canto
+   inferior direito, longe da bandeja de moodles (topo-direita) e da barra
+   de atalhos de teclado (embaixo, fora deste overlay). */
+.menu-buttons {
+  position: absolute;
+  bottom: 12px;
+  right: 12px;
+  display: flex;
+  gap: 8px;
+}
+.menu-btn {
+  pointer-events: auto;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
+  border: 2px solid #3b2415;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b2415;
+  cursor: pointer;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+.menu-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
+}
+.menu-btn .icon {
+  width: 19px;
+  height: 19px;
 }

@@ -48,6 +48,11 @@ export function initHud() {
       <div class="berries"><span class="coin"></span><span id="hud-berries">0</span></div>
     </div>
     <div class="moodle-tray" id="hud-moodle-tray"></div>
+    <div class="menu-buttons" id="hud-menu-buttons">
+      <div class="menu-btn" data-menu="personagem" title="Personagem (C)"><svg class="icon" aria-hidden="true"><use href="#i-personagem"></use></svg></div>
+      <div class="menu-btn" data-menu="inventario" title="Inventário (I)"><svg class="icon" aria-hidden="true"><use href="#i-inventario"></use></svg></div>
+      <div class="menu-btn" data-menu="mapa" title="Mapa (M)"><svg class="icon" aria-hidden="true"><use href="#i-mapa"></use></svg></div>
+    </div>
   `;
 
   hpFrameEl = overlay.querySelector('.hp-frame');
@@ -95,4 +100,16 @@ export function setBerries(amount) {
 export function setMoodle(key, active) {
   const el = moodleTrayEl.querySelector(`[data-key="${key}"]`);
   if (el) el.classList.toggle('show', active);
+}
+
+// Liga os botões clicáveis de Personagem/Inventário/Mapa aos MESMOS
+// handlers que os atalhos de teclado já chamam — hud.js não sabe nada de
+// progressão/inventário, só repassa o clique (ver villageScene.js, que
+// chama isto uma vez logo depois de initHud()).
+export function bindMenuButtons({ onPersonagem, onInventario, onMapa }) {
+  const overlay = document.getElementById('hud-overlay');
+  const HANDLERS = { personagem: onPersonagem, inventario: onInventario, mapa: onMapa };
+  overlay.querySelectorAll('.menu-btn').forEach((btn) => {
+    btn.addEventListener('click', () => HANDLERS[btn.dataset.menu]?.());
+  });
 }

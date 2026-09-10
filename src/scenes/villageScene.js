@@ -35,7 +35,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { initHud, setBerries, setHp } from '../ui/hud.js';
+import { bindMenuButtons, initHud, setBerries, setHp } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -113,21 +113,27 @@ export function create() {
 
   treePositions = VILLAGE_PROPS.filter((p) => TREE_KEYS.includes(p.key)).map((p) => ({ x: p.x, y: p.y }));
 
-  // Menus (Personagem/Inventário) — ver ui/menuManager.js. Não abrem no
-  // editor nem com uma pescaria em andamento, pra não empilhar estado de UI
-  // incompatível.
-  this.input.keyboard.on('keydown-C', () => {
+  // Menus (Personagem/Inventário/Mapa) — ver ui/menuManager.js. Não abrem
+  // no editor nem com uma pescaria em andamento, pra não empilhar estado de
+  // UI incompatível. Funções nomeadas (em vez de inline) porque agora têm
+  // DOIS jeitos de chamar a mesma coisa: atalho de teclado e o botão
+  // clicável do HUD (ver bindMenuButtons logo abaixo).
+  const openCharacterMenu = () => {
     if (isEditorModeActive() || isFishingActive()) return;
     toggleCharacterMenu(progression);
-  });
-  this.input.keyboard.on('keydown-I', () => {
+  };
+  const openInventoryMenu = () => {
     if (isEditorModeActive() || isFishingActive()) return;
     toggleInventoryMenu({ inventory, equipState, onEquip: handleEquip, onCraft: handleCraft });
-  });
-  this.input.keyboard.on('keydown-M', () => {
+  };
+  const openMapMenu = () => {
     if (isEditorModeActive() || isFishingActive()) return;
     toggleMapMenu();
-  });
+  };
+  this.input.keyboard.on('keydown-C', openCharacterMenu);
+  this.input.keyboard.on('keydown-I', openInventoryMenu);
+  this.input.keyboard.on('keydown-M', openMapMenu);
+  bindMenuButtons({ onPersonagem: openCharacterMenu, onInventario: openInventoryMenu, onMapa: openMapMenu });
 
   // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
   // atalho do modo editor, ver editor/editorMode.js — os dois listeners
