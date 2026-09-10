@@ -44,6 +44,7 @@ import { findStatMeta } from '../ui/menuData.js';
 import { cancelFishingAttempt, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
 import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
+import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
 
 let player; // Sprite com física — a posição/colisão "de verdade"
 let shadow; // elipse sob os pés, sincronizada com o player todo frame
@@ -173,7 +174,10 @@ export function create() {
   // Se a cena for destruída com uma pescaria em andamento (recarregar em
   // dev, futura troca de cena), encerra o timer em vez de deixar rodando
   // sozinho sem ninguém pra receber o resultado.
-  this.events.once('shutdown', () => cancelFishingAttempt());
+  this.events.once('shutdown', () => {
+    cancelFishingAttempt();
+    resetRod(weaponSprite);
+  });
 
   this.add
     .text(12, window.innerHeight - 34, 'Q: equipar/desequipar arma   G: coletar   F: pescar (segure e solte)', {
@@ -197,6 +201,12 @@ export function create() {
         inventory,
         equipState,
       }),
+      // Pra testar a animação de pesca sem precisar chegar perto d'água de
+      // verdade (ver character/fishingAnimation.js).
+      playCastAnim: () => playCast(this, weaponSprite),
+      playBiteAnim: () => playBiteJitter(this, weaponSprite),
+      playResultAnim: (outcome) => playReelResult(this, weaponSprite, outcome),
+      getRodRotationDeg: () => Phaser.Math.RadToDeg(weaponSprite.rotation),
     };
   }
 }
@@ -334,15 +344,19 @@ function tryStartFishing(scene, targetPoint) {
   }
 
   const baitId = getBestBait(inventory);
+  playCast(scene, weaponSprite);
   startFishingAttempt({
     biteChance: getBiteChance(baitId),
     reactionMs: getReactionWindowMs(castQuality),
     maxWaitTicks: MAX_WAIT_TICKS,
+    onBite: () => playBiteJitter(scene, weaponSprite),
     onResult: (outcome) => handleFishingResult(scene, outcome, baitId),
   });
 }
 
 function handleFishingResult(scene, outcome, baitId) {
+  playReelResult(scene, weaponSprite, outcome);
+
   // Isca só se perde se um peixe chegou a morder (sucesso ou escapou) —
   // "nada mordeu"/"cedo demais" significam que ela ainda está no anzol.
   if (baitId && (outcome === 'sucesso' || outcome === 'escapou')) {

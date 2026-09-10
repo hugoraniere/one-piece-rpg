@@ -3,13 +3,21 @@
    resultado de uma ação que JÁ rolou): fica fixo na tela (não preso ao
    personagem que pode estar se mexendo) e dura tempo real de leitura, não
    600ms. Ver conversa de design — os dois buracos que geraram isto (F longe
-   d'água, G em cooldown) eram completamente mudos antes. */
+   d'água, G em cooldown) eram completamente mudos antes.
+
+   Posição — topo-centro, de propósito (ver debate de design): é a zona que
+   jogos usam pra alerta que precisa de atenção agora (ex: "item
+   conseguido" no Zelda), diferente do topo-esquerda (status pessoal
+   permanente) e topo-direita (status secundário passivo, moodles). Fica
+   perto de onde o olho já está (o personagem, ~centro da tela) sem
+   competir com nenhuma das duas zonas de HUD existentes. Reservado só pra
+   esta categoria — não vira endereço genérico de qualquer notificação. */
 
 .block-toast {
   position: fixed;
-  bottom: 90px;
+  top: 14px;
   left: 50%;
-  transform: translateX(-50%) translateY(8px);
+  transform: translateX(-50%) translateY(-8px);
   display: flex;
   flex-direction: column;
   gap: 5px;

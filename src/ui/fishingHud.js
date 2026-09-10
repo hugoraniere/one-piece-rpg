@@ -25,6 +25,7 @@ let maxTicks = 0;
 let biteChance = 0;
 let reactionMs = 0;
 let resultCallback = null;
+let biteCallback = null;
 
 function ensureDom() {
   if (rootEl) return;
@@ -48,7 +49,7 @@ export function isFishingActive() {
 // `maxWaitTicks` vem de sim/fishing.js (MAX_WAIT_TICKS) — não importamos
 // direto aqui pra este módulo continuar sem saber de regra de jogo nenhuma,
 // só de estado de UI/timer (mesma separação de fishingHud.js original).
-export function startFishingAttempt({ biteChance: chance, reactionMs: reaction, maxWaitTicks, onResult }) {
+export function startFishingAttempt({ biteChance: chance, reactionMs: reaction, maxWaitTicks, onResult, onBite }) {
   if (phase !== 'idle') return;
   ensureDom();
   phase = 'esperando';
@@ -57,6 +58,7 @@ export function startFishingAttempt({ biteChance: chance, reactionMs: reaction, 
   maxTicks = maxWaitTicks;
   elapsedTicks = 0;
   resultCallback = onResult;
+  biteCallback = onBite;
 
   rootEl.classList.remove('bite-active');
   hintEl.textContent = 'Aguardando mordida... segure a tecla';
@@ -84,6 +86,7 @@ function startBiteWindow() {
   waitIntervalId = null;
   phase = 'mordida';
 
+  if (biteCallback) biteCallback();
   rootEl.classList.add('bite-active');
   hintEl.textContent = 'MORDEU! Solte agora!';
   // Força um reflow antes de trocar a transição — sem isso o navegador pode
@@ -120,6 +123,7 @@ export function cancelFishingAttempt() {
   phase = 'idle';
   if (rootEl) rootEl.classList.remove('show', 'bite-active');
   resultCallback = null;
+  biteCallback = null;
 }
 
 function finish(outcome) {
@@ -131,5 +135,6 @@ function finish(outcome) {
   rootEl.classList.remove('show', 'bite-active');
   const callback = resultCallback;
   resultCallback = null;
+  biteCallback = null;
   if (callback) callback(outcome);
 }
