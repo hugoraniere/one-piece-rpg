@@ -104,6 +104,10 @@ export function create() {
   equipState = createLayerState();
   equipLayer(equipState, 'sword'); // equipada por padrão só pra já dar pra ver funcionando
   this.input.keyboard.on('keydown-Q', () => {
+    // Sem essa trava, Q desequipava a vara no meio de uma pescaria em
+    // andamento (ou por trás de um menu aberto) — a animação continuava
+    // rodando com a linha "largada sem dono" (ver auditoria de bugs).
+    if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
     equipState.equippedLayerId ? unequipLayer(equipState) : equipLayer(equipState, 'sword');
   });
 
@@ -207,6 +211,21 @@ export function create() {
       playBiteAnim: () => playBiteJitter(this, weaponSprite),
       playResultAnim: (outcome) => playReelResult(this, weaponSprite, outcome),
       getRodRotationDeg: () => Phaser.Math.RadToDeg(weaponSprite.rotation),
+      // Força um estado de "pescando" sem precisar estar perto d'água —
+      // só pra testar travas (Q/E) contra isFishingActive() sem depender
+      // de movimento de verdade.
+      forceStartFishing: () => startFishingAttempt({ biteChance: 0, reactionMs: 500, maxWaitTicks: 999, onResult: () => {} }),
+      isFishingActive: () => isFishingActive(),
+      isEditorModeActive: () => isEditorModeActive(),
+      getFacing: () => facing,
+      tryStartFishing: (point) => tryStartFishing(this, point),
+      // Teleporta o jogador pra testar coisas que dependem de posição
+      // (perto d'água, perto de árvore) sem depender de simulação de
+      // movimento via teclado, que é pouco confiável em automação.
+      setPlayerPos: (x, y) => {
+        player.body.reset(x, y);
+        shadow.setPosition(x, y + SHADOW_OFFSET_Y);
+      },
     };
   }
 }
@@ -327,6 +346,13 @@ function tryStartFishing(scene, targetPoint) {
   let target;
   let castQuality;
   if (targetPoint) {
+    const dx = targetPoint.x - player.x;
+    const dy = targetPoint.y - player.y;
+    // Vira o personagem (e a vara) pro lado do clique — sem isso o arremesso
+    // ia sempre visualmente pra direção que o personagem já estava olhando
+    // antes de pescar, mesmo mirando pro lado oposto na água.
+    facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+
     const dist = Phaser.Math.Distance.Between(player.x, player.y, targetPoint.x, targetPoint.y);
     const clampedDist = Math.min(dist, CAST_MAX_RANGE);
     const angle = Phaser.Math.Angle.Between(player.x, player.y, targetPoint.x, targetPoint.y);

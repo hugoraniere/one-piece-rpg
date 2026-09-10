@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 import { EDITOR_TERRAIN_PALETTE } from '../world/ground.js';
 import { EDITOR_PROP_PALETTE, createPropImage, editorObjects } from '../world/propRegistry.js';
+import { isFishingActive } from '../ui/fishingHud.js';
 
 // ============================================================================
 // MODO EDITOR — pra montar/ajustar o cenário visualmente, sem depender de
@@ -490,6 +491,10 @@ function paintTerrainAt(scene, worldX, worldY) {
 }
 
 function toggleEditorMode(scene, player) {
+  // Só trava LIGAR o editor com pesca ativa (nunca trava desligar) — sem
+  // isso dava pra abrir a paleta do editor por cima de uma pescaria ainda
+  // rodando escondida atrás (ver auditoria de bugs).
+  if (!editorMode && isFishingActive()) return;
   editorMode = !editorMode;
   editorGrid.setVisible(editorMode);
   editorToggleButton.setText(editorMode ? '🖌 Editor: ON' : '🖌 Editor: OFF');
