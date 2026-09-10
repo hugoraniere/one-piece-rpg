@@ -36,9 +36,25 @@ WATER_SRC_DIR = '/Users/hugo/Downloads/One Piece/Terreno/Transição Agua'
 def tile_fill(tile_img, width, height):
     w, h = tile_img.size
     layer = Image.new('RGBA', (width, height))
+    # Variantes espelhadas em xadrez (mesmo bloco de cor continua batendo
+    # na costura — espelhar não muda isso — só a MANCHA grande de luz/sombra
+    # deixa de repetir sempre no mesmo lugar). Sem isso, num tile grande o
+    # bastante pra reter detalhe pintado, a mancha de textura vira visível
+    # como um padrão em grade real (ver conversa de design — foi exatamente
+    # o que apareceu ao tirar o downscale de 120px pra 512px).
+    variants = {
+        (0, 0): tile_img,
+        (1, 0): tile_img.transpose(Image.FLIP_LEFT_RIGHT),
+        (0, 1): tile_img.transpose(Image.FLIP_TOP_BOTTOM),
+        (1, 1): tile_img.transpose(Image.ROTATE_180),
+    }
+    row = 0
     for ty in range(0, height, h):
+        col = 0
         for tx in range(0, width, w):
-            layer.paste(tile_img, (tx, ty))
+            layer.paste(variants[(col % 2, row % 2)], (tx, ty))
+            col += 1
+        row += 1
     return layer
 
 
