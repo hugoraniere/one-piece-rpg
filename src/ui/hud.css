@@ -239,14 +239,14 @@
 }
 
 /* Minimapa — moldura de "vigia de latão" só em CSS (gradiente simulando
-   metal + rebites), mesmo tratamento rápido do resto do HUD. O fundo é só
-   uma faixa grama/água na proporção MEDIDA da linha d'água real do mundo
-   (~86%/14%, ver scene_background_water_line.json e
-   tools/recolor_ground_palette.py pras cores) — não tenta traçar a costa de
-   verdade, só dar noção de "onde no mapa" até existir mais de uma
-   localização (ver conversa de design: baixa prioridade por ora). Canto
-   inferior esquerdo, único que ainda estava livre; acima da barra de dicas
-   do Phaser (texto fixo no rodapé, fora deste overlay). */
+   metal + rebites), mesmo tratamento rápido do resto do HUD. O fundo é uma
+   cor neutra de couro/pergaminho escuro (mesma paleta madeira já usada no
+   resto do HUD), não uma tentativa de simular o terreno pintado — duas
+   cores sólidas e saturadas (grama/água) ficavam destoando feio da arte
+   pintada e texturizada do chão de verdade. Só dá noção de "onde no mapa"
+   até existir mais de uma localização (ver conversa de design: baixa
+   prioridade por ora) e uma câmera/render de minimapa de verdade. Canto
+   inferior esquerdo, único que ainda estava livre. */
 .minimap-wrap {
   position: absolute;
   bottom: 40px;
@@ -275,7 +275,7 @@
   width: 90px;
   height: 90px;
   border-radius: 50%;
-  background: linear-gradient(180deg, #2b731d 0%, #2b731d 86%, #2e6887 86%, #2e6887 100%);
+  background: radial-gradient(circle at 40% 35%, #4a3524, #241708 88%);
   box-shadow: inset 0 0 0 3px #2a1c0e, inset 0 0 14px rgba(0, 0, 0, 0.55);
   overflow: hidden;
 }

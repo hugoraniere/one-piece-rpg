@@ -190,16 +190,6 @@ export function create() {
     resetRod(weaponSprite);
   });
 
-  this.add
-    .text(12, window.innerHeight - 34, 'Q: equipar/desequipar arma   G: coletar   F: pescar (segure e solte)', {
-      font: '13px monospace',
-      color: '#ffffff',
-      backgroundColor: '#000000aa',
-      padding: { x: 6, y: 4 },
-    })
-    .setScrollFactor(0)
-    .setDepth(9999);
-
   // Ganchos de depuração só em dev (o build de produção elimina este bloco
   // inteiro) — pra inspecionar o estado do jogo pelo console.
   if (import.meta.env.DEV) {
