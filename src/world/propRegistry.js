@@ -139,7 +139,7 @@ export const VILLAGE_PROPS = [
   // original), redundante com `lilypad.png` — sem uso real de doca nela.
   { key: 'prop-dock-platform', x: 280, y: 1741, scale: 1.3 },
   { key: 'prop-lilypad-reed', x: 1450, y: 1715, scale: 0.36 },
-  { key: 'prop-lilypad-reed', x: 2000, y: 1869, scale: 0.36 },
+  { key: 'prop-lilypad-reed', x: 2300, y: 1756, scale: 0.36 }, // longe da doca nova (x 1800-2160) — ver ground.js#buildPierDock
   { key: 'prop-rock-cluster-water', x: 900, y: 1743, scale: 1.03 },
 ];
 

@@ -18,7 +18,7 @@ import {
 } from '../character/layers.js';
 import { isEditorModeActive, panEditorCamera, setupEditor } from '../editor/editorMode.js';
 import { buildVillageProps, preloadVillageAssets, VILLAGE_PROPS } from '../world/propRegistry.js';
-import { buildGround, buildWaterCollision, isNearWater, isWaterPoint, preloadGroundAssets } from '../world/ground.js';
+import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadGroundAssets } from '../world/ground.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import { createHealth } from '../sim/health.js';
 import { createProgression, trainSkill } from '../sim/progression.js';
@@ -162,6 +162,7 @@ export function create() {
   wasd = this.input.keyboard.addKeys('W,A,S,D');
 
   buildVillageProps(this, player);
+  buildPierDock(this);
   buildWaterCollision(this, player);
   setupEditor(this, player);
 

@@ -1,4 +1,4 @@
-import { WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
 
 // Peças de caminho entram como TERRENO, não prop — elas são blocos de chão
 // de um tile inteiro (pintam encaixado no grid de 120px), não objetos com
@@ -33,6 +33,30 @@ export const EDITOR_TERRAIN_PALETTE = [
   { key: 'ground-sand-outer-corner-0', label: 'Canto externo (R gira)' },
   { key: 'ground-sand-inner-corner-0', label: 'Canto interno (R gira)' },
   { key: 'ground-sand-peninsula-0', label: 'Ponta de areia (R gira)' },
+
+  // Kit de doca modular (18 peças, ver tools/reprocess_pier_kit.py) — ao
+  // contrário do kit de grama/areia acima, aqui NÃO reduzimos pra "1 peça +
+  // gira por código": o grão da madeira é direcional (pranchas horizontais),
+  // então girar 90° deixaria o grão errado. Cada direção já vem desenhada
+  // certa no próprio pacote.
+  { key: 'pier-center', label: 'Doca (centro)' },
+  { key: 'pier-edge-n', label: 'Doca (borda N)' },
+  { key: 'pier-edge-e', label: 'Doca (borda L)' },
+  { key: 'pier-edge-s', label: 'Doca (borda S)' },
+  { key: 'pier-edge-w', label: 'Doca (borda O)' },
+  { key: 'pier-outer-nw', label: 'Doca (canto ext. NO)' },
+  { key: 'pier-outer-ne', label: 'Doca (canto ext. NE)' },
+  { key: 'pier-outer-se', label: 'Doca (canto ext. SE)' },
+  { key: 'pier-outer-sw', label: 'Doca (canto ext. SO)' },
+  { key: 'pier-connect-n', label: 'Doca (conector N)' },
+  { key: 'pier-connect-e', label: 'Doca (conector L)' },
+  { key: 'pier-connect-s', label: 'Doca (conector S)' },
+  { key: 'pier-connect-w', label: 'Doca (conector O)' },
+  { key: 'pier-inner-nw', label: 'Doca (canto int. NO)' },
+  { key: 'pier-inner-ne', label: 'Doca (canto int. NE)' },
+  { key: 'pier-inner-se', label: 'Doca (canto int. SE)' },
+  { key: 'pier-inner-sw', label: 'Doca (canto int. SO)' },
+  { key: 'pier-t', label: 'Doca (T)' },
 ];
 
 export function preloadGroundAssets(scene) {
@@ -58,6 +82,63 @@ export function preloadGroundAssets(scene) {
   scene.load.image('ground-sand-outer-corner-0', 'assets/ground/sand_outer_corner_0.png');
   scene.load.image('ground-sand-inner-corner-0', 'assets/ground/sand_inner_corner_0.png');
   scene.load.image('ground-sand-peninsula-0', 'assets/ground/sand_peninsula_0.png');
+
+  scene.load.image('pier-center', 'assets/water/pier/pier_center.png');
+  scene.load.image('pier-edge-n', 'assets/water/pier/pier_edge_n.png');
+  scene.load.image('pier-edge-e', 'assets/water/pier/pier_edge_e.png');
+  scene.load.image('pier-edge-s', 'assets/water/pier/pier_edge_s.png');
+  scene.load.image('pier-edge-w', 'assets/water/pier/pier_edge_w.png');
+  scene.load.image('pier-outer-nw', 'assets/water/pier/pier_outer_nw.png');
+  scene.load.image('pier-outer-ne', 'assets/water/pier/pier_outer_ne.png');
+  scene.load.image('pier-outer-se', 'assets/water/pier/pier_outer_se.png');
+  scene.load.image('pier-outer-sw', 'assets/water/pier/pier_outer_sw.png');
+  scene.load.image('pier-connect-n', 'assets/water/pier/pier_connect_n.png');
+  scene.load.image('pier-connect-e', 'assets/water/pier/pier_connect_e.png');
+  scene.load.image('pier-connect-s', 'assets/water/pier/pier_connect_s.png');
+  scene.load.image('pier-connect-w', 'assets/water/pier/pier_connect_w.png');
+  scene.load.image('pier-inner-nw', 'assets/water/pier/pier_inner_nw.png');
+  scene.load.image('pier-inner-ne', 'assets/water/pier/pier_inner_ne.png');
+  scene.load.image('pier-inner-se', 'assets/water/pier/pier_inner_se.png');
+  scene.load.image('pier-inner-sw', 'assets/water/pier/pier_inner_sw.png');
+  scene.load.image('pier-t', 'assets/water/pier/pier_t.png');
+}
+
+// Doca de verdade, desenhada à mão com o kit de 18 peças (ver
+// tools/reprocess_pier_kit.py) — mesmas peças disponíveis no pincel do
+// editor, só que já plantadas no mapa por padrão. Layout simples (retângulo
+// 3x3 saindo da praia pro mar): fileira 1 é 100% madeira (encosta na areia,
+// o kit não tem uma peça "madeira encontra areia" — fica uma borda reta
+// mesma, igual a doca antiga já fazia), fileira 2 tem água nas duas
+// laterais, fileira 3 fecha em água nos 3 lados (SW/S/SE). A fileira 3 cai
+// bem na última linha do mundo (WORLD_HEIGHT=1920) — o próprio limite do
+// mapa já impede andar além dela, então não precisa de peça de fechamento.
+const DOCK_COL_START = 15; // x mundo: 1800-2160
+const DOCK_ROW_START = 13; // y mundo: 1560-1920
+const DOCK_LAYOUT = [
+  ['pier-center', 'pier-center', 'pier-center'],
+  ['pier-edge-w', 'pier-center', 'pier-edge-e'],
+  ['pier-outer-sw', 'pier-edge-s', 'pier-outer-se'],
+];
+
+export function buildPierDock(scene) {
+  DOCK_LAYOUT.forEach((rowKeys, rowOffset) => {
+    rowKeys.forEach((key, colOffset) => {
+      const col = DOCK_COL_START + colOffset;
+      const row = DOCK_ROW_START + rowOffset;
+      const tile = scene.add.image(col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2, key);
+      tile.setDisplaySize(TILE_SIZE, TILE_SIZE);
+      tile.setDepth(-0.99); // mesma convenção do pincel do editor (ver paintTerrainAt em editorMode.js)
+    });
+  });
+}
+
+// buildWaterCollision (abaixo) bloqueia água em faixas de 32px seguindo a
+// curva do mar inteira — sem isso, a doca ficaria visualmente andável mas
+// com uma parede invisível por cima, já que o colisor não sabe que ali tem
+// madeira em vez de água.
+function isUnderDock(x) {
+  const worldX = x;
+  return worldX >= DOCK_COL_START * TILE_SIZE && worldX < (DOCK_COL_START + DOCK_LAYOUT[0].length) * TILE_SIZE;
 }
 
 export function buildGround(scene) {
@@ -87,6 +168,7 @@ export function buildWaterCollision(scene, player) {
   const depth = 700; // bem mais que suficiente até o fundo do mundo
 
   for (let x = 0; x < WORLD_WIDTH; x += segmentWidth) {
+    if (isUnderDock(x)) continue; // ali é madeira andável, não água (ver buildPierDock)
     const end = Math.min(x + segmentWidth, WORLD_WIDTH);
     let minY = line[x];
     for (let i = x + 1; i < end; i++) {
