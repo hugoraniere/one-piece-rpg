@@ -22,7 +22,7 @@ import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPo
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import { createHealth } from '../sim/health.js';
 import { createProgression, trainSkill } from '../sim/progression.js';
-import { createInventory, addItem, removeItem } from '../sim/inventory.js';
+import { createInventory, addItem, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, craft } from '../sim/crafting.js';
 import {
@@ -35,7 +35,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindMenuButtons, initHud, setBerries, setHp, setMinimapPos } from '../ui/hud.js';
+import { bindHotbar, bindMenuButtons, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -104,13 +104,18 @@ export function create() {
   weaponSprite = createLayerSprite(this, 'weapon-sword-front');
   equipState = createLayerState();
   equipLayer(equipState, 'sword'); // equipada por padrão só pra já dar pra ver funcionando
-  this.input.keyboard.on('keydown-Q', () => {
+  // Nomeada (em vez de inline) pra reaproveitar no clique do slot de espada
+  // da hotbar — mesmo padrão já usado pros menus (ver openCharacterMenu
+  // etc. logo abaixo).
+  const toggleSwordEquip = () => {
     // Sem essa trava, Q desequipava a vara no meio de uma pescaria em
     // andamento (ou por trás de um menu aberto) — a animação continuava
     // rodando com a linha "largada sem dono" (ver auditoria de bugs).
     if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
     equipState.equippedLayerId ? unequipLayer(equipState) : equipLayer(equipState, 'sword');
-  });
+    refreshHotbar();
+  };
+  this.input.keyboard.on('keydown-Q', toggleSwordEquip);
 
   treePositions = VILLAGE_PROPS.filter((p) => TREE_KEYS.includes(p.key)).map((p) => ({ x: p.x, y: p.y }));
 
@@ -135,6 +140,22 @@ export function create() {
   this.input.keyboard.on('keydown-I', openInventoryMenu);
   this.input.keyboard.on('keydown-M', openMapMenu);
   bindMenuButtons({ onPersonagem: openCharacterMenu, onInventario: openInventoryMenu, onMapa: openMapMenu });
+
+  // Hotbar — troca rápida do que está na mão sem abrir o Inventário. Só 2
+  // slots porque só existem 2 coisas equipáveis hoje (ver setHotbarState em
+  // ui/hud.js). O slot da espada reusa o mesmo toggle da tecla Q; o da vara
+  // avisa com o toast já existente se ainda não foi fabricada, em vez de
+  // deixar clicar num slot "travado" sem feedback nenhum.
+  const onHotbarRod = () => {
+    if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+    if (!hasItem(inventory, 'vara-de-pescar')) {
+      showBlocked('pesca', 'Você ainda não tem uma vara de pescar — fabrique uma no Inventário.');
+      return;
+    }
+    handleEquip('vara-de-pescar');
+  };
+  bindHotbar({ onSword: toggleSwordEquip, onRod: onHotbarRod });
+  refreshHotbar();
 
   // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
   // atalho do modo editor, ver editor/editorMode.js — os dois listeners
@@ -301,12 +322,25 @@ function handleEquip(itemId) {
   } else {
     equipLayer(equipState, def.equipLayerId);
   }
+  refreshHotbar();
 }
 
 function handleCraft(recipeId) {
   const recipe = RECIPES.find((r) => r.id === recipeId);
   if (!recipe) return false;
-  return craft(inventory, recipe);
+  const crafted = craft(inventory, recipe);
+  // Fabricar a vara pela primeira vez destrava o slot dela na hotbar na
+  // hora — sem isso o jogador só veria a mudança na próxima vez que
+  // equipar/desequipar alguma coisa.
+  if (crafted) refreshHotbar();
+  return crafted;
+}
+
+// Espelha equipState/inventory pro HUD (ver setHotbarState em ui/hud.js) —
+// chamado depois de qualquer coisa que possa mudar "o que está na mão" ou
+// "tem vara ou não" (equipar, fabricar, teclado ou clique na hotbar).
+function refreshHotbar() {
+  setHotbarState({ equipped: equipState.equippedLayerId, hasRod: hasItem(inventory, 'vara-de-pescar') });
 }
 
 // ============================================================================

@@ -297,3 +297,52 @@
   transform: translate(-50%, -50%);
   transition: left 0.1s linear, top 0.1s linear;
 }
+
+/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. Só 2
+   slots de verdade porque só existem 2 coisas equipáveis no jogo hoje
+   (espada sempre disponível, vara de pescar só se já fabricada) — ver
+   equipState em character/layers.js, que só guarda UM equippedLayerId por
+   vez. Nada de slots vazios fingindo itens que não existem. Centro-baixo,
+   único lugar ainda livre. */
+.hotbar {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  gap: 7px;
+}
+.hotbar-slot {
+  pointer-events: auto;
+  position: relative;
+  width: 46px;
+  height: 46px;
+  background: linear-gradient(180deg, #e8d9b0, #c7b280);
+  border: 1px solid #3b2415;
+  border-radius: 7px;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #3b2415;
+  cursor: pointer;
+  transition: box-shadow 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.hotbar-slot .icon {
+  width: 22px;
+  height: 22px;
+}
+.hotbar-slot:hover {
+  transform: translateY(-2px);
+}
+.hotbar-slot.equipped {
+  box-shadow: 0 0 0 3px #b8752e, inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+/* "Locked" aqui não é "nunca vai existir" (ver slot de habilidade do
+   wireframe) — é "ainda não fabricou": some o ícone, deixa o slot escuro,
+   volta a mostrar normal assim que a vara entrar no inventário. */
+.hotbar-slot.locked {
+  background: repeating-linear-gradient(45deg, #4a4238, #4a4238 4px, #3d3730 4px, #3d3730 8px);
+  color: #8a8070;
+  opacity: 0.75;
+}

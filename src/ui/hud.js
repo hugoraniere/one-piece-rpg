@@ -26,6 +26,8 @@ let berriesFrameEl;
 let berriesEl;
 let moodleTrayEl;
 let minimapDotEl;
+let hotbarSwordEl;
+let hotbarRodEl;
 let lastHp = null;
 let lastBerries = null;
 
@@ -65,6 +67,10 @@ export function initHud() {
       <div class="menu-btn" data-menu="inventario" title="Inventário (I)"><svg class="icon" aria-hidden="true"><use href="#i-inventario"></use></svg></div>
       <div class="menu-btn" data-menu="mapa" title="Mapa (M)"><svg class="icon" aria-hidden="true"><use href="#i-mapa"></use></svg></div>
     </div>
+    <div class="hotbar" id="hud-hotbar">
+      <div class="hotbar-slot" id="hud-hotbar-sword" title="Cutlass de Ferro (Q)"><svg class="icon" aria-hidden="true"><use href="#i-espada"></use></svg></div>
+      <div class="hotbar-slot locked" id="hud-hotbar-rod" title="Vara de Pescar"><svg class="icon" aria-hidden="true"><use href="#i-pesca"></use></svg></div>
+    </div>
   `;
 
   hpFrameEl = overlay.querySelector('.hp-frame');
@@ -74,6 +80,8 @@ export function initHud() {
   berriesEl = overlay.querySelector('#hud-berries');
   moodleTrayEl = overlay.querySelector('#hud-moodle-tray');
   minimapDotEl = overlay.querySelector('#hud-minimap-dot');
+  hotbarSwordEl = overlay.querySelector('#hud-hotbar-sword');
+  hotbarRodEl = overlay.querySelector('#hud-hotbar-rod');
   lastHp = null;
   lastBerries = null;
 
@@ -133,4 +141,19 @@ export function bindMenuButtons({ onPersonagem, onInventario, onMapa }) {
   overlay.querySelectorAll('.menu-btn').forEach((btn) => {
     btn.addEventListener('click', () => HANDLERS[btn.dataset.menu]?.());
   });
+}
+
+// `equipped` é o mesmo equipState.equippedLayerId de character/layers.js
+// ('sword' | 'vara-de-pescar' | null) — hud.js só espelha, não decide.
+// `hasRod` trava o slot da vara (visual + clique) até ela existir de
+// verdade no inventário (ver refreshHotbar em villageScene.js).
+export function setHotbarState({ equipped, hasRod }) {
+  hotbarSwordEl.classList.toggle('equipped', equipped === 'sword');
+  hotbarRodEl.classList.toggle('equipped', equipped === 'vara-de-pescar');
+  hotbarRodEl.classList.toggle('locked', !hasRod);
+}
+
+export function bindHotbar({ onSword, onRod }) {
+  hotbarSwordEl.addEventListener('click', () => onSword?.());
+  hotbarRodEl.addEventListener('click', () => onRod?.());
 }
