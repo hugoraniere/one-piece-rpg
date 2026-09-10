@@ -38,4 +38,12 @@ export const ITEM_DEFS = {
     isBait: true,
     baitTier: 1,
   },
+  // Só uma espécie por enquanto — variar peixe/raridade por local (zona de
+  // pesca) e "pescar lixo" em vez de peixe foram debatidos e propositalmente
+  // adiados (ver conversa de design), não esquecidos.
+  peixe: {
+    name: 'Peixe',
+    icon: '🐟',
+    category: 'comida',
+  },
 };

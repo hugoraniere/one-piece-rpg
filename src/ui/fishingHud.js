@@ -46,6 +46,14 @@ export function isFishingActive() {
   return phase !== 'idle';
 }
 
+// Só pra depuração (ver __gameDebug em villageScene.js) — testar a fase de
+// mordida de fora sem essa leitura significa ou monkey-patchar Math.random
+// (arriscado, o próprio Phaser usa Math.random internamente pra outras
+// coisas) ou apostar num tempo fixo de espera.
+export function getFishingPhase() {
+  return phase;
+}
+
 // `maxWaitTicks` vem de sim/fishing.js (MAX_WAIT_TICKS) — não importamos
 // direto aqui pra este módulo continuar sem saber de regra de jogo nenhuma,
 // só de estado de UI/timer (mesma separação de fishingHud.js original).

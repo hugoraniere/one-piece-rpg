@@ -41,7 +41,7 @@ import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
 import { toggleMapMenu } from '../ui/mapMenu.js';
 import { findStatMeta } from '../ui/menuData.js';
-import { cancelFishingAttempt, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
+import { cancelFishingAttempt, getFishingPhase, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
 import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
 import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
@@ -245,6 +245,11 @@ export function create() {
       isEditorModeActive: () => isEditorModeActive(),
       getFacing: () => facing,
       tryStartFishing: (point) => tryStartFishing(this, point),
+      // Solta a vara de fora (equivalente ao keyup-F/pointerup) — junto com
+      // tryStartFishing, dá pra simular uma captura de ponta a ponta sem
+      // depender de segurar tecla de verdade (pouco confiável em automação).
+      releaseFishingAttempt: () => releaseFishingAttempt(),
+      getFishingPhase: () => getFishingPhase(),
       // Teleporta o jogador pra testar coisas que dependem de posição
       // (perto d'água, perto de árvore) sem depender de simulação de
       // movimento via teclado, que é pouco confiável em automação.
@@ -429,11 +434,18 @@ function handleFishingResult(scene, outcome, baitId) {
   }
 
   if (outcome === 'sucesso') {
+    addItem(inventory, 'peixe', 1);
+    spawnItemText(scene, player.x, player.y - 60, itemLabel('peixe', 1));
+    // Berries direto na captura é ponte temporária, igual a linha de nylon
+    // de graça no create() — o peixe de verdade já existe no inventário
+    // (dá pra guardar, cozinhar, comer), só não tem ainda pra quem vender.
+    // Quando existir um comércio de verdade, isto sai daqui e vira o preço
+    // de venda do peixe, não recompensa automática por pescar.
     berries += FISH_REWARD;
     setBerries(berries);
-    spawnMoneyText(scene, player.x, player.y - 60, FISH_REWARD);
+    spawnMoneyText(scene, player.x, player.y - 76, FISH_REWARD);
     const skillResult = trainAndNotify('pesca');
-    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Pesca');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 92, 'Pesca');
     return;
   }
 
