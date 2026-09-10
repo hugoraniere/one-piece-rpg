@@ -46,6 +46,7 @@ const MENU_SYMBOLS = `
 <symbol id="i-personagem" viewBox="0 0 24 24"><circle cx="12" cy="7.5" r="4" fill="currentColor"/><path d="M4 21c0-4.4 3.6-7.2 8-7.2s8 2.8 8 7.2" fill="currentColor"/></symbol>
 <symbol id="i-inventario" viewBox="0 0 24 24"><path d="M8 9.5V7a4 4 0 018 0v2.5" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="4.5" y="9.5" width="15" height="10.5" rx="2" fill="currentColor"/></symbol>
 <symbol id="i-mapa" viewBox="0 0 24 24"><path d="M9 4.5L4.5 6.3v13.2L9 17.7l6 1.8 4.5-1.8V4.5L15 6.3l-6-1.8z" fill="currentColor"/><path d="M9 4.5v13.2M15 6.3v13.2" stroke="rgba(0,0,0,0.25)" stroke-width="0.8"/></symbol>
+<symbol id="i-cadeado" viewBox="0 0 24 24"><path d="M7 10V8a5 5 0 0 1 10 0v2" fill="none" stroke="currentColor" stroke-width="1.8"/><rect x="5" y="10" width="14" height="10" rx="2" fill="currentColor"/></symbol>
 `;
 
 let injected = false;

@@ -142,10 +142,14 @@ export function create() {
   bindMenuButtons({ onPersonagem: openCharacterMenu, onInventario: openInventoryMenu, onMapa: openMapMenu });
 
   // Hotbar — troca rápida do que está na mão sem abrir o Inventário. Só 2
-  // slots porque só existem 2 coisas equipáveis hoje (ver setHotbarState em
-  // ui/hud.js). O slot da espada reusa o mesmo toggle da tecla Q; o da vara
-  // avisa com o toast já existente se ainda não foi fabricada, em vez de
-  // deixar clicar num slot "travado" sem feedback nenhum.
+  // slots de item de verdade porque só existem 2 coisas equipáveis hoje
+  // (ver setHotbarState em ui/hud.js). O slot da espada reusa o mesmo
+  // toggle da tecla Q; o da vara avisa com o toast já existente se ainda
+  // não foi fabricada, em vez de deixar clicar num slot "travado" sem
+  // feedback nenhum. O 4º slot é permanentemente travado — reserva de
+  // espaço pra quando existir alguma habilidade de verdade — e usa o mesmo
+  // toast só que com o ícone de cadeado, deixando claro que a trava aqui é
+  // "não existe ainda", não "falta fabricar".
   const onHotbarRod = () => {
     if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
     if (!hasItem(inventory, 'vara-de-pescar')) {
@@ -154,7 +158,11 @@ export function create() {
     }
     handleEquip('vara-de-pescar');
   };
-  bindHotbar({ onSword: toggleSwordEquip, onRod: onHotbarRod });
+  const onHotbarAbility = () => {
+    if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+    showBlocked('cadeado', 'Habilidade ainda não existe.');
+  };
+  bindHotbar({ onSword: toggleSwordEquip, onRod: onHotbarRod, onAbility: onHotbarAbility });
   refreshHotbar();
 
   // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o

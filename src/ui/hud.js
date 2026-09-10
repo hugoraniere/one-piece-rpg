@@ -28,6 +28,7 @@ let moodleTrayEl;
 let minimapDotEl;
 let hotbarSwordEl;
 let hotbarRodEl;
+let hotbarAbilityEl;
 let lastHp = null;
 let lastBerries = null;
 
@@ -70,6 +71,7 @@ export function initHud() {
     <div class="hotbar" id="hud-hotbar">
       <div class="hotbar-slot" id="hud-hotbar-sword" title="Cutlass de Ferro (Q)"><svg class="icon" aria-hidden="true"><use href="#i-espada"></use></svg></div>
       <div class="hotbar-slot locked" id="hud-hotbar-rod" title="Vara de Pescar"><svg class="icon" aria-hidden="true"><use href="#i-pesca"></use></svg></div>
+      <div class="hotbar-slot locked" id="hud-hotbar-ability" title="Habilidade (ainda não existe)"><svg class="icon" aria-hidden="true"><use href="#i-cadeado"></use></svg></div>
     </div>
   `;
 
@@ -82,6 +84,7 @@ export function initHud() {
   minimapDotEl = overlay.querySelector('#hud-minimap-dot');
   hotbarSwordEl = overlay.querySelector('#hud-hotbar-sword');
   hotbarRodEl = overlay.querySelector('#hud-hotbar-rod');
+  hotbarAbilityEl = overlay.querySelector('#hud-hotbar-ability');
   lastHp = null;
   lastBerries = null;
 
@@ -153,7 +156,8 @@ export function setHotbarState({ equipped, hasRod }) {
   hotbarRodEl.classList.toggle('locked', !hasRod);
 }
 
-export function bindHotbar({ onSword, onRod }) {
+export function bindHotbar({ onSword, onRod, onAbility }) {
   hotbarSwordEl.addEventListener('click', () => onSword?.());
   hotbarRodEl.addEventListener('click', () => onRod?.());
+  hotbarAbilityEl.addEventListener('click', () => onAbility?.());
 }
