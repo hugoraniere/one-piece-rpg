@@ -60,6 +60,23 @@ export function isEditorModeActive() {
   return editorMode;
 }
 
+// Chamado no início de toda IslandScene.create() (ver islandScene.js), antes
+// de setupEditor() rodar de novo. Sem isso, uma troca de ilha herdaria o
+// modo/seleção/pintura de terreno da ilha anterior — e `terrainOverrides`
+// guardaria Image de tiles já destruídos junto com a cena velha.
+export function resetEditorState() {
+  editorMode = false;
+  editorCategory = 'prop';
+  terrainOverrides = new Map();
+  editorSelected = null;
+  editorPropIndex = -1;
+  editorTerrainIndex = -1;
+  editorPainting = false;
+  editorTerrainRotation = 0;
+  spaceHeld = false;
+  spacePanPointer = null;
+}
+
 // Chamado do update() da cena quando o editor está ligado — WASD/setas
 // viram pan de câmera em vez de mover o personagem.
 export function panEditorCamera(scene, delta, cursors, wasd) {

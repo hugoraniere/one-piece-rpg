@@ -7,6 +7,15 @@ import Phaser from 'phaser';
 // funcionar igual nos dois casos.
 export const editorObjects = [];
 
+// Chamado no início de toda IslandScene.create() (ver islandScene.js) —
+// sem isso, uma troca de ilha (scene.restart) deixaria aqui as referências
+// aos props da ilha ANTERIOR, já destruídos pelo Phaser junto com a cena
+// velha (GameObject destruído = propriedades inválidas), misturados com os
+// novos que buildVillageProps() está prestes a criar.
+export function resetEditorObjects() {
+  editorObjects.length = 0;
+}
+
 // Praça da Vila Semente — baseado no pacote de assets reais em
 // assets/village/ (ver VILA_SEMENTE_MAP_SPEC.md original) + assets/water/
 // (recortado do Pack07 — ver BEACH_SCENE_ANALYSIS.md). Layout validado

@@ -14,7 +14,17 @@ let fillEl;
 let hideTimer = null;
 
 function ensureDom() {
-  if (rootEl) return;
+  const host = document.querySelector('.hud-topleft') ?? document.body;
+  // `.hud-topleft` é recriado do zero a cada initHud() (ver ui/hud.js —
+  // overlay.innerHTML = ... substitui os filhos antigos inteiros), o que
+  // aconteceria a cada troca de ilha (scene.restart chama create() nela de
+  // novo). Sem o `isConnected`, o chip continuaria vivo e sendo atualizado,
+  // só que pendurado num nó já removido da árvore — invisível pra sempre.
+  if (rootEl && rootEl.isConnected) return;
+  if (rootEl) {
+    host.appendChild(rootEl);
+    return;
+  }
   rootEl = document.createElement('div');
   rootEl.className = 'progress-chip';
   rootEl.innerHTML = `
@@ -24,7 +34,6 @@ function ensureDom() {
       <div class="bar-track"><div class="bar-fill" id="progress-chip-fill"></div></div>
     </div>
   `;
-  const host = document.querySelector('.hud-topleft') ?? document.body;
   host.appendChild(rootEl);
   iconUseEl = rootEl.querySelector('#progress-chip-icon-use');
   nameEl = rootEl.querySelector('#progress-chip-name');

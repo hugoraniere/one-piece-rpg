@@ -50,10 +50,12 @@ export function generateShadowTexture(scene) {
 
 // Cria o sprite do jogador + sua sombra, já posicionados e com física.
 // `raceId` decide qual conjunto de frames usar (ver races.js) — default
-// 'human' porque é a única raça jogável até agora.
+// 'human' porque é a única raça jogável até agora. A textura 'shadow' já
+// precisa existir (ver BootScene.create() — gerada uma vez só, ao ligar o
+// jogo, não a cada troca de ilha: scene.textures é global ao jogo inteiro,
+// não por cena, então gerar de novo aqui a cada scene.restart() faria o
+// Phaser avisar de chave duplicada sem motivo).
 export function createPlayerCharacter(scene, x, y, raceId = 'human') {
-  generateShadowTexture(scene);
-
   const shadow = scene.add.image(x, y + SHADOW_OFFSET_Y, 'shadow');
   shadow.setScale(SHADOW_SCALE_X, SHADOW_SCALE_Y);
   shadow.setDepth(-0.5); // acima do chão, abaixo do personagem
