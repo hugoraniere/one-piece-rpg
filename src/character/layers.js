@@ -60,20 +60,36 @@ const PLACEHOLDER_CANVAS_SIZE = 32;
 // tão pequeno (32px) o desenho fica mais tosco que antes — é esperado, é
 // só um placeholder, e a escala tem que bater com o corpo (ver comentário
 // de PLACEHOLDER_CANVAS_SIZE).
+// Pontos de cintura MEDIDOS de verdade (não escalados às cegas) nos 4
+// sprites de idle do teste de pixel art — desenhei uma grade de referência
+// por cima do personagem em cada direção e conferi visualmente antes de
+// aceitar (mesmo espírito de "confirma antes de aceitar" do
+// VISUAL_STYLE_GUIDE.md, só que pra posição em vez de asset). Corpo é
+// "chibi" (cabeça grande) — a cintura fica bem mais alta no canvas do que
+// "65% da altura do conteúdo" sugere; ela está por volta de y=19-20 nos
+// 4 sprites (medido direto na grade, não estimado).
+// Primeira tentativa media o quadril certo mas desenhava a lâmina para
+// CIMA a partir dele — numa vista de perfil isso empurra a espada até a
+// altura do rosto (ruim). Corrigido: lâmina embainhada aponta pra BAIXO
+// a partir da cintura (acompanha a perna), cabo/punho fica ligeiramente
+// acima da cintura — é assim que uma espada na cintura realmente pendura.
+// 'side' usa a cintura do east (18,19); o west reaproveita a MESMA textura
+// espelhada (ver LAYER_DEFS.sword.left, idleFlip/walkFlip: true).
 export function generatePlaceholderWeaponTextures(scene) {
-  drawPlaceholderSword(scene, 'weapon-sword-front', 24, 23, -15);
-  drawPlaceholderSword(scene, 'weapon-sword-back', 8, 22, -15);
-  drawPlaceholderSword(scene, 'weapon-sword-side', 23, 23, -10);
+  drawPlaceholderSword(scene, 'weapon-sword-front', 19, 19, 20);
+  drawPlaceholderSword(scene, 'weapon-sword-back', 12, 18, 20);
+  drawPlaceholderSword(scene, 'weapon-sword-side', 18, 19, 15);
 }
 
 // PLACEHOLDER na mesma linha da espada acima: uma vara marrom simples (sem
-// arte de verdade ainda) só pra provar que o equip funciona. Ângulo mais
-// vertical que a espada — uma vara de pescar descansa quase reta, não
-// inclinada como uma lâmina embainhada.
+// arte de verdade ainda) só pra provar que o equip funciona. Mesmos pontos
+// de cintura da espada, um pouco mais alto (vara segurada na altura do
+// peito/mão, não pendurada no cinto) e mais vertical (uma vara de pescar
+// descansa quase reta, não inclinada como uma lâmina embainhada).
 export function generatePlaceholderRodTextures(scene) {
-  drawPlaceholderRod(scene, 'rod-front', 20, 24, -12);
-  drawPlaceholderRod(scene, 'rod-back', 12, 22, -12);
-  drawPlaceholderRod(scene, 'rod-side', 20, 23, -6);
+  drawPlaceholderRod(scene, 'rod-front', 19, 17, -8);
+  drawPlaceholderRod(scene, 'rod-back', 12, 16, -8);
+  drawPlaceholderRod(scene, 'rod-side', 18, 17, -4);
 }
 
 function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
@@ -87,12 +103,12 @@ function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
   ctx.translate(gripX, gripY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
   ctx.fillStyle = '#8a5a34';
-  ctx.fillRect(-1, -15, 2, 15); // vareta
+  ctx.fillRect(-1, -8, 2, 8); // vareta (encurtada pra caber no canvas de 32px)
   ctx.strokeStyle = '#e8d9b0';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, -15);
-  ctx.lineTo(3, -3);
+  ctx.moveTo(0, -8);
+  ctx.lineTo(2, -1);
   ctx.stroke(); // linha de pesca
   ctx.fillStyle = '#3b2415';
   ctx.fillRect(-1, -1, 2, 3); // cabo
@@ -111,11 +127,16 @@ function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {
   ctx.save();
   ctx.translate(hiltX, hiltY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
-  ctx.fillStyle = '#c026d3';
-  ctx.fillRect(-1, -9, 2, 9); // lâmina
-  ctx.fillRect(-2, -1, 4, 1); // guarda
+  // Lâmina embainhada aponta pra BAIXO a partir do ponto de cintura
+  // (pendura ao lado da perna) — cabo/guarda ficam ACIMA desse ponto
+  // (altura da mão que empunha). Ver comentário de generatePlaceholder-
+  // WeaponTextures acima: a versão anterior desenhava isso invertido, o
+  // que empurrava a lâmina até a altura do rosto na vista de perfil.
   ctx.fillStyle = '#701a75';
-  ctx.fillRect(-1, 0, 2, 3); // cabo
+  ctx.fillRect(-1, -3, 2, 3); // cabo
+  ctx.fillStyle = '#c026d3';
+  ctx.fillRect(-2, 0, 4, 1); // guarda
+  ctx.fillRect(-1, 1, 2, 8); // lâmina
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
