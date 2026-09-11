@@ -132,16 +132,18 @@ function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {
   // (altura da mão que empunha). Ver comentário de generatePlaceholder-
   // WeaponTextures acima: a versão anterior desenhava isso invertido, o
   // que empurrava a lâmina até a altura do rosto na vista de perfil.
-  // Silhueta mais legível que um retângulo liso: pomo, guarda mais larga
-  // que o cabo (marca a "cruz" de uma espada de verdade) e lâmina afunilada
-  // até uma ponta, com um friso central mais claro pra sugerir metal.
-  ctx.fillStyle = '#4a1052';
-  ctx.fillRect(-1, -4, 2, 1); // pomo
-  ctx.fillStyle = '#701a75';
-  ctx.fillRect(-1, -3, 2, 3); // cabo
-  ctx.fillStyle = '#9333ea';
-  ctx.fillRect(-3, 0, 6, 1); // guarda
-  ctx.fillStyle = '#c026d3';
+  // Silhueta legível de espada: pomo, guarda mais larga que o cabo (marca
+  // a "cruz") e lâmina afunilada até uma ponta. Cores agora são as de
+  // verdade (aço/latão/couro) em vez do magenta "impossível" de antes —
+  // ainda é um placeholder (forma simples, sem arte desenhada à mão), mas
+  // já lê como espada de longe, não só como um bloco colorido.
+  ctx.fillStyle = '#8b6c27'; // pomo (latão escuro)
+  ctx.fillRect(-1, -4, 2, 1);
+  ctx.fillStyle = '#4a2c17'; // cabo (couro)
+  ctx.fillRect(-1, -3, 2, 3);
+  ctx.fillStyle = '#c49c3e'; // guarda (latão)
+  ctx.fillRect(-3, 0, 6, 1);
+  ctx.fillStyle = '#c4c8d1'; // lâmina (aço)
   ctx.beginPath();
   ctx.moveTo(-1, 1);
   ctx.lineTo(1, 1);
@@ -149,9 +151,11 @@ function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {
   ctx.lineTo(0, 8);
   ctx.lineTo(-1, 6);
   ctx.closePath();
-  ctx.fill(); // lâmina afunilada
-  ctx.fillStyle = '#e879f9';
-  ctx.fillRect(0, 1, 1, 6); // friso/brilho
+  ctx.fill();
+  ctx.fillStyle = '#787e8a'; // sombra na lâmina (dá volume)
+  ctx.fillRect(-1, 1, 1, 5);
+  ctx.fillStyle = '#eef1f5'; // friso/brilho na lâmina
+  ctx.fillRect(0, 1, 1, 5);
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
