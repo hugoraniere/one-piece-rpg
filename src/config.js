@@ -11,7 +11,11 @@ export const CHAR_SCALE = 4.26;
 export const WALK_FRAME_MS = 180; // troca de frame do ciclo de caminhada (2 frames alternando)
 export const IDLE_FRAME_MS = 650; // troca de frame do idle (bem mais devagar — é só uma respiração sutil)
 export const ATTACK_FRAME_MS = 90; // troca de frame do ataque — mais rápido, dá sensação de impacto
-export const ATTACK_DURATION_MS = 280; // quanto tempo o modo 'attack' fica ativo antes de voltar pra idle/walk
+// Quanto tempo o modo 'attack' fica ativo antes de voltar pra idle/walk —
+// precisa caber o ciclo inteiro (ATTACK_FRAME_MS * nº de frames de ataque
+// = 90 * 4 = 360ms) mais uma pequena folga, senão o golpe corta antes do
+// último frame aparecer.
+export const ATTACK_DURATION_MS = 400;
 
 // Sombra sob os pés — desenhada por código (gradiente radial), não é um
 // asset. Assim ela nunca desalinha entre os frames do personagem, e já

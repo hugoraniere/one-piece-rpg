@@ -244,6 +244,16 @@ const ALL_MODES = ['idle', 'walk', 'attack'];
 // "grudar" no personagem em vez de precisar de coordenadas calculadas por
 // direção. `mode` é 'idle' | 'walk' | 'attack', igual em character.js.
 export function updateLayerVisual(layerSprite, state, bodySprite, delta, mode, facing) {
+  // Os frames de golpe do CORPO (gerados via PixelLab, ver races.js) já
+  // vêm com a espada desenhada na mão — mostrar a camada de equipamento
+  // (espada "embainhada" no quadril) por cima duplicaria a arma durante o
+  // golpe. Some ela só nesse modo; idle/walk continuam mostrando a camada
+  // normalmente.
+  if (mode === 'attack' && state.equippedLayerId === 'sword') {
+    layerSprite.setVisible(false);
+    return;
+  }
+
   const layerData = state.equippedLayerId ? LAYER_DEFS[state.equippedLayerId] : null;
   const frameSet = layerData ? layerData[facing] : null;
 
