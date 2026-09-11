@@ -32,6 +32,9 @@ import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
 import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
 import { getPlayerState } from '../state/playerState.js';
+import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
+
+const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
 
 const FISH_REWARD = 8; // Berries por peixe fisgado — valor de referência, fácil de reequilibrar
 
@@ -142,8 +145,16 @@ export default class IslandScene extends Phaser.Scene {
     };
     const openMapMenu = () => {
       if (isEditorModeActive() || isFishingActive()) return;
-      toggleMapMenu();
+      toggleMapMenu({
+        currentIslandId: this.islandConfig.id,
+        discoveredIslands: this.state.discoveredIslands,
+        onTravel: (destinationId) => travelToIsland(this, destinationId),
+      });
     };
+    // Guardada na cena (não só na closure local) pra handleGather() poder
+    // abrir o mapa quando o jogador estiver perto do barco — ver
+    // BOAT_INTERACT_RANGE logo abaixo.
+    this.openMapMenu = openMapMenu;
     this.input.keyboard.on('keydown-C', openCharacterMenu);
     this.input.keyboard.on('keydown-I', openInventoryMenu);
     this.input.keyboard.on('keydown-M', openMapMenu);
@@ -211,6 +222,11 @@ export default class IslandScene extends Phaser.Scene {
     // quando a janela muda de tamanho — não precisamos fazer isso na mão.
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    // Simétrico com o fadeOut de travelToIsland (ui/sailingTransition.js) —
+    // roda também no primeiro boot (fade a partir de preto), o que é
+    // inofensivo/discreto o bastante pra não precisar de um caso especial
+    // só pra pular ele na primeira vez.
+    this.cameras.main.fadeIn(FADE_MS, 0, 0, 0);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
@@ -233,6 +249,8 @@ export default class IslandScene extends Phaser.Scene {
     if (import.meta.env.DEV) {
       window.__gameDebug = {
         getState: () => ({
+          islandId: this.islandConfig.id,
+          discoveredIslands: this.state.discoveredIslands,
           playerHealth: this.state.playerHealth,
           player: { x: this.player.x, y: this.player.y },
           berries: this.state.berries,
@@ -266,6 +284,11 @@ export default class IslandScene extends Phaser.Scene {
           this.player.body.reset(x, y);
           this.shadow.setPosition(x, y + SHADOW_OFFSET_Y);
         },
+        // Aciona o mesmo caminho do menu de Mapa/barco, sem precisar de uma
+        // 2ª ilha real descoberta pra clicar em algo — útil pra testar o
+        // pipeline de viagem (fade + scene.restart + estado preservado)
+        // isoladamente (ver ui/sailingTransition.js).
+        travelTo: (islandId) => travelToIsland(this, islandId),
       };
     }
   }
@@ -377,6 +400,17 @@ function itemLabel(itemId, qty) {
 }
 
 function handleGather(scene) {
+  // Prioridade máxima: perto do barco, G abre o mapa de viagem em vez de
+  // coletar — mesma tecla de "interagir com o que tem por perto" de sempre,
+  // só que aqui o contexto é "quer navegar", não "quer um recurso". Fica
+  // antes até do cooldown de coleta pra nunca ficar bloqueado tentando abrir
+  // o mapa só porque acabou de coletar algo.
+  const boatSpawn = scene.islandConfig.boatSpawn;
+  if (boatSpawn && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, boatSpawn.x, boatSpawn.y) <= BOAT_INTERACT_RANGE) {
+    scene.openMapMenu();
+    return;
+  }
+
   const now = scene.time.now;
   if (now - scene.lastGatherAt < GATHER_COOLDOWN_MS) {
     if (now - scene.lastGatherBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {

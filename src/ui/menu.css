@@ -639,21 +639,6 @@
   border-radius: 55% 45% 60% 40% / 60% 50% 50% 40%;
 }
 
-.map-routes {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-}
-.map-routes path {
-  fill: none;
-  stroke: #e6c66e;
-  stroke-width: 0.6;
-  stroke-dasharray: 2.2 2.4;
-  opacity: 0.55;
-}
-
 .map-compass {
   position: absolute;
   top: 14px;
@@ -666,9 +651,8 @@
 
 .map-island {
   position: absolute;
-  top: 45%;
-  left: 45%;
   filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.4));
+  text-align: center;
 }
 .map-island-shape {
   width: 90px;
@@ -678,9 +662,55 @@
 }
 .map-ship {
   position: absolute;
+  top: 6px;
+  left: 26px;
   width: 20px;
   height: 20px;
   color: #3b2415;
+}
+.map-island-label {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #ece2c8;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  white-space: nowrap;
+}
+/* Ilha já descoberta, mas não é onde o jogador está agora — clicável pra
+   abrir a confirmação de viagem (ver renderCaption em mapMenu.js). Cor mais
+   viva que a silhueta desconhecida (.map-unknown-island) e cursor de mão
+   deixam claro que dá pra interagir, sem precisar de texto extra. */
+.map-island-travelable {
+  cursor: pointer;
+}
+.map-island-travelable .map-island-shape {
+  background: #9aa860;
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.map-island-travelable:hover .map-island-shape {
+  background: #b8c878;
+  transform: scale(1.08);
+}
+.map-caption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.map-travel-confirm {
+  font: inherit;
+  font-weight: 600;
+  border: none;
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+  background: #e6c66e;
+  color: #241708;
+}
+.map-travel-confirm[data-action='cancel'] {
+  background: rgba(255, 255, 255, 0.15);
+  color: #ece2c8;
 }
 .map-caption {
   position: absolute;
