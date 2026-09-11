@@ -38,6 +38,11 @@ export const VILA_DO_MASTRO_PARTIDO = {
   pierDock: PIER_DOCK,
   props: VILLAGE_PROPS,
 
+  // Espécie/chance de lixo desta zona de pesca — ver ITEM_DEFS e
+  // handleFishingResult em islandScene.js. Água de vila tranquila: pouco
+  // lixo.
+  fishing: { fishItemId: 'peixe', junkChance: 0.05 },
+
   // Barco decorativo já existente (ver propRegistry.js) — reaproveitado como
   // ponto de interação de viagem (ver plano, marco 3) até ganhar arte de
   // barco a vela de verdade (marco 6).

@@ -90,6 +90,10 @@ export const PORTOMARES = {
   },
   props: PORTOMARES_PROPS,
 
+  // Água de porto movimentado: espécie própria (robalo) e mais chance de
+  // lixo que as outras duas ilhas — tráfego de barco de verdade.
+  fishing: { fishItemId: 'robalo', junkChance: 0.15 },
+
   boatSpawn: { x: 1600, y: 1150 },
   monsterSpawn: { x: 2300, y: 500 },
 };

@@ -38,12 +38,36 @@ export const ITEM_DEFS = {
     isBait: true,
     baitTier: 1,
   },
-  // Só uma espécie por enquanto — variar peixe/raridade por local (zona de
-  // pesca) e "pescar lixo" em vez de peixe foram debatidos e propositalmente
-  // adiados (ver conversa de design), não esquecidos.
+  // Peixe da praia/vila — a espécie original, mantida como padrão. As duas
+  // espécies novas (uma por ilha) e o "pescar lixo" eram debatidos e
+  // propositalmente adiados; agora que existem 3 ilhas de verdade, cada
+  // zona de pesca tem sua própria espécie (ver islandConfig.fishing em
+  // world/islands/*.js e handleFishingResult em scenes/islandScene.js).
   peixe: {
     name: 'Peixe',
     icon: '🐟',
     category: 'comida',
+  },
+  // Portomares — água salgada de porto movimentado.
+  robalo: {
+    name: 'Robalo',
+    icon: '🐠',
+    category: 'comida',
+  },
+  // Floresta Sussurro — lago/rio de água doce.
+  truta: {
+    name: 'Truta',
+    icon: '🐡',
+    category: 'comida',
+  },
+  // "Pescar lixo" — chance pequena (por ilha, ver islandConfig.fishing) de a
+  // isca voltar com isto em vez de um peixe de verdade: mordida real,
+  // reação certa, só que não veio nada bom. Sem valor de venda nem uso em
+  // receita ainda — existe só pela sensação de "essa água tem lixo",
+  // maior em Portomares (porto movimentado) que na Floresta (água limpa).
+  'lixo-marinho': {
+    name: 'Lixo do Mar',
+    icon: '🥫',
+    category: 'materiais',
   },
 };

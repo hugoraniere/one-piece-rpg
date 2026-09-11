@@ -303,6 +303,13 @@ export default class IslandScene extends Phaser.Scene {
         // pipeline de viagem (fade + scene.restart + estado preservado)
         // isoladamente (ver ui/sailingTransition.js).
         travelTo: (islandId) => travelToIsland(this, islandId),
+        // Força o RESULTADO de uma captura sem depender do sorteio real de
+        // mordida (que usa Math.random() dentro de um setInterval — sob
+        // throttling de aba oculta em automação, esperar uma mordida de
+        // verdade pode levar minutos; forçar o outcome aqui testa a lógica
+        // de recompensa/espécie/lixo sem precisar disso). NÃO usar pra
+        // simular sucesso de jogador de verdade — é só pra depuração.
+        forceCatch: (outcome = 'sucesso', baitId = null) => handleFishingResult(this, outcome, baitId),
       };
     }
   }
@@ -606,18 +613,31 @@ function handleFishingResult(scene, outcome, baitId) {
   }
 
   if (outcome === 'sucesso') {
-    addItem(scene.state.inventory, 'peixe', 1);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel('peixe', 1));
+    // Espécie e chance de lixo variam por ilha (ver islandConfig.fishing em
+    // world/islands/*.js) — cada zona de pesca tem sua própria água, isso
+    // era debatido e propositalmente adiado desde a primeira versão da
+    // pesca (ver ITEM_DEFS), só fazia sentido depois de existir mais de uma
+    // ilha de verdade.
+    const fishing = scene.islandConfig.fishing ?? { fishItemId: 'peixe', junkChance: 0 };
+    const isJunk = Math.random() < fishing.junkChance;
+    const catchId = isJunk ? 'lixo-marinho' : fishing.fishItemId;
+
+    addItem(scene.state.inventory, catchId, 1);
+    spawnItemText(scene, player.x, player.y - 60, itemLabel(catchId, 1));
+
     // Berries direto na captura é ponte temporária, igual a linha de nylon
     // de graça no create() — o peixe de verdade já existe no inventário
     // (dá pra guardar, cozinhar, comer), só não tem ainda pra quem vender.
     // Quando existir um comércio de verdade, isto sai daqui e vira o preço
-    // de venda do peixe, não recompensa automática por pescar.
-    scene.state.berries += FISH_REWARD;
-    setBerries(scene.state.berries);
-    spawnMoneyText(scene, player.x, player.y - 76, FISH_REWARD);
+    // de venda do peixe, não recompensa automática por pescar. Lixo não
+    // vale Berries nenhum — a mordida foi real, só não veio nada bom.
+    if (!isJunk) {
+      scene.state.berries += FISH_REWARD;
+      setBerries(scene.state.berries);
+      spawnMoneyText(scene, player.x, player.y - 76, FISH_REWARD);
+    }
     const skillResult = trainAndNotify(scene, 'pesca');
-    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 92, 'Pesca');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - (isJunk ? 76 : 92), 'Pesca');
     return;
   }
 

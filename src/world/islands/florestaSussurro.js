@@ -80,6 +80,10 @@ export const FLORESTA_SUSSURRO = {
   },
   props: FLORESTA_SUSSURRO_PROPS,
 
+  // Lago/rio de água doce, isolado — espécie própria (truta) e o menor
+  // índice de lixo das três ilhas, água limpa e pouco visitada.
+  fishing: { fishItemId: 'truta', junkChance: 0.02 },
+
   boatSpawn: { x: 1020, y: 850 },
   monsterSpawn: { x: 1800, y: 300 },
 };
