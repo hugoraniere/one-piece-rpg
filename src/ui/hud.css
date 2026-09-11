@@ -18,6 +18,12 @@
   vertical-align: middle;
 }
 
+/* Ícones em PNG pixel art (ex: assets/icons/sword.png) — sem isso o
+   navegador borra ao redimensionar de 32px pro tamanho do slot. */
+.pixel-icon {
+  image-rendering: pixelated;
+}
+
 .hud-topleft {
   position: absolute;
   top: 12px;
