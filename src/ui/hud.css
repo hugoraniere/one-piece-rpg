@@ -304,12 +304,12 @@
   transition: left 0.1s linear, top 0.1s linear;
 }
 
-/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. Só 2
-   slots de verdade porque só existem 2 coisas equipáveis no jogo hoje
-   (espada sempre disponível, vara de pescar só se já fabricada) — ver
-   equipState em character/layers.js, que só guarda UM equippedLayerId por
-   vez. Nada de slots vazios fingindo itens que não existem. Centro-baixo,
-   único lugar ainda livre. */
+/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. Cada
+   slot tem atalho de número (1-4, ver HOTBAR_SLOTS em hud.js) mostrado no
+   canto — só 2 são itens de verdade hoje (espada sempre disponível, vara
+   de pescar só se já fabricada, ver equipState em character/layers.js),
+   os outros ficam reservados/travados pra quando existir mais alguma
+   coisa equipável. Centro-baixo, único lugar ainda livre. */
 .hotbar {
   position: absolute;
   bottom: 12px;
@@ -337,6 +337,22 @@
 .hotbar-slot .icon {
   width: 22px;
   height: 22px;
+}
+/* Indicador do atalho de número — canto inferior direito, pequeno o
+   bastante pra não brigar com o ícone no centro do slot. */
+.hotbar-key {
+  position: absolute;
+  bottom: 1px;
+  right: 3px;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1;
+  color: #e8d9b0;
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
+}
+.hotbar-slot.locked .hotbar-key {
+  color: #8a8070;
 }
 .hotbar-slot:hover {
   transform: translateY(-2px);

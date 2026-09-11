@@ -20,7 +20,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindHotbar, bindMenuButtons, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
+import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -173,15 +173,15 @@ export default class IslandScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-M', openMapMenu);
     bindMenuButtons({ onPersonagem: openCharacterMenu, onInventario: openInventoryMenu, onMapa: openMapMenu });
 
-    // Hotbar — troca rápida do que está na mão sem abrir o Inventário. Só 2
-    // slots de item de verdade porque só existem 2 coisas equipáveis hoje
-    // (ver setHotbarState em ui/hud.js). O slot da espada reusa o mesmo
-    // toggle da tecla Q; o da vara avisa com o toast já existente se ainda
-    // não foi fabricada, em vez de deixar clicar num slot "travado" sem
-    // feedback nenhum. O 4º slot é permanentemente travado — reserva de
-    // espaço pra quando existir alguma habilidade de verdade — e usa o mesmo
-    // toast só que com o ícone de cadeado, deixando claro que a trava aqui é
-    // "não existe ainda", não "falta fabricar".
+    // Hotbar — troca rápida do que está na mão sem abrir o Inventário,
+    // clique OU tecla de número (1-4, layout/atalho de cada slot em
+    // HOTBAR_SLOTS, ui/hud.js). O slot da espada reusa o mesmo toggle da
+    // tecla Q; o da vara avisa com o toast já existente se ainda não foi
+    // fabricada, em vez de deixar clicar num slot "travado" sem feedback
+    // nenhum. Os dois últimos são permanentemente travados — reserva de
+    // espaço pra quando existir mais alguma coisa equipável — e usam o
+    // mesmo toast só que com o ícone de cadeado, deixando claro que a
+    // trava aqui é "não existe ainda", não "falta fabricar".
     const onHotbarRod = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
       if (!hasItem(this.state.inventory, 'vara-de-pescar')) {
@@ -194,7 +194,19 @@ export default class IslandScene extends Phaser.Scene {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
       showBlocked('cadeado', 'Habilidade ainda não existe.');
     };
-    bindHotbar({ onSword: toggleSwordEquip, onRod: onHotbarRod, onAbility: onHotbarAbility });
+    const onHotbarReserved = () => {
+      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+      showBlocked('cadeado', 'Slot reservado — ainda não existe.');
+    };
+    const hotbarHandlers = { sword: toggleSwordEquip, rod: onHotbarRod, ability: onHotbarAbility, slot4: onHotbarReserved };
+    bindHotbar(hotbarHandlers);
+    // Mesmos handlers do clique, só que pela tecla de número — nomes de
+    // evento do Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
+    // KeyMap.js), não "keydown-1".
+    ['ONE', 'TWO', 'THREE', 'FOUR'].forEach((keyName, i) => {
+      const slotId = getHotbarSlotIdByShortcut(String(i + 1));
+      this.input.keyboard.on(`keydown-${keyName}`, () => hotbarHandlers[slotId]?.());
+    });
     refreshHotbar(this);
 
     // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
