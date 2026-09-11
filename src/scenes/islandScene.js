@@ -532,12 +532,20 @@ function handleGather(scene) {
   if (nearTree) {
     addItem(inventory, 'graveto', 1);
     spawnItemText(scene, player.x, player.y - 60, itemLabel('graveto', 1));
+    // Forrageamento (graveto/isca) treina Sobrevivência — ver menuData.js,
+    // que até aqui dizia "sem forrageamento ainda". Separado de Caça
+    // (minhoca, logo abaixo): forragear é achar o que já está largado por
+    // aí, caçar é perseguir bicho.
+    const skillResult = trainAndNotify(scene, 'sobrevivencia');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Sobrevivência');
     return;
   }
 
   if (isNearWater(scene, player.x, player.y)) {
     addItem(inventory, 'isca-improvisada', 1);
     spawnItemText(scene, player.x, player.y - 60, itemLabel('isca-improvisada', 1));
+    const skillResult = trainAndNotify(scene, 'sobrevivencia');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Sobrevivência');
     return;
   }
 

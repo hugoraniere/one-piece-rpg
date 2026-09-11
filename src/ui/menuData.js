@@ -80,7 +80,7 @@ export const OFICIO_SKILLS = [
   { key: 'alfaiataria', icon: 'alfaiataria', name: 'Alfaiataria', real: false, trainedBy: 'Sem costura ainda.' },
   { key: 'ferraria', icon: 'ferraria', name: 'Ferraria', real: false, trainedBy: 'Sem forja ainda.' },
   { key: 'comercio', icon: 'comercio', name: 'Comércio', real: true, trainedBy: 'Sobe vendendo peixe no mercado de Portomares.' },
-  { key: 'sobrevivencia', icon: 'sobrevivencia', name: 'Sobrevivência', real: false, trainedBy: 'Sem forrageamento ainda.' },
+  { key: 'sobrevivencia', icon: 'sobrevivencia', name: 'Sobrevivência', real: true, trainedBy: 'Sobe forrageando graveto ou isca (tecla G).' },
   { key: 'furtividade', icon: 'furtividade', name: 'Furtividade', real: false, trainedBy: 'Sem furtividade ainda.' },
   { key: 'percepcao', icon: 'percepcao', name: 'Percepção', real: false, trainedBy: 'Sem sistema de detecção ainda.' },
   { key: 'arqueologia', icon: 'arqueologia', name: 'Arqueologia', real: false, trainedBy: 'Sem ruínas escaváveis ainda.' },
