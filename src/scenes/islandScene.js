@@ -9,7 +9,7 @@ import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPo
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import { trainSkill } from '../sim/progression.js';
-import { addItem, hasItem, removeItem } from '../sim/inventory.js';
+import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, craft } from '../sim/crafting.js';
 import {
@@ -36,6 +36,7 @@ import { getPlayerState } from '../state/playerState.js';
 import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
+const MARKET_INTERACT_RANGE = 110; // pixels — perto o bastante das barracas pra "G" vender em vez de coletar
 const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
 const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
 
@@ -78,11 +79,21 @@ export default class IslandScene extends Phaser.Scene {
     this.islandConfig.preloadAssets(this);
   }
 
-  create() {
+  create(data) {
     // Estado que PRECISA sobreviver a uma troca de ilha — ver
     // state/playerState.js. Mantemos a referência ao objeto (não uma cópia),
     // então mutar `this.state.berries` etc. já persiste sozinho.
     this.state = getPlayerState();
+
+    // Chegou de barco de verdade (ver sailingTransition.js) — treina
+    // Navegação, que até aqui não tinha nenhum gatilho real ("sem
+    // travessia marítima ainda", ver menuData.js). Não dispara no primeiro
+    // boot (sem data.arrivedByBoat) nem no teste de auto-viagem do
+    // __gameDebug.travelTo quando o destino é a própria ilha atual — só
+    // quando a ilha realmente mudou.
+    if (data?.arrivedByBoat && this.islandConfig.id !== data.previousIslandId) {
+      trainAndNotify(this, 'navegacao');
+    }
 
     // Estado que é OK (e correto) resetar a cada troca de ilha/restart.
     this.facing = 'down'; // 'up' | 'down' | 'left' | 'right'
@@ -451,6 +462,40 @@ function tryAttack(scene) {
   return true;
 }
 
+// Vende TODO item com sellPrice no inventário de uma vez (hoje só peixe/
+// robalo/truta) — só existe onde há mercado de verdade (marketSpawn, só em
+// Portomares por enquanto). Substitui/estende a "ponte temporária" de
+// Berries direto na captura (ver handleFishingResult): aquela continua
+// existindo (ainda não dá pra remover sem esvaziar a renda de quem nunca
+// visitou um porto), mas agora carregar o peixe até um mercado de verdade
+// rende Berries A MAIS — o comércio de verdade que os comentários antigos
+// esperavam. Também é o primeiro gatilho real da perícia Comércio (ver
+// menuData.js, que até aqui dizia "sem mercador ainda").
+function handleSell(scene) {
+  const inventory = scene.state.inventory;
+  let total = 0;
+  let count = 0;
+  for (const [itemId, def] of Object.entries(ITEM_DEFS)) {
+    if (!def.sellPrice) continue;
+    const qty = getQuantity(inventory, itemId);
+    if (qty <= 0) continue;
+    total += def.sellPrice * qty;
+    count += qty;
+    removeItem(inventory, itemId, qty);
+  }
+
+  if (count === 0) {
+    showBlocked('comercio', 'Nada pra vender agora.');
+    return;
+  }
+
+  scene.state.berries += total;
+  setBerries(scene.state.berries);
+  spawnMoneyText(scene, scene.player.x, scene.player.y - 60, total);
+  const skillResult = trainAndNotify(scene, 'comercio');
+  if (skillResult.leveledUp) spawnLevelUpText(scene, scene.player.x, scene.player.y - 76, 'Comércio');
+}
+
 function handleGather(scene) {
   // Prioridade máxima: perto do barco, G abre o mapa de viagem em vez de
   // coletar — mesma tecla de "interagir com o que tem por perto" de sempre,
@@ -460,6 +505,14 @@ function handleGather(scene) {
   const boatSpawn = scene.islandConfig.boatSpawn;
   if (boatSpawn && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, boatSpawn.x, boatSpawn.y) <= BOAT_INTERACT_RANGE) {
     scene.openMapMenu();
+    return;
+  }
+
+  // Mesma lógica pro mercado (só existe em Portomares, ver marketSpawn) —
+  // vender também não deveria ficar preso atrás do cooldown de coleta.
+  const marketSpawn = scene.islandConfig.marketSpawn;
+  if (marketSpawn && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, marketSpawn.x, marketSpawn.y) <= MARKET_INTERACT_RANGE) {
+    handleSell(scene);
     return;
   }
 
@@ -625,12 +678,12 @@ function handleFishingResult(scene, outcome, baitId) {
     addItem(scene.state.inventory, catchId, 1);
     spawnItemText(scene, player.x, player.y - 60, itemLabel(catchId, 1));
 
-    // Berries direto na captura é ponte temporária, igual a linha de nylon
-    // de graça no create() — o peixe de verdade já existe no inventário
-    // (dá pra guardar, cozinhar, comer), só não tem ainda pra quem vender.
-    // Quando existir um comércio de verdade, isto sai daqui e vira o preço
-    // de venda do peixe, não recompensa automática por pescar. Lixo não
-    // vale Berries nenhum — a mordida foi real, só não veio nada bom.
+    // Berries direto na captura ainda é ponte temporária, igual a linha de
+    // nylon de graça no create() — agora já existe comércio de verdade
+    // (ver handleSell, mercado de Portomares), mas removê-la totalmente
+    // deixaria a renda zerada em qualquer ilha sem porto até o jogador
+    // aprender a rota de comércio; fica pra uma passada futura de economia.
+    // Lixo não vale Berries nenhum — a mordida foi real, só não veio nada bom.
     if (!isJunk) {
       scene.state.berries += FISH_REWARD;
       setBerries(scene.state.berries);

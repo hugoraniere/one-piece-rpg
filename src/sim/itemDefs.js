@@ -7,6 +7,8 @@
 // "aparecer no personagem" (lá).
 // `isBait`/`baitTier` marcam iscas de pesca — ver sim/fishing.js pra como o
 // tier vira chance de mordida.
+// `sellPrice` marca item vendável no mercado de Portomares (ver
+// handleSell em scenes/islandScene.js) — Berries por unidade.
 export const ITEM_DEFS = {
   'vara-de-pescar': {
     name: 'Vara de Pescar',
@@ -47,18 +49,21 @@ export const ITEM_DEFS = {
     name: 'Peixe',
     icon: '🐟',
     category: 'comida',
+    sellPrice: 4,
   },
   // Portomares — água salgada de porto movimentado.
   robalo: {
     name: 'Robalo',
     icon: '🐠',
     category: 'comida',
+    sellPrice: 6,
   },
   // Floresta Sussurro — lago/rio de água doce.
   truta: {
     name: 'Truta',
     icon: '🐡',
     category: 'comida',
+    sellPrice: 5,
   },
   // "Pescar lixo" — chance pequena (por ilha, ver islandConfig.fishing) de a
   // isca voltar com isto em vez de um peixe de verdade: mordida real,
