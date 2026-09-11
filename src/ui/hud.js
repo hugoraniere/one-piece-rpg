@@ -70,7 +70,7 @@ export function initHud() {
     </div>
     <div class="hotbar" id="hud-hotbar">
       <div class="hotbar-slot" id="hud-hotbar-sword" title="Cutlass de Ferro (Q)"><img class="icon pixel-icon" src="/assets/icons/sword.png" alt="Espada"></div>
-      <div class="hotbar-slot locked" id="hud-hotbar-rod" title="Vara de Pescar"><svg class="icon" aria-hidden="true"><use href="#i-pesca"></use></svg></div>
+      <div class="hotbar-slot locked" id="hud-hotbar-rod" title="Vara de Pescar"><img class="icon pixel-icon" src="/assets/icons/rod.png" alt="Vara de Pescar"></div>
       <div class="hotbar-slot locked" id="hud-hotbar-ability" title="Habilidade (ainda não existe)"><svg class="icon" aria-hidden="true"><use href="#i-cadeado"></use></svg></div>
     </div>
   `;
