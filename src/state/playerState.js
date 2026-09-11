@@ -3,7 +3,7 @@ import { createProgression } from '../sim/progression.js';
 import { createInventory } from '../sim/inventory.js';
 import { createLayerState, equipLayer } from '../character/layers.js';
 import { PLAYER_MAX_HP } from '../config.js';
-import { DEFAULT_ISLAND_ID } from '../world/islands/index.js';
+import { DEFAULT_ISLAND_ID, getDefaultDiscoveredIslands } from '../world/islands/index.js';
 
 // Estado do jogador que precisa sobreviver a uma troca de ilha (scene.restart
 // recria a IslandScene do zero, mas inventário/berries/progressão/equipamento
@@ -24,7 +24,7 @@ function buildInitialState() {
     equipState,
     playerHealth: createHealth(PLAYER_MAX_HP),
     currentIslandId: DEFAULT_ISLAND_ID,
-    discoveredIslands: [DEFAULT_ISLAND_ID],
+    discoveredIslands: getDefaultDiscoveredIslands(),
   };
 }
 

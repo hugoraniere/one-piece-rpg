@@ -1,18 +1,15 @@
 import { preloadVillageAssets, VILLAGE_PROPS } from '../propRegistry.js';
+import { STANDARD_PIER_LAYOUT } from '../ground.js';
 import { WORLD_HEIGHT, WORLD_WIDTH } from '../../config.js';
 
-// Doca de madeira saindo da praia pro mar (retângulo 3x3, ver
-// world/ground.js#buildPierDock) — fileira 1 encosta na areia, fileira 3
-// fecha em água nos 3 lados. Cai bem na última linha do mundo desta ilha
-// (worldHeight 1920), então não precisa de peça de fechamento por baixo.
+// Doca de madeira saindo da praia pro mar — fileira 1 encosta na areia,
+// fileira 3 fecha em água nos 3 lados. Cai bem na última linha do mundo
+// desta ilha (worldHeight 1920), então não precisa de peça de fechamento
+// por baixo.
 const PIER_DOCK = {
   colStart: 15, // x mundo: 1800-2160
   rowStart: 13, // y mundo: 1560-1920
-  layout: [
-    ['pier-center', 'pier-center', 'pier-center'],
-    ['pier-edge-w', 'pier-center', 'pier-edge-e'],
-    ['pier-outer-sw', 'pier-edge-s', 'pier-outer-se'],
-  ],
+  layout: STANDARD_PIER_LAYOUT,
 };
 
 // Ilha inicial do jogo — praia + vila, primeiro lugar que existiu (ver

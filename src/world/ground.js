@@ -99,6 +99,16 @@ export function preloadTerrainPaletteAssets(scene) {
   scene.load.image('pier-t', 'assets/water/pier/pier_t.png');
 }
 
+// Layout padrão (retângulo 3x3) do kit de doca de 18 peças — reaproveitado
+// por qualquer ilha que precise de uma doca simples saindo da praia pro mar
+// (ver world/islands/*.js). Fileira 1 é 100% madeira (encosta na terra),
+// fileira 2 tem água nos dois lados, fileira 3 fecha em água nos 3 lados.
+export const STANDARD_PIER_LAYOUT = [
+  ['pier-center', 'pier-center', 'pier-center'],
+  ['pier-edge-w', 'pier-center', 'pier-edge-e'],
+  ['pier-outer-sw', 'pier-edge-s', 'pier-outer-se'],
+];
+
 // Doca de verdade, desenhada à mão com o kit de 18 peças (ver
 // tools/reprocess_pier_kit.py) — mesmas peças disponíveis no pincel do
 // editor, só que já plantadas no mapa por padrão. `scene.islandConfig.pierDock`

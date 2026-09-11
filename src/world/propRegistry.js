@@ -187,8 +187,16 @@ export const EDITOR_PROP_PALETTE = [
   { key: 'prop-bush-flower', label: 'Arbusto (com flor)', defaultScale: 0.46 },
   { key: 'prop-bush-large', label: 'Arbusto (denso)', defaultScale: 0.52 },
 
+  // Vila Semente v5 (ver ~/Downloads/Ambiente Sprites) — mesmos arquivos que
+  // já formam o resto da vila, só que ainda não tinham sido usados aqui.
+  // Ferraria é um prédio grande (mesma régua das casas); barraca de
+  // mercado já vem com toldo embutido, sem precisar de peça separada.
+  { key: 'village-forge', label: 'Ferraria', defaultScale: 0.42 },
+  { key: 'village-market-stall', label: 'Barraca de mercado', defaultScale: 0.3 },
+
   // Recortados do Pack07 (A Pedra do Sol) — ver BEACH_SCENE_ANALYSIS.md.
   { key: 'water-boat-row', label: 'Barco a remo', defaultScale: 0.85 },
+  { key: 'water-boat-sail', label: 'Barco a vela', defaultScale: 0.8 },
   { key: 'water-dock-pier', label: 'Doca (com escada)', defaultScale: 1.35 },
   { key: 'water-rock', label: 'Pedra de água', defaultScale: 0.85 },
   { key: 'water-lilypad-flower', label: 'Vitória-régia (com flor)', defaultScale: 0.55 },
@@ -243,7 +251,16 @@ export function preloadVillageAssets(scene) {
   // Recortados do sheet "Pack 07" (A Pedra do Sol, água/pontes) — ver
   // BEACH_SCENE_ANALYSIS.md seção 4. Pontes e cerca de corda ficaram
   // prontas mas não usadas nesta cena (não há rio/vão aqui).
+  // Vila Semente v5 — ferraria e barraca de mercado, ver comentário do
+  // EDITOR_PROP_PALETTE acima.
+  scene.load.image('village-forge', 'assets/village/forge.png');
+  scene.load.image('village-market-stall', 'assets/village/market_stall.png');
+
   scene.load.image('water-boat-row', 'assets/water/boat_row.png');
+  // Recortado à mão do Pack07 original (ver tools de recorte usadas nos
+  // outros itens desta lista) — vira o barco de viagem de verdade entre
+  // ilhas (ver islandConfig.boatSpawn), mais vistoso que o barco a remo.
+  scene.load.image('water-boat-sail', 'assets/water/boat_sail.png');
   scene.load.image('water-dock-pier', 'assets/water/dock_pier.png');
   scene.load.image('water-rock', 'assets/water/water_rock.png');
   scene.load.image('water-lilypad-flower', 'assets/water/lilypad_flower.png');
