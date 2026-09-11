@@ -81,15 +81,17 @@ export function generatePlaceholderWeaponTextures(scene) {
   drawPlaceholderSword(scene, 'weapon-sword-side', 18, 19, 15);
 }
 
-// PLACEHOLDER na mesma linha da espada acima: uma vara marrom simples (sem
-// arte de verdade ainda) só pra provar que o equip funciona. Mesmos pontos
-// de cintura da espada, um pouco mais alto (vara segurada na altura do
-// peito/mão, não pendurada no cinto) e mais vertical (uma vara de pescar
-// descansa quase reta, não inclinada como uma lâmina embainhada).
+// PLACEHOLDER na mesma linha da espada acima, mesmo ponto de cintura
+// (rod-front/back/side usam os MESMOS anchors de weapon-sword-*): cabo e
+// carretilha ficam acima da cintura (altura da mão), vareta pendura pra
+// BAIXO ao lado da perna. Primeira versão segurava a vara quase reta pra
+// CIMA — ficava sobre o cabelo escuro do personagem e sumia por falta de
+// contraste (mesmo problema de raiz que a espada tinha antes de virar pra
+// baixo). Resolvido do mesmo jeito: pendurada, não erguida.
 export function generatePlaceholderRodTextures(scene) {
-  drawPlaceholderRod(scene, 'rod-front', 19, 17, -8);
-  drawPlaceholderRod(scene, 'rod-back', 12, 16, -8);
-  drawPlaceholderRod(scene, 'rod-side', 18, 17, -4);
+  drawPlaceholderRod(scene, 'rod-front', 19, 19, -8);
+  drawPlaceholderRod(scene, 'rod-back', 12, 18, -8);
+  drawPlaceholderRod(scene, 'rod-side', 18, 19, -4);
 }
 
 function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
@@ -102,16 +104,52 @@ function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
   ctx.save();
   ctx.translate(gripX, gripY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
-  ctx.fillStyle = '#8a5a34';
-  ctx.fillRect(-1, -8, 2, 8); // vareta (encurtada pra caber no canvas de 32px)
-  ctx.strokeStyle = '#e8d9b0';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, -8);
-  ctx.lineTo(2, -1);
-  ctx.stroke(); // linha de pesca
+
+  // Cabo de cortiça (acima da cintura, altura da mão)
   ctx.fillStyle = '#3b2415';
-  ctx.fillRect(-1, -1, 2, 3); // cabo
+  ctx.fillRect(-1, -4, 2, 4);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-1, -4, 2, 4);
+
+  // Carretilha — pequena, senão vira uma bola preta dominando o desenho
+  ctx.beginPath();
+  ctx.arc(1.6, -2.5, 1.2, 0, Math.PI * 2);
+  ctx.fillStyle = '#3a3a3e';
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#96969c';
+  ctx.fillRect(1.1, -3, 1, 1); // brilho
+
+  // Vareta afunilada pendurada (grossa no cabo, fina na ponta) — contorno
+  // preto, senão some contra o cabelo escuro do personagem
+  ctx.beginPath();
+  ctx.moveTo(-1, 0);
+  ctx.lineTo(1, 0);
+  ctx.lineTo(0.5, 9);
+  ctx.lineTo(-0.5, 9);
+  ctx.closePath();
+  ctx.fillStyle = '#a8703e';
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = '#785029'; // sombra
+  ctx.beginPath();
+  ctx.moveTo(-0.5, 1);
+  ctx.lineTo(-0.2, 8);
+  ctx.stroke();
+  ctx.strokeStyle = '#cc9c64'; // friso de luz
+  ctx.beginPath();
+  ctx.moveTo(0.5, 1);
+  ctx.lineTo(0.2, 8);
+  ctx.stroke();
+
+  // Linha de pesca escapando da ponta
+  ctx.strokeStyle = '#e6e0d0';
+  ctx.beginPath();
+  ctx.moveTo(0, 9);
+  ctx.lineTo(-2.2, 13);
+  ctx.stroke();
+
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
