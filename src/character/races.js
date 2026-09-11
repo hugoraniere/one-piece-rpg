@@ -3,61 +3,74 @@
 // raça nova é só mais uma entrada aqui, no mesmo formato de `human` — nenhum
 // outro código (character.js, layers.js, villageScene.js) precisa mudar.
 //
-// `attack` ainda não tem arte de verdade em nenhuma raça — por enquanto
-// reaproveita o frame de idle como placeholder (ver CHARACTER_ASSETS_TODO.md),
-// só pra a máquina de estados de animação já funcionar ponta a ponta. Trocar
-// pela arte real é só substituir esses arrays, sem mexer em código.
+// TESTE de estilo pixel art (gerado no PixelLab, ver
+// assets/characters/pixel/ — 8 direções exportadas mas só as 4 cardeais
+// estão em uso aqui, mesma limitação de sempre do sistema de facing).
+// Substituiu a arte "pintada" anterior (200x200) — ver git log pra
+// recuperar os arquivos antigos se o teste não agradar.
+//
+// Canvas NÃO é o mesmo em todo arquivo (idle/north/east/west de caminhada
+// são 32x32; o ciclo novo de caminhada pro sul é 40x40) — sem problema:
+// Phaser centraliza cada textura no x/y do sprite não importa o tamanho do
+// canvas, e o conteúdo real do personagem mede a mesma altura (~26-27px)
+// nos dois casos, então o personagem não muda de tamanho trocando de pose.
+//
+// Só o sul tem ciclo de caminhada de verdade (8 frames, pernas alternando)
+// — as outras 3 direções ainda seguram uma pose só enquanto andam (o
+// export original não trouxe ciclo pra elas, "animations" saiu vazio no
+// metadata.json). `attack` ainda não tem arte de verdade — reaproveita o
+// frame de idle como placeholder, igual antes.
 export const RACES = {
   human: {
     assets: [
-      { key: 'char-idle-front', path: 'assets/characters/idle_front.png' },
-      { key: 'char-idle-back-1', path: 'assets/characters/idle_back_1.png' },
-      { key: 'char-idle-back-2', path: 'assets/characters/idle_back_2.png' },
-      { key: 'char-idle-left', path: 'assets/characters/idle_left.png' },
-      { key: 'char-idle-right', path: 'assets/characters/idle_right.png' },
-      { key: 'char-walk-front-1', path: 'assets/characters/walk_front_1.png' },
-      { key: 'char-walk-front-2', path: 'assets/characters/walk_front_2.png' },
-      { key: 'char-walk-back-1', path: 'assets/characters/walk_up_1.png' },
-      { key: 'char-walk-back-2', path: 'assets/characters/walk_up_2.png' },
-      { key: 'char-walk-back-3', path: 'assets/characters/walk_up_3.png' },
-      { key: 'char-walk-back-4', path: 'assets/characters/walk_up_4.png' },
-      { key: 'char-walk-back-5', path: 'assets/characters/walk_up_5.png' },
-      { key: 'char-walk-right-1', path: 'assets/characters/walk_right_1.png' },
-      { key: 'char-walk-right-2', path: 'assets/characters/walk_right_2.png' },
-      { key: 'char-walk-right-3', path: 'assets/characters/walk_right_3.png' },
-      { key: 'char-walk-right-4', path: 'assets/characters/walk_right_4.png' },
-      { key: 'char-walk-left-1', path: 'assets/characters/walk_left_1.png' },
-      { key: 'char-walk-left-2', path: 'assets/characters/walk_left_2.png' },
-      { key: 'char-walk-left-3', path: 'assets/characters/walk_left_3.png' },
-      { key: 'char-walk-left-4', path: 'assets/characters/walk_left_4.png' },
+      { key: 'char-idle-south', path: 'assets/characters/pixel/idle_south.png' },
+      { key: 'char-idle-north', path: 'assets/characters/pixel/idle_north.png' },
+      { key: 'char-idle-east', path: 'assets/characters/pixel/idle_east.png' },
+      { key: 'char-idle-west', path: 'assets/characters/pixel/idle_west.png' },
+      { key: 'char-walk-south-1', path: 'assets/characters/pixel/walk_south_01.png' },
+      { key: 'char-walk-south-2', path: 'assets/characters/pixel/walk_south_02.png' },
+      { key: 'char-walk-south-3', path: 'assets/characters/pixel/walk_south_03.png' },
+      { key: 'char-walk-south-4', path: 'assets/characters/pixel/walk_south_04.png' },
+      { key: 'char-walk-south-5', path: 'assets/characters/pixel/walk_south_05.png' },
+      { key: 'char-walk-south-6', path: 'assets/characters/pixel/walk_south_06.png' },
+      { key: 'char-walk-south-7', path: 'assets/characters/pixel/walk_south_07.png' },
+      { key: 'char-walk-south-8', path: 'assets/characters/pixel/walk_south_08.png' },
+      { key: 'char-walk-north', path: 'assets/characters/pixel/walk_north.png' },
+      { key: 'char-walk-east', path: 'assets/characters/pixel/walk_east.png' },
+      { key: 'char-walk-west', path: 'assets/characters/pixel/walk_west.png' },
     ],
     frames: {
       down: {
-        idle: ['char-idle-front'],
-        walk: ['char-walk-front-1', 'char-walk-front-2'],
-        attack: ['char-idle-front'],
+        idle: ['char-idle-south'],
+        walk: [
+          'char-walk-south-1',
+          'char-walk-south-2',
+          'char-walk-south-3',
+          'char-walk-south-4',
+          'char-walk-south-5',
+          'char-walk-south-6',
+          'char-walk-south-7',
+          'char-walk-south-8',
+        ],
+        attack: ['char-idle-south'],
       },
       up: {
-        idle: ['char-idle-back-1', 'char-idle-back-2'],
-        walk: ['char-walk-back-1', 'char-walk-back-2', 'char-walk-back-3', 'char-walk-back-4', 'char-walk-back-5'],
-        attack: ['char-idle-back-1'],
+        idle: ['char-idle-north'],
+        walk: ['char-walk-north'],
+        attack: ['char-idle-north'],
       },
+      // Sem espelhar mais nada — o export trouxe leste E oeste de verdade
+      // (ao contrário da arte antiga, que só tinha um perfil e espelhava
+      // pra virar o outro lado).
       left: {
-        idle: ['char-idle-left'],
-        idleFlip: false,
-        // Ver nota equivalente que existia em character.js: a caminhada de
-        // perfil pra esquerda reaproveita a arte da direita espelhada (a
-        // arte própria de "caminhada contra" saiu com o tronco torcido).
-        walk: ['char-walk-right-1', 'char-walk-right-2', 'char-walk-right-3', 'char-walk-right-4'],
-        walkFlip: true,
-        attack: ['char-idle-left'],
+        idle: ['char-idle-west'],
+        walk: ['char-walk-west'],
+        attack: ['char-idle-west'],
       },
       right: {
-        idle: ['char-idle-right'],
-        idleFlip: false,
-        walk: ['char-walk-right-1', 'char-walk-right-2', 'char-walk-right-3', 'char-walk-right-4'],
-        walkFlip: false,
-        attack: ['char-idle-right'],
+        idle: ['char-idle-east'],
+        walk: ['char-walk-east'],
+        attack: ['char-idle-east'],
       },
     },
   },

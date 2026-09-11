@@ -2,7 +2,12 @@
 // cena, personagem, mundo e editor.
 
 export const PLAYER_SPEED = 160; // pixels por segundo
-export const CHAR_SCALE = 0.65; // escala de exibição — ajuste aqui se o tamanho não bater
+// Escala de exibição — ajuste aqui se o tamanho não bater. Recalculada pro
+// teste de pixel art (canvas 32x32, conteúdo real ~26px de altura — ver
+// character/races.js): 113px de altura em tela / ~26.5px de conteúdo ≈ 4.26,
+// mesma altura em tela que o personagem pintado anterior tinha (200x200,
+// conteúdo 174px, escala 0.65).
+export const CHAR_SCALE = 4.26;
 export const WALK_FRAME_MS = 180; // troca de frame do ciclo de caminhada (2 frames alternando)
 export const IDLE_FRAME_MS = 650; // troca de frame do idle (bem mais devagar — é só uma respiração sutil)
 export const ATTACK_FRAME_MS = 90; // troca de frame do ataque — mais rápido, dá sensação de impacto
@@ -11,7 +16,7 @@ export const ATTACK_DURATION_MS = 280; // quanto tempo o modo 'attack' fica ativ
 // Sombra sob os pés — desenhada por código (gradiente radial), não é um
 // asset. Assim ela nunca desalinha entre os frames do personagem, e já
 // funciona de graça pra qualquer personagem/inimigo futuro.
-export const SHADOW_OFFSET_Y = 55; // distância dos pés até o centro do personagem, em pixels de tela
+export const SHADOW_OFFSET_Y = 49; // distância dos pés até o centro do personagem, em pixels de tela — recalculado junto com CHAR_SCALE pro teste de pixel art
 export const SHADOW_SCALE_X = 1.0;
 export const SHADOW_SCALE_Y = 0.4;
 

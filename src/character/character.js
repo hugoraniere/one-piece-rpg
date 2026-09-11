@@ -65,8 +65,11 @@ export function createPlayerCharacter(scene, x, y, raceId = 'human') {
   player.setScale(CHAR_SCALE);
   // Caixa de colisão pequena perto dos pés, não o corpo inteiro (a imagem
   // tem bastante espaço vazio ao redor do personagem) — ajuste fino depois.
-  player.body.setSize(90, 60);
-  player.body.setOffset(55, 120);
+  // Valores proporcionais aos antigos (90,60 / 55,120 num canvas 200x200),
+  // reduzidos pro canvas novo de 32x32 (fator 0.16) — ver CHAR_SCALE em
+  // config.js pro resto da conta do teste de pixel art.
+  player.body.setSize(14, 10);
+  player.body.setOffset(9, 19);
   player.setCollideWorldBounds(true);
 
   return { player, shadow };

@@ -44,19 +44,26 @@ export const LAYER_DEFS = {
   },
 };
 
-// Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md)
-// — a arte da camada precisa nascer nesse mesmo tamanho de tela pra alinhar.
-const PLACEHOLDER_CANVAS_SIZE = 200;
+// Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md
+// — a arte da camada precisa nascer nesse mesmo tamanho de tela pra alinhar).
+// 32 pra bater com o canvas do teste de pixel art (ver character/races.js);
+// era 200 com a arte pintada anterior — todas as coordenadas de desenho
+// abaixo foram reduzidas pelo mesmo fator (32/200 = 0.16), não são mais as
+// mesmas de antes.
+const PLACEHOLDER_CANVAS_SIZE = 32;
 
 // PLACEHOLDER — desenha uma "espada" simples numa cor que não existe em
 // nenhum asset real (roxo/magenta), só pra provar que a camada de
 // equipamento funciona: acompanha a direção, anda junto, aparece/some ao
 // equipar. Troque por arte de verdade seguindo EQUIPMENT_ASSETS_TODO.md; até
-// lá, ver esse retângulo roxo em cima do personagem é esperado.
+// lá, ver esse retângulo roxo em cima do personagem é esperado. Em canvas
+// tão pequeno (32px) o desenho fica mais tosco que antes — é esperado, é
+// só um placeholder, e a escala tem que bater com o corpo (ver comentário
+// de PLACEHOLDER_CANVAS_SIZE).
 export function generatePlaceholderWeaponTextures(scene) {
-  drawPlaceholderSword(scene, 'weapon-sword-front', 128, 118, -35);
-  drawPlaceholderSword(scene, 'weapon-sword-back', 76, 108, -35);
-  drawPlaceholderSword(scene, 'weapon-sword-side', 122, 118, -20);
+  drawPlaceholderSword(scene, 'weapon-sword-front', 24, 23, -15);
+  drawPlaceholderSword(scene, 'weapon-sword-back', 8, 22, -15);
+  drawPlaceholderSword(scene, 'weapon-sword-side', 23, 23, -10);
 }
 
 // PLACEHOLDER na mesma linha da espada acima: uma vara marrom simples (sem
@@ -64,9 +71,9 @@ export function generatePlaceholderWeaponTextures(scene) {
 // vertical que a espada — uma vara de pescar descansa quase reta, não
 // inclinada como uma lâmina embainhada.
 export function generatePlaceholderRodTextures(scene) {
-  drawPlaceholderRod(scene, 'rod-front', 128, 150, -12);
-  drawPlaceholderRod(scene, 'rod-back', 76, 140, -12);
-  drawPlaceholderRod(scene, 'rod-side', 122, 145, -6);
+  drawPlaceholderRod(scene, 'rod-front', 20, 24, -12);
+  drawPlaceholderRod(scene, 'rod-back', 12, 22, -12);
+  drawPlaceholderRod(scene, 'rod-side', 20, 23, -6);
 }
 
 function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
@@ -80,15 +87,15 @@ function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
   ctx.translate(gripX, gripY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
   ctx.fillStyle = '#8a5a34';
-  ctx.fillRect(-3, -95, 6, 95); // vareta
+  ctx.fillRect(-1, -15, 2, 15); // vareta
   ctx.strokeStyle = '#e8d9b0';
   ctx.lineWidth = 1;
   ctx.beginPath();
-  ctx.moveTo(0, -95);
-  ctx.lineTo(18, -20);
+  ctx.moveTo(0, -15);
+  ctx.lineTo(3, -3);
   ctx.stroke(); // linha de pesca
   ctx.fillStyle = '#3b2415';
-  ctx.fillRect(-5, -6, 10, 20); // cabo
+  ctx.fillRect(-1, -1, 2, 3); // cabo
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
@@ -105,10 +112,10 @@ function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {
   ctx.translate(hiltX, hiltY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
   ctx.fillStyle = '#c026d3';
-  ctx.fillRect(-4, -55, 8, 55); // lâmina
-  ctx.fillRect(-12, -8, 24, 6); // guarda
+  ctx.fillRect(-1, -9, 2, 9); // lâmina
+  ctx.fillRect(-2, -1, 4, 1); // guarda
   ctx.fillStyle = '#701a75';
-  ctx.fillRect(-4, -2, 8, 16); // cabo
+  ctx.fillRect(-1, 0, 2, 3); // cabo
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
