@@ -14,9 +14,11 @@
 //   atacar        -> Espadas (arma equipada) ou Luta (desarmado) + Força
 //   apanhar e sobreviver -> Vitalidade
 //
-// Sem persistência ainda — reseta ao recarregar a página, igual tudo mais
-// no jogo hoje (posição, vida). Quando existir save de verdade, isso entra
-// junto.
+// Progressão já sobrevive a recarregar a página (ver state/playerState.js —
+// save em localStorage, autosave a cada 5s + beforeunload). Só a posição
+// exata dentro da ilha continua resetando pro spawnPoint — isso é
+// intencional (mesma regra de toda troca de ilha), não uma limitação de
+// save; vida, inventário e Berries persistem junto com a progressão.
 
 export const ACTIONS_PER_LEVEL = 15;
 export const ATTRIBUTE_BASE = 10;

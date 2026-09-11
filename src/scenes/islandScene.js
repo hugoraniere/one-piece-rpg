@@ -32,7 +32,7 @@ import { cancelFishingAttempt, getFishingPhase, isFishingActive, releaseFishingA
 import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
 import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
-import { getPlayerState } from '../state/playerState.js';
+import { getPlayerState, resetPlayerState, saveState } from '../state/playerState.js';
 import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
@@ -321,6 +321,14 @@ export default class IslandScene extends Phaser.Scene {
         // de recompensa/espécie/lixo sem precisar disso). NÃO usar pra
         // simular sucesso de jogador de verdade — é só pra depuração.
         forceCatch: (outcome = 'sucesso', baitId = null) => handleFishingResult(this, outcome, baitId),
+        // Save de verdade agora existe (localStorage, ver state/playerState.js)
+        // — saveNow força fora do intervalo de 5s do autosave, resetSave
+        // apaga e recarrega a página com jogo novo.
+        saveNow: () => saveState(),
+        resetSave: () => {
+          resetPlayerState();
+          location.reload();
+        },
       };
     }
   }
