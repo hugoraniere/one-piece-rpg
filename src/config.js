@@ -8,6 +8,12 @@ export const PLAYER_SPEED = 160; // pixels por segundo
 // mesma altura em tela que o personagem pintado anterior tinha (200x200,
 // conteúdo 174px, escala 0.65).
 export const CHAR_SCALE = 4.26;
+// Zoom da câmera — o personagem em 113px de altura (CHAR_SCALE acima) e
+// câmera no zoom padrão (1) deixava o boneco grande demais na tela,
+// escondendo o mundo ao redor. Zoom < 1 encolhe a visão inteira igual
+// (personagem, chão, props) mantendo a proporção — mais "visão de cima"
+// de RPG top-down, menos "close no rosto".
+export const CAMERA_ZOOM = 0.5;
 export const WALK_FRAME_MS = 180; // troca de frame do ciclo de caminhada (2 frames alternando)
 export const IDLE_FRAME_MS = 650; // troca de frame do idle (bem mais devagar — é só uma respiração sutil)
 export const ATTACK_FRAME_MS = 90; // troca de frame do ataque — mais rápido, dá sensação de impacto

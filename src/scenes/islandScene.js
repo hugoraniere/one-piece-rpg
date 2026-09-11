@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ATTACK_DURATION_MS, PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
+import { ATTACK_DURATION_MS, CAMERA_ZOOM, PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
 import { createEnemy, damageEnemy, updateEnemy } from '../world/enemy.js';
 import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, updateCharacterVisual } from '../character/character.js';
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
@@ -249,6 +249,7 @@ export default class IslandScene extends Phaser.Scene {
     // quando a janela muda de tamanho — não precisamos fazer isso na mão.
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(CAMERA_ZOOM);
     // Simétrico com o fadeOut de travelToIsland (ui/sailingTransition.js) —
     // roda também no primeiro boot (fade a partir de preto), o que é
     // inofensivo/discreto o bastante pra não precisar de um caso especial
