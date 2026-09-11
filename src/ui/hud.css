@@ -222,6 +222,7 @@
 }
 .menu-btn {
   pointer-events: auto;
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -338,21 +339,30 @@
   width: 22px;
   height: 22px;
 }
-/* Indicador do atalho de número — canto inferior direito, pequeno o
-   bastante pra não brigar com o ícone no centro do slot. */
-.hotbar-key {
+/* Indicador de atalho (número da hotbar, letra dos botões de menu) —
+   canto inferior direito, chip com FUNDO PRÓPRIO escuro em vez de só cor
+   de texto. Um texto claro direto sobre o slot (creme sobre creme, tanto
+   no fundo normal do slot quanto no do menu-btn) quase não aparecia —
+   ver conversa de revisão de contraste. Com chip escuro sólido + borda o
+   número sempre lê, não importa o que tiver atrás (slot claro, travado,
+   equipado, ou o botão redondo do menu). */
+.shortcut-badge {
   position: absolute;
-  bottom: 1px;
-  right: 3px;
+  bottom: -3px;
+  right: -3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 2px;
+  border-radius: 4px;
+  background: #241a12;
+  border: 1px solid #100b07;
+  color: #f5ebc8;
   font-size: 10px;
-  font-weight: 700;
-  line-height: 1;
-  color: #e8d9b0;
-  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.8);
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
   pointer-events: none;
-}
-.hotbar-slot.locked .hotbar-key {
-  color: #8a8070;
 }
 .hotbar-slot:hover {
   transform: translateY(-2px);

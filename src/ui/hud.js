@@ -34,6 +34,24 @@ const HOTBAR_SLOTS = [
   { id: 'slot4', shortcut: '4', iconSymbol: 'cadeado', title: 'Reservado (ainda não existe)' },
 ];
 
+// Mesma ideia da hotbar: qualquer botão clicável que também tem atalho de
+// teclado mostra o indicador — não só a hotbar. `id` bate com o
+// `data-menu`/chave de handler que bindMenuButtons já esperava.
+const MENU_BUTTONS = [
+  { id: 'personagem', shortcut: 'C', iconSymbol: 'personagem', title: 'Personagem' },
+  { id: 'inventario', shortcut: 'I', iconSymbol: 'inventario', title: 'Inventário' },
+  { id: 'mapa', shortcut: 'M', iconSymbol: 'mapa', title: 'Mapa' },
+];
+
+// Badge do atalho — fundo escuro sólido próprio, não a cor de texto do
+// slot por baixo. Um slot de hotbar claro (madeira) ou um menu-btn também
+// claro (creme) deixava o número quase invisível (creme sobre creme,
+// achado em revisão de contraste); com chip escuro próprio o número
+// sempre lê, não importa o fundo por trás.
+function shortcutBadge(shortcut) {
+  return `<span class="shortcut-badge">${shortcut}</span>`;
+}
+
 let hpFrameEl;
 let hpFillEl;
 let hpNumEl;
@@ -77,9 +95,12 @@ export function initHud() {
       </div>
     </div>
     <div class="menu-buttons" id="hud-menu-buttons">
-      <div class="menu-btn" data-menu="personagem" title="Personagem (C)"><svg class="icon" aria-hidden="true"><use href="#i-personagem"></use></svg></div>
-      <div class="menu-btn" data-menu="inventario" title="Inventário (I)"><svg class="icon" aria-hidden="true"><use href="#i-inventario"></use></svg></div>
-      <div class="menu-btn" data-menu="mapa" title="Mapa (M)"><svg class="icon" aria-hidden="true"><use href="#i-mapa"></use></svg></div>
+      ${MENU_BUTTONS.map((btn) => `
+        <div class="menu-btn" data-menu="${btn.id}" title="${btn.title} (${btn.shortcut})">
+          <svg class="icon" aria-hidden="true"><use href="#i-${btn.iconSymbol}"></use></svg>
+          ${shortcutBadge(btn.shortcut)}
+        </div>
+      `).join('')}
     </div>
     <div class="hotbar" id="hud-hotbar">
       ${HOTBAR_SLOTS.map((slot) => `
@@ -87,7 +108,7 @@ export function initHud() {
           ${slot.icon
             ? `<img class="icon pixel-icon" src="${slot.icon}" alt="${slot.title}">`
             : `<svg class="icon" aria-hidden="true"><use href="#i-${slot.iconSymbol}"></use></svg>`}
-          <span class="hotbar-key">${slot.shortcut}</span>
+          ${shortcutBadge(slot.shortcut)}
         </div>
       `).join('')}
     </div>
