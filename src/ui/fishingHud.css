@@ -1,7 +1,7 @@
 /* Minigame de pesca — duas fases (ver fishingHud.js): espera (barra vazia,
-   dica neutra) e mordida (barra cheia esvaziando = tempo pra soltar,
-   destaque vermelho). Fixa na tela, aparece só enquanto uma tentativa está
-   rolando. */
+   dica neutra) e mordida (barra cheia esvaziando = tempo pra clicar de
+   novo e fisgar, destaque vermelho). Fixa na tela, aparece só enquanto uma
+   tentativa está rolando. */
 
 .fishing-hud {
   position: fixed;

@@ -13,8 +13,6 @@ import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, craft } from '../sim/crafting.js';
 import {
-  CAST_DEFAULT_DIST,
-  CAST_DEFAULT_QUALITY,
   CAST_MAX_RANGE,
   MAX_WAIT_TICKS,
   computeCastQuality,
@@ -211,25 +209,24 @@ export default class IslandScene extends Phaser.Scene {
 
     // Pesca — primeira fonte de renda real do jogo (ver conversa de design:
     // combate deveria ser raro, o dinheiro vem de trabalho/ofício, não de
-    // matar). Segurar F (ou clicar na água e segurar) joga a vara; soltar
-    // puxa — ver sim/fishing.js pras fórmulas e ui/fishingHud.js pro
-    // minigame de duas fases (espera + mordida).
-    this.input.keyboard.on('keydown-F', () => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      tryStartFishing(this, null);
-    });
-    this.input.keyboard.on('keyup-F', () => {
-      if (isFishingActive()) releaseFishingAttempt();
-    });
+    // matar). A vara é só mais um equipamento: o MESMO clique que ataca com
+    // a espada arremessa com a vara — sem tecla dedicada (F) só pra ela.
+    // Dois cliques, não segurar/soltar: um pra jogar a isca, outro pra
+    // fisgar quando morder — ver sim/fishing.js pras fórmulas e
+    // ui/fishingHud.js pro minigame de duas fases (espera + mordida).
     this.input.on('pointerdown', (pointer) => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+      if (isEditorModeActive() || isMenuOpen()) return;
+      if (isFishingActive()) {
+        // Clique durante a espera não faz nada (sem mordida ainda, nada pra
+        // fisgar) — só a mordida reage ao clique. Assim não existe mais
+        // jeito de "puxar cedo demais" por um clique impaciente.
+        if (getFishingPhase() === 'mordida') releaseFishingAttempt();
+        return;
+      }
       // Perto do boneco de treino com espada equipada? O clique vira golpe,
       // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
       if (tryAttack(this)) return;
       tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
-    });
-    this.input.on('pointerup', () => {
-      if (isFishingActive()) releaseFishingAttempt();
     });
 
     const { worldWidth, worldHeight } = this.islandConfig;
@@ -297,9 +294,9 @@ export default class IslandScene extends Phaser.Scene {
         isEditorModeActive: () => isEditorModeActive(),
         getFacing: () => this.facing,
         tryStartFishing: (point) => tryStartFishing(this, point),
-        // Solta a vara de fora (equivalente ao keyup-F/pointerup) — junto com
+        // Aciona o mesmo caminho do segundo clique (fisgar) — junto com
         // tryStartFishing, dá pra simular uma captura de ponta a ponta sem
-        // depender de segurar tecla de verdade (pouco confiável em automação).
+        // depender de cliques de verdade (pouco confiável em automação).
         releaseFishingAttempt: () => releaseFishingAttempt(),
         getFishingPhase: () => getFishingPhase(),
         // Teleporta o jogador pra testar coisas que dependem de posição
@@ -352,7 +349,8 @@ export default class IslandScene extends Phaser.Scene {
     }
 
     if (isFishingActive()) {
-      // Parado olhando a água enquanto a barra de reação roda — ver keydown-F.
+      // Parado olhando a água enquanto a barra de reação roda — ver o
+      // pointerdown único que decide arremessar/fisgar conforme a fase.
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -604,16 +602,10 @@ function refreshHotbar(scene) {
 
 // ============================================================================
 // PESCA — arremesso (mira/qualidade) + espera/mordida (ver sim/fishing.js
-// pras fórmulas e ui/fishingHud.js pro minigame). `targetPoint` é o clique
-// n'água, ou null se foi F sem mirar (arremesso reto, qualidade fixa).
+// pras fórmulas e ui/fishingHud.js pro minigame). `targetPoint` é sempre o
+// clique n'água — sem tecla dedicada pra arremesso "cego" (ver clique único
+// pro item equipado, acima).
 // ============================================================================
-
-function facingVector(dir) {
-  if (dir === 'up') return { x: 0, y: -1 };
-  if (dir === 'left') return { x: -1, y: 0 };
-  if (dir === 'right') return { x: 1, y: 0 };
-  return { x: 0, y: 1 }; // 'down'
-}
 
 function tryStartFishing(scene, targetPoint) {
   const player = scene.player;
@@ -634,26 +626,18 @@ function tryStartFishing(scene, targetPoint) {
     return;
   }
 
-  let target;
-  let castQuality;
-  if (targetPoint) {
-    const dx = targetPoint.x - player.x;
-    const dy = targetPoint.y - player.y;
-    // Vira o personagem (e a vara) pro lado do clique — sem isso o arremesso
-    // ia sempre visualmente pra direção que o personagem já estava olhando
-    // antes de pescar, mesmo mirando pro lado oposto na água.
-    scene.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+  const dx = targetPoint.x - player.x;
+  const dy = targetPoint.y - player.y;
+  // Vira o personagem (e a vara) pro lado do clique — sem isso o arremesso
+  // ia sempre visualmente pra direção que o personagem já estava olhando
+  // antes de pescar, mesmo mirando pro lado oposto na água.
+  scene.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
 
-    const dist = Phaser.Math.Distance.Between(player.x, player.y, targetPoint.x, targetPoint.y);
-    const clampedDist = Math.min(dist, CAST_MAX_RANGE);
-    const angle = Phaser.Math.Angle.Between(player.x, player.y, targetPoint.x, targetPoint.y);
-    target = { x: player.x + Math.cos(angle) * clampedDist, y: player.y + Math.sin(angle) * clampedDist };
-    castQuality = computeCastQuality(clampedDist);
-  } else {
-    const dir = facingVector(scene.facing);
-    target = { x: player.x + dir.x * CAST_DEFAULT_DIST, y: player.y + dir.y * CAST_DEFAULT_DIST };
-    castQuality = CAST_DEFAULT_QUALITY;
-  }
+  const dist = Phaser.Math.Distance.Between(player.x, player.y, targetPoint.x, targetPoint.y);
+  const clampedDist = Math.min(dist, CAST_MAX_RANGE);
+  const angle = Phaser.Math.Angle.Between(player.x, player.y, targetPoint.x, targetPoint.y);
+  const target = { x: player.x + Math.cos(angle) * clampedDist, y: player.y + Math.sin(angle) * clampedDist };
+  const castQuality = computeCastQuality(clampedDist);
 
   if (!isWaterPoint(scene, target.x, target.y)) {
     spawnMissText(scene, player.x, player.y - 60, 'Aí não tem água pra pescar.');

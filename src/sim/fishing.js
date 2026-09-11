@@ -26,8 +26,6 @@ export const MAX_CAST_BONUS_MS = 250; // bônus máximo de janela de reação po
 export const CAST_IDEAL_MIN_DIST = 60;
 export const CAST_IDEAL_MAX_DIST = 180;
 export const CAST_MAX_RANGE = 260;
-export const CAST_DEFAULT_QUALITY = 0.6; // F sem mirar: arremesso reto, nem ruim nem perfeito
-export const CAST_DEFAULT_DIST = 120;
 
 // A melhor isca que o jogador tem no inventário — sempre a de maior tier
 // (ver ITEM_DEFS). `null` significa pescar sem isca nenhuma.
