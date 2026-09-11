@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
-import { PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
+import { ATTACK_DURATION_MS, PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
+import { createEnemy, damageEnemy, updateEnemy } from '../world/enemy.js';
 import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, updateCharacterVisual } from '../character/character.js';
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
 import { isEditorModeActive, panEditorCamera, resetEditorState, setupEditor } from '../editor/editorMode.js';
@@ -35,6 +36,8 @@ import { getPlayerState } from '../state/playerState.js';
 import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
+const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
+const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
 
 const FISH_REWARD = 8; // Berries por peixe fisgado — valor de referência, fácil de reequilibrar
 
@@ -87,6 +90,7 @@ export default class IslandScene extends Phaser.Scene {
     this.lastGatherAt = -Infinity;
     this.lastGatherBlockHintAt = -Infinity;
     this.lastFishBlockHintAt = -Infinity;
+    this.attackAnimTimer = 0;
 
     // Limpa estado de módulo do editor deixado pela ilha anterior (ver
     // comentário nas próprias funções) — precisa vir antes de qualquer
@@ -208,6 +212,9 @@ export default class IslandScene extends Phaser.Scene {
     });
     this.input.on('pointerdown', (pointer) => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+      // Perto do boneco de treino com espada equipada? O clique vira golpe,
+      // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
+      if (tryAttack(this)) return;
       tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
     });
     this.input.on('pointerup', () => {
@@ -235,6 +242,13 @@ export default class IslandScene extends Phaser.Scene {
     buildPierDock(this);
     buildWaterCollision(this, this.player);
     setupEditor(this, this.player);
+
+    // Boneco de treino — placeholder de monstro (ver world/enemy.js), raro/
+    // opcional igual o resto do jogo. Sem IA nem combate de verdade ainda:
+    // combate real por turnos é um projeto futuro à parte (ver plano de
+    // ilhas). A textura já foi gerada uma vez só, na BootScene.
+    this.enemy = createEnemy(this, this.islandConfig.monsterSpawn.x, this.islandConfig.monsterSpawn.y);
+    this.physics.add.collider(this.player, this.enemy.sprite);
 
     // Se a cena for destruída com uma pescaria em andamento (recarregar em
     // dev, troca de ilha), encerra o timer em vez de deixar rodando sozinho
@@ -298,6 +312,9 @@ export default class IslandScene extends Phaser.Scene {
     // teleporte via __gameDebug.setPlayerPos — mais simples que replicar essa
     // chamada em cada branch abaixo.
     setMinimapPos(this.player.x / this.islandConfig.worldWidth, this.player.y / this.islandConfig.worldHeight);
+    // Também sempre em dia — o respawn do boneco de treino não deveria travar
+    // só porque o jogador abriu um menu (ver world/enemy.js).
+    updateEnemy(this.enemy, delta);
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
@@ -321,6 +338,16 @@ export default class IslandScene extends Phaser.Scene {
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
       panEditorCamera(this, delta, this.cursors, this.wasd);
+      return;
+    }
+
+    if (this.attackAnimTimer > 0) {
+      // Parado durante o golpe (ver tryAttack) — mesma ideia de "congela o
+      // resto pra essa ação ler bem" das outras travas acima.
+      this.attackAnimTimer -= delta;
+      this.player.body.setVelocity(0, 0);
+      updateCharacterVisual(this.player, this.animState, delta, 'attack', this.facing);
+      updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'attack', this.facing);
       return;
     }
 
@@ -397,6 +424,24 @@ function trainAndNotify(scene, key) {
 function itemLabel(itemId, qty) {
   const def = ITEM_DEFS[itemId];
   return `${def.icon} +${qty} ${def.name}`;
+}
+
+// Golpe corpo-a-corpo no boneco de treino (ver world/enemy.js) — só existe
+// pra dar o que bater enquanto não existe combate de verdade (esse é um
+// projeto futuro à parte, ver plano de ilhas). Precisa de espada equipada e
+// alcance curto; sem trava de cooldown própria porque a animação de ataque
+// (ATTACK_DURATION_MS, ver update()) já ocupa o jogador tempo suficiente
+// entre um clique e outro.
+function tryAttack(scene) {
+  const enemy = scene.enemy;
+  if (scene.state.equipState.equippedLayerId !== 'sword') return false;
+  if (!enemy || enemy.respawnTimer > 0) return false;
+  const dist = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, enemy.sprite.x, enemy.sprite.y);
+  if (dist > MELEE_RANGE) return false;
+
+  damageEnemy(scene, enemy, MELEE_DAMAGE);
+  scene.attackAnimTimer = ATTACK_DURATION_MS;
+  return true;
 }
 
 function handleGather(scene) {

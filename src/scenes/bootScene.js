@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { generateShadowTexture } from '../character/character.js';
 import { generatePlaceholderRodTextures, generatePlaceholderWeaponTextures } from '../character/layers.js';
+import { generatePlaceholderEnemyTexture } from '../world/enemy.js';
 import { getPlayerState } from '../state/playerState.js';
 
 // Roda uma vez só, ao ligar o jogo — não a cada troca de ilha (isso é
@@ -18,6 +19,7 @@ export default class BootScene extends Phaser.Scene {
     generateShadowTexture(this);
     generatePlaceholderWeaponTextures(this);
     generatePlaceholderRodTextures(this);
+    generatePlaceholderEnemyTexture(this);
     this.scene.start('island', { islandId: getPlayerState().currentIslandId });
   }
 }
