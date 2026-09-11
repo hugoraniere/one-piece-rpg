@@ -1,0 +1,15 @@
+import { VILA_DO_MASTRO_PARTIDO } from './vilaDoMastroPartido.js';
+
+// Registro de ilhas jogáveis — cada uma é um arquivo de config próprio (ver
+// vilaDoMastroPartido.js pro formato completo). Adicionar uma ilha nova é só
+// mais uma entrada aqui (import + linha no objeto), não código novo em
+// nenhum outro lugar — scene, mapa, sistema de água etc. já leem tudo daqui.
+export const DEFAULT_ISLAND_ID = VILA_DO_MASTRO_PARTIDO.id;
+
+export const ISLANDS = {
+  [VILA_DO_MASTRO_PARTIDO.id]: VILA_DO_MASTRO_PARTIDO,
+};
+
+export function getIsland(id) {
+  return ISLANDS[id] ?? ISLANDS[DEFAULT_ISLAND_ID];
+}

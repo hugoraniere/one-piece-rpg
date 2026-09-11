@@ -1,4 +1,4 @@
-import { TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { TILE_SIZE } from '../config.js';
 
 // Peças de caminho entram como TERRENO, não prop — elas são blocos de chão
 // de um tile inteiro (pintam encaixado no grid de 120px), não objetos com
@@ -59,14 +59,10 @@ export const EDITOR_TERRAIN_PALETTE = [
   { key: 'pier-t', label: 'Doca (T)' },
 ];
 
-export function preloadGroundAssets(scene) {
-  scene.load.image('scene-background', 'assets/ground/scene_background.png');
-  // Altura da linha areia/água por coluna, extraída do PNG acima — usada só
-  // pra montar a colisão que impede andar na água (ver buildWaterCollision).
-  scene.load.json('water-line', 'assets/ground/scene_background_water_line.json');
-
-  // Ainda carregados pra pintura de terreno pontual no editor (touch-up
-  // por cima do background), mesmo não sendo mais a base do mapa.
+// Assets COMPARTILHADOS entre qualquer ilha (paleta de pintura do editor +
+// kit de doca) — ao contrário do fundo/linha-d'água, que mudam de arquivo a
+// cada ilha (ver islandConfig.preloadAssets em world/islands/*.js).
+export function preloadTerrainPaletteAssets(scene) {
   scene.load.image('ground-grass', 'assets/ground/grass.png');
   scene.load.image('ground-dirt', 'assets/ground/dirt.png');
   scene.load.image('ground-sand', 'assets/ground/sand.png');
@@ -105,26 +101,16 @@ export function preloadGroundAssets(scene) {
 
 // Doca de verdade, desenhada à mão com o kit de 18 peças (ver
 // tools/reprocess_pier_kit.py) — mesmas peças disponíveis no pincel do
-// editor, só que já plantadas no mapa por padrão. Layout simples (retângulo
-// 3x3 saindo da praia pro mar): fileira 1 é 100% madeira (encosta na areia,
-// o kit não tem uma peça "madeira encontra areia" — fica uma borda reta
-// mesma, igual a doca antiga já fazia), fileira 2 tem água nas duas
-// laterais, fileira 3 fecha em água nos 3 lados (SW/S/SE). A fileira 3 cai
-// bem na última linha do mundo (WORLD_HEIGHT=1920) — o próprio limite do
-// mapa já impede andar além dela, então não precisa de peça de fechamento.
-const DOCK_COL_START = 15; // x mundo: 1800-2160
-const DOCK_ROW_START = 13; // y mundo: 1560-1920
-const DOCK_LAYOUT = [
-  ['pier-center', 'pier-center', 'pier-center'],
-  ['pier-edge-w', 'pier-center', 'pier-edge-e'],
-  ['pier-outer-sw', 'pier-edge-s', 'pier-outer-se'],
-];
-
+// editor, só que já plantadas no mapa por padrão. `scene.islandConfig.pierDock`
+// dá a posição (colStart/rowStart, em tiles) e o layout — cada ilha planta a
+// doca onde sua própria curva d'água encosta na terra (ver
+// world/islands/*.js).
 export function buildPierDock(scene) {
-  DOCK_LAYOUT.forEach((rowKeys, rowOffset) => {
+  const { colStart, rowStart, layout } = scene.islandConfig.pierDock;
+  layout.forEach((rowKeys, rowOffset) => {
     rowKeys.forEach((key, colOffset) => {
-      const col = DOCK_COL_START + colOffset;
-      const row = DOCK_ROW_START + rowOffset;
+      const col = colStart + colOffset;
+      const row = rowStart + rowOffset;
       const tile = scene.add.image(col * TILE_SIZE + TILE_SIZE / 2, row * TILE_SIZE + TILE_SIZE / 2, key);
       tile.setDisplaySize(TILE_SIZE, TILE_SIZE);
       tile.setDepth(-0.99); // mesma convenção do pincel do editor (ver paintTerrainAt em editorMode.js)
@@ -135,41 +121,49 @@ export function buildPierDock(scene) {
 // buildWaterCollision (abaixo) bloqueia água em faixas de 32px seguindo a
 // curva do mar inteira — sem isso, a doca ficaria visualmente andável mas
 // com uma parede invisível por cima, já que o colisor não sabe que ali tem
-// madeira em vez de água.
-function isUnderDock(x) {
-  const worldX = x;
-  return worldX >= DOCK_COL_START * TILE_SIZE && worldX < (DOCK_COL_START + DOCK_LAYOUT[0].length) * TILE_SIZE;
+// madeira em vez de água. A doca sempre ocupa a MESMA largura (em colunas)
+// do seu próprio layout — não precisamos de um campo separado só pra isso.
+function isUnderDock(pierDock, x) {
+  const { colStart, layout } = pierDock;
+  return x >= colStart * TILE_SIZE && x < (colStart + layout[0].length) * TILE_SIZE;
 }
 
+// Uma imagem só, do tamanho exato do mundo daquela ilha — o chão era faixas
+// retas empilhadas antes; a fronteira grama/areia/água precisava ser uma
+// curva orgânica, e isso não dá pra fazer bem só com tiles retangulares. O
+// sistema de PINTURA de terreno do editor continua funcionando por cima
+// dela, em qualquer ilha.
 export function buildGround(scene) {
-  // Uma imagem só, do tamanho exato do mundo — o chão era faixas retas
-  // empilhadas antes; a fronteira grama/areia/água precisava ser uma curva
-  // orgânica (medida a partir da referência, ver BEACH_SCENE_ANALYSIS.md),
-  // e isso não dá pra fazer bem só com tiles retangulares. O sistema de
-  // PINTURA de terreno do editor continua funcionando por cima dela.
-  const bg = scene.add.image(0, 0, 'scene-background');
+  const { backgroundKey } = scene.islandConfig.ground;
+  const bg = scene.add.image(0, 0, backgroundKey);
   bg.setOrigin(0, 0);
-  bg.setDisplaySize(WORLD_WIDTH, WORLD_HEIGHT);
+  bg.setDisplaySize(scene.islandConfig.worldWidth, scene.islandConfig.worldHeight);
   bg.setDepth(-1); // sempre atrás do personagem/props/terreno pintado
 }
 
+// "Perto o bastante da água pra pescar" (ou pra coletar isca improvisada) —
+// cada ilha pode ajustar via islandConfig.water.fishingDistance; a maioria
+// não precisa, então isso serve só de valor padrão.
+const DEFAULT_FISHING_DISTANCE = 90; // pixels
+
 // Impede o personagem de andar na água. A "linha d'água" (uma altura em
-// pixels por coluna) foi extraída do próprio PNG de fundo por
-// tools/build_terrain_background.py — aqui só ladrilhamos uma fileira de
-// zonas estáticas invisíveis seguindo essa curva. Cada zona é larga o
-// bastante pra não precisar de uma por coluna, mas usa a menor altura
-// (mais perto da grama) dentro do seu trecho, senão um pico da curva
-// dentro do trecho ficaria sem cobertura.
+// pixels por coluna, ver islandConfig.water.lineKey) foi extraída do PNG de
+// fundo daquela ilha por tools/build_terrain_background.py — aqui só
+// ladrilhamos uma fileira de zonas estáticas invisíveis seguindo essa curva.
+// Cada zona é larga o bastante pra não precisar de uma por coluna, mas usa a
+// menor altura (mais perto da grama) dentro do seu trecho, senão um pico da
+// curva dentro do trecho ficaria sem cobertura.
 export function buildWaterCollision(scene, player) {
-  const data = scene.cache.json.get('water-line');
+  const { water, pierDock, worldWidth } = scene.islandConfig;
+  const data = scene.cache.json.get(water.lineKey);
   if (!data) return;
   const line = data.line;
   const segmentWidth = 32;
   const depth = 700; // bem mais que suficiente até o fundo do mundo
 
-  for (let x = 0; x < WORLD_WIDTH; x += segmentWidth) {
-    if (isUnderDock(x)) continue; // ali é madeira andável, não água (ver buildPierDock)
-    const end = Math.min(x + segmentWidth, WORLD_WIDTH);
+  for (let x = 0; x < worldWidth; x += segmentWidth) {
+    if (isUnderDock(pierDock, x)) continue; // ali é madeira andável, não água (ver buildPierDock)
+    const end = Math.min(x + segmentWidth, worldWidth);
     let minY = line[x];
     for (let i = x + 1; i < end; i++) {
       if (line[i] < minY) minY = line[i];
@@ -181,16 +175,11 @@ export function buildWaterCollision(scene, player) {
   }
 }
 
-// "Perto o bastante da água pra pescar" — reaproveita a mesma curva de
-// buildWaterCollision em vez de mais uma zona física: só compara uma
-// posição com a altura da linha d'água na coluna dela.
-const FISHING_DISTANCE = 90; // pixels
-
 // Altura (Y) da linha areia/água na coluna de `x` — base pra isNearWater
 // (proximidade do jogador) e isWaterPoint (o alvo de um arremesso é água de
 // verdade?). `null` se o JSON ainda não carregou.
 export function getWaterLineY(scene, x) {
-  const data = scene.cache.json.get('water-line');
+  const data = scene.cache.json.get(scene.islandConfig.water.lineKey);
   if (!data) return null;
   const col = Math.max(0, Math.min(Math.floor(x), data.line.length - 1));
   return data.line[col];
@@ -199,7 +188,8 @@ export function getWaterLineY(scene, x) {
 export function isNearWater(scene, x, y) {
   const waterY = getWaterLineY(scene, x);
   if (waterY === null) return false;
-  return Math.abs(y - waterY) <= FISHING_DISTANCE;
+  const fishingDistance = scene.islandConfig.water.fishingDistance ?? DEFAULT_FISHING_DISTANCE;
+  return Math.abs(y - waterY) <= fishingDistance;
 }
 
 // Um ponto de arremesso precisa estar do lado da ÁGUA da linha (Y maior,

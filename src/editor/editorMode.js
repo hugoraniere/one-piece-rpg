@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TILE_SIZE, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { TILE_SIZE } from '../config.js';
 import { EDITOR_TERRAIN_PALETTE } from '../world/ground.js';
 import { EDITOR_PROP_PALETTE, createPropImage, editorObjects } from '../world/propRegistry.js';
 import { isFishingActive } from '../ui/fishingHud.js';
@@ -91,13 +91,14 @@ export function panEditorCamera(scene, delta, cursors, wasd) {
 export function setupEditor(scene, player) {
   // Grid de referência — cobre o mundo inteiro, mas só fica visível em
   // modo editor.
+  const { worldWidth, worldHeight } = scene.islandConfig;
   editorGrid = scene.add.graphics();
   editorGrid.lineStyle(1, 0xffffff, 0.15);
-  for (let x = 0; x <= WORLD_WIDTH; x += TILE_SIZE) {
-    editorGrid.lineBetween(x, 0, x, WORLD_HEIGHT);
+  for (let x = 0; x <= worldWidth; x += TILE_SIZE) {
+    editorGrid.lineBetween(x, 0, x, worldHeight);
   }
-  for (let y = 0; y <= WORLD_HEIGHT; y += TILE_SIZE) {
-    editorGrid.lineBetween(0, y, WORLD_WIDTH, y);
+  for (let y = 0; y <= worldHeight; y += TILE_SIZE) {
+    editorGrid.lineBetween(0, y, worldWidth, y);
   }
   editorGrid.setDepth(9000);
   editorGrid.setVisible(false);
@@ -483,7 +484,8 @@ function updateEditorGhost(scene, pointer) {
 function paintTerrainAt(scene, worldX, worldY) {
   const col = Math.floor(worldX / TILE_SIZE);
   const row = Math.floor(worldY / TILE_SIZE);
-  if (col < 0 || row < 0 || col * TILE_SIZE >= WORLD_WIDTH || row * TILE_SIZE >= WORLD_HEIGHT) return;
+  const { worldWidth, worldHeight } = scene.islandConfig;
+  if (col < 0 || row < 0 || col * TILE_SIZE >= worldWidth || row * TILE_SIZE >= worldHeight) return;
 
   const cellKey = `${col},${row}`;
   const terrainKey = EDITOR_TERRAIN_PALETTE[editorTerrainIndex].key;

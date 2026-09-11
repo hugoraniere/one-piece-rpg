@@ -3,11 +3,7 @@ import { createProgression } from '../sim/progression.js';
 import { createInventory } from '../sim/inventory.js';
 import { createLayerState, equipLayer } from '../character/layers.js';
 import { PLAYER_MAX_HP } from '../config.js';
-
-// Repetido aqui (em vez de importado de world/islands/index.js) até essa
-// pasta existir de verdade — ver plano, marco 2. Só um id de string, sem
-// acoplar este módulo ao sistema de config de ilha ainda.
-const DEFAULT_ISLAND_ID = 'vila-do-mastro-partido';
+import { DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 
 // Estado do jogador que precisa sobreviver a uma troca de ilha (scene.restart
 // recria a IslandScene do zero, mas inventário/berries/progressão/equipamento

@@ -15,8 +15,10 @@ export const SHADOW_OFFSET_Y = 55; // distância dos pés até o centro do perso
 export const SHADOW_SCALE_X = 1.0;
 export const SHADOW_SCALE_Y = 0.4;
 
-// O MUNDO é maior que a tela — a câmera acompanha o personagem e o jogo
-// mostra só uma janela dele por vez. Aumente esses números pra um mapa maior.
+// Tamanho de mundo da ilha inicial (Vila do Mastro Partido) — ver
+// world/islands/vilaDoMastroPartido.js. Cada ilha nova tem seu próprio
+// worldWidth/worldHeight no config dela; estes dois só existem aqui pra não
+// duplicar o valor "de fábrica" da primeira ilha em dois lugares.
 export const WORLD_WIDTH = 2560;
 export const WORLD_HEIGHT = 1920;
 

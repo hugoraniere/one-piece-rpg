@@ -1,10 +1,11 @@
 import Phaser from 'phaser';
-import { PLAYER_SPEED, SHADOW_OFFSET_Y, WORLD_HEIGHT, WORLD_WIDTH } from '../config.js';
+import { PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
 import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, updateCharacterVisual } from '../character/character.js';
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
 import { isEditorModeActive, panEditorCamera, resetEditorState, setupEditor } from '../editor/editorMode.js';
-import { buildVillageProps, preloadVillageAssets, resetEditorObjects, VILLAGE_PROPS } from '../world/propRegistry.js';
-import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadGroundAssets } from '../world/ground.js';
+import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js';
+import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
+import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import { trainSkill } from '../sim/progression.js';
 import { addItem, hasItem, removeItem } from '../sim/inventory.js';
@@ -54,10 +55,21 @@ export default class IslandScene extends Phaser.Scene {
     super('island');
   }
 
+  // Roda ANTES de preload() — é daqui que a cena sabe qual ilha montar
+  // (ver `scene.restart({ islandId })` no fluxo de viagem, marco 3 do
+  // plano). Sem `data.islandId` (primeiro boot), usa a ilha atual salva em
+  // playerState, ou a ilha padrão se nem isso existir ainda.
+  init(data) {
+    this.islandConfig = getIsland(data?.islandId ?? getPlayerState().currentIslandId ?? DEFAULT_ISLAND_ID);
+  }
+
   preload() {
-    preloadGroundAssets(this);
+    // Compartilhado por qualquer ilha — ver comentário nas próprias funções.
+    preloadTerrainPaletteAssets(this);
     preloadCharacterAssets(this);
-    preloadVillageAssets(this);
+    // Só o que é específico DESTA ilha (fundo, linha d'água, props) — ver
+    // world/islands/*.js.
+    this.islandConfig.preloadAssets(this);
   }
 
   create() {
@@ -82,11 +94,11 @@ export default class IslandScene extends Phaser.Scene {
     initHud();
     buildGround(this);
 
-    // Na praia, na frente do caminho descendo da praça.
-    const { player, shadow } = createPlayerCharacter(this, 1280, 1517);
+    const { spawnPoint } = this.islandConfig;
+    const { player, shadow } = createPlayerCharacter(this, spawnPoint.x, spawnPoint.y);
     this.player = player;
     this.shadow = shadow;
-    setMinimapPos(this.player.x / WORLD_WIDTH, this.player.y / WORLD_HEIGHT);
+    setMinimapPos(this.player.x / this.islandConfig.worldWidth, this.player.y / this.islandConfig.worldHeight);
     this.animState = createAnimationState();
     setHp(this.state.playerHealth.current, this.state.playerHealth.max);
     setBerries(this.state.berries);
@@ -108,7 +120,7 @@ export default class IslandScene extends Phaser.Scene {
     };
     this.input.keyboard.on('keydown-Q', toggleSwordEquip);
 
-    this.treePositions = VILLAGE_PROPS.filter((p) => TREE_KEYS.includes(p.key)).map((p) => ({ x: p.x, y: p.y }));
+    this.treePositions = this.islandConfig.props.filter((p) => TREE_KEYS.includes(p.key)).map((p) => ({ x: p.x, y: p.y }));
 
     // Menus (Personagem/Inventário/Mapa) — ver ui/menuManager.js. Não abrem
     // no editor nem com uma pescaria em andamento, pra não empilhar estado de
@@ -191,18 +203,19 @@ export default class IslandScene extends Phaser.Scene {
       if (isFishingActive()) releaseFishingAttempt();
     });
 
-    this.physics.world.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    const { worldWidth, worldHeight } = this.islandConfig;
+    this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
     // Câmera menor que o mundo, seguindo o personagem, sem sair da borda do
     // mapa. O Scale Manager (modo RESIZE) já redimensiona essa câmera sozinho
     // quando a janela muda de tamanho — não precisamos fazer isso na mão.
-    this.cameras.main.setBounds(0, 0, WORLD_WIDTH, WORLD_HEIGHT);
+    this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
 
-    buildVillageProps(this, this.player);
+    buildVillageProps(this, this.player, this.islandConfig.props);
     buildPierDock(this);
     buildWaterCollision(this, this.player);
     setupEditor(this, this.player);
@@ -261,7 +274,7 @@ export default class IslandScene extends Phaser.Scene {
     // Sempre em dia, mesmo parado (menu/pesca/editor) ou depois de um
     // teleporte via __gameDebug.setPlayerPos — mais simples que replicar essa
     // chamada em cada branch abaixo.
-    setMinimapPos(this.player.x / WORLD_WIDTH, this.player.y / WORLD_HEIGHT);
+    setMinimapPos(this.player.x / this.islandConfig.worldWidth, this.player.y / this.islandConfig.worldHeight);
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de

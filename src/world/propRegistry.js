@@ -267,8 +267,11 @@ export function createPropImage(scene, key, x, y, scale) {
   return image;
 }
 
-export function buildVillageProps(scene, player) {
-  VILLAGE_PROPS.forEach((prop) => {
+// `propList` é os props DAQUELA ilha (ver islandConfig.props em
+// world/islands/*.js) — default pra VILLAGE_PROPS só por compatibilidade,
+// quem chama de verdade (islandScene.js) sempre passa a lista explícita.
+export function buildVillageProps(scene, player, propList = VILLAGE_PROPS) {
+  propList.forEach((prop) => {
     const image = createPropImage(scene, prop.key, prop.x, prop.y, prop.scale);
     if (prop.rotation) image.setRotation(Phaser.Math.DegToRad(prop.rotation));
     // `tint` é só pra placeholders temporários (ex.: flor tingida de
