@@ -1,6 +1,7 @@
 import { VILA_DO_MASTRO_PARTIDO } from './vilaDoMastroPartido.js';
 import { PORTOMARES } from './portomares.js';
 import { FLORESTA_SUSSURRO } from './florestaSussurro.js';
+import { PANTANO_RONCO } from './pantanoRonco.js';
 
 // Registro de ilhas jogáveis — cada uma é um arquivo de config próprio (ver
 // vilaDoMastroPartido.js pro formato completo). Adicionar uma ilha nova é só
@@ -12,6 +13,7 @@ export const ISLANDS = {
   [VILA_DO_MASTRO_PARTIDO.id]: VILA_DO_MASTRO_PARTIDO,
   [PORTOMARES.id]: PORTOMARES,
   [FLORESTA_SUSSURRO.id]: FLORESTA_SUSSURRO,
+  [PANTANO_RONCO.id]: PANTANO_RONCO,
 };
 
 // Ilhas visíveis/clicáveis no mapa desde o início — ver
