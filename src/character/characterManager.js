@@ -98,7 +98,9 @@ export let characterManager = null;
 export function initCharacterManager(character, scene) {
   characterManager = new CharacterManager(character);
   characterManager.setScene(scene);
-  window.__characterManager = characterManager; // Para debug no console
+  if (typeof window !== 'undefined') {
+    window.__characterManager = characterManager; // Para debug no console
+  }
   return characterManager;
 }
 
