@@ -96,6 +96,40 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* Nível de personagem — mesmo cartão de madeira do resto do chip do topo
+   esquerdo, barra dourada (mesma cor de "subiu de nível" já usada no
+   chip de progressão) marcando o progresso até o próximo nível. */
+.level-frame {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(180deg, #8a5a34, #3b2415);
+  border: 1px solid #241708;
+  border-radius: 6px;
+  padding: 5px 9px;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+}
+.level-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: #ece2c8;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.level-bar {
+  width: 110px;
+  height: 8px;
+  background: #3b2f18;
+  border-radius: 3px;
+  overflow: hidden;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.level-fill {
+  height: 100%;
+  background: linear-gradient(180deg, #f0d78a, #c9992f);
+  transition: width 0.2s ease;
+}
+
 /* Pulso de "o valor mudou" — dispara em setHp/setBerries (ver hud.js) só
    quando o número é diferente do anterior, não em toda chamada. Resolve
    "ganhei Berries e não percebi porque só o número trocou". */
@@ -114,7 +148,8 @@
   }
 }
 .hp-frame.pulse,
-.berries.pulse {
+.berries.pulse,
+.level-frame.pulse {
   animation: hud-pulse 0.5s ease;
 }
 

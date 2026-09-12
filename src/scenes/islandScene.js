@@ -8,7 +8,8 @@ import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js'
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
-import { trainSkill } from '../sim/progression.js';
+import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
+import { getCharacterLevel, getCharacterLevelProgress, getCharacterRank } from '../sim/characterLevel.js';
 import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, craft } from '../sim/crafting.js';
@@ -20,7 +21,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
+import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setCharacterLevel, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -137,6 +138,7 @@ export default class IslandScene extends Phaser.Scene {
     this.animState = createAnimationState();
     setHp(this.state.playerHealth.current, this.state.playerHealth.max);
     setBerries(this.state.berries);
+    setCharacterLevel(getCharacterLevel(this.state.progression), getCharacterLevelProgress(this.state.progression));
 
     // Camada de equipamento (arma/ferramenta) — ver EQUIPMENT_ASSETS_TODO.md
     // pro plano de trocar os placeholders pela arte de verdade. As texturas
@@ -479,13 +481,46 @@ export default class IslandScene extends Phaser.Scene {
 // ============================================================================
 
 function trainAndNotify(scene, key) {
+  const levelBefore = getCharacterLevel(scene.state.progression);
   const result = trainSkill(scene.state.progression, key);
   const meta = findStatMeta(key);
   if (meta) {
     if (result.leveledUp) showLevelUp(meta);
     else showTrainingProgress(meta, scene.state.progression.skills[key]);
   }
+  reportCharacterLevel(scene, levelBefore);
   return result;
+}
+
+// Mesma ideia de trainAndNotify, só que pra atributo (trainAttribute em
+// vez de trainSkill) — hoje só chamada pra Força (ver tryAttack). Duas
+// funções pequenas em vez de uma genérica com parâmetro "tipo": os dois
+// motores (trainSkill/trainAttribute) já são separados em
+// sim/progression.js por terem tetos diferentes (nível 10 vs sem teto),
+// então espelhar essa separação aqui é mais claro que esconder um `if`.
+function trainAttributeAndNotify(scene, key) {
+  const levelBefore = getCharacterLevel(scene.state.progression);
+  const result = trainAttribute(scene.state.progression, key);
+  const meta = findStatMeta(key);
+  if (meta) {
+    if (result.leveledUp) showLevelUp(meta);
+    else showTrainingProgress(meta, scene.state.progression.attributes[key]);
+  }
+  reportCharacterLevel(scene, levelBefore);
+  return result;
+}
+
+// Nível de PERSONAGEM (agregado de todas as perícias/atributos, ver
+// sim/characterLevel.js) — chamado de dentro de trainAndNotify/
+// trainAttributeAndNotify pra todo ponto que já treina algo participar
+// automaticamente, sem precisar mexer em cada um dos 7 call sites.
+function reportCharacterLevel(scene, levelBefore) {
+  const level = getCharacterLevel(scene.state.progression);
+  setCharacterLevel(level, getCharacterLevelProgress(scene.state.progression));
+  if (level > levelBefore) {
+    const rank = getCharacterRank(level);
+    spawnLevelUpText(scene, scene.player.x, scene.player.y - 100, `Nível ${level} — ${rank.name}`);
+  }
 }
 
 function itemLabel(itemId, qty) {
@@ -499,6 +534,13 @@ function itemLabel(itemId, qty) {
 // alcance curto; sem trava de cooldown própria porque a animação de ataque
 // (ATTACK_DURATION_MS, ver update()) já ocupa o jogador tempo suficiente
 // entre um clique e outro.
+//
+// Treina Espada e Força de verdade (antes não treinava nada, apesar das
+// duas aparecerem como "real" no menu — achado ao planejar o sistema de
+// nível de personagem: um nível que ignora combate ficaria estranho pra
+// quem só luta). getForcaDamageBonus já existia em sim/progression.js mas
+// nunca tinha sido chamada — o dano segue fixo (MELEE_DAMAGE) até o
+// jogador treinar Força de verdade batendo no boneco.
 function tryAttack(scene) {
   const enemy = scene.enemy;
   if (scene.state.equipState.equippedLayerId !== 'sword') return false;
@@ -506,8 +548,11 @@ function tryAttack(scene) {
   const dist = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, enemy.sprite.x, enemy.sprite.y);
   if (dist > MELEE_RANGE) return false;
 
-  damageEnemy(scene, enemy, MELEE_DAMAGE);
+  const damage = Math.round(MELEE_DAMAGE + getForcaDamageBonus(scene.state.progression));
+  damageEnemy(scene, enemy, damage);
   scene.attackAnimTimer = ATTACK_DURATION_MS;
+  trainAndNotify(scene, 'espada');
+  trainAttributeAndNotify(scene, 'forca');
   return true;
 }
 
