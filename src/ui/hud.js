@@ -1,5 +1,6 @@
 import './hud.css';
 import { injectMoodleIcons } from './icons.js';
+import { hasItem } from '../sim/inventory.js';
 
 // HUD de exploração — sobreposto ao canvas via #hud-overlay (ver
 // index.html), não desenhado com Phaser. Mais fácil de estilar em HTML/CSS
@@ -29,9 +30,33 @@ const MOODLE_DEFS = [
 // fabricar").
 const HOTBAR_SLOTS = [
   { id: 'sword', shortcut: '1', icon: '/assets/icons/sword.png', title: 'Cutlass de Ferro', equipLayerId: 'sword' },
-  { id: 'rod', shortcut: '2', icon: '/assets/icons/rod.png', title: 'Vara de Pescar', equipLayerId: 'vara-de-pescar', locksUntilOwned: true },
-  { id: 'ability', shortcut: '3', iconSymbol: 'cadeado', title: 'Habilidade (ainda não existe)' },
-  { id: 'slot4', shortcut: '4', iconSymbol: 'cadeado', title: 'Reservado (ainda não existe)' },
+  {
+    id: 'rod',
+    shortcut: '2',
+    icon: '/assets/icons/rod.png',
+    title: 'Vara de Pescar',
+    equipLayerId: 'vara-de-pescar',
+    itemId: 'vara-de-pescar',
+    locksUntilOwned: true,
+  },
+  {
+    id: 'arco',
+    shortcut: '3',
+    icon: '/assets/icons/arco.png',
+    title: 'Arco Curto',
+    equipLayerId: 'arco',
+    itemId: 'arco',
+    locksUntilOwned: true,
+  },
+  {
+    id: 'machado',
+    shortcut: '4',
+    icon: '/assets/icons/machado.png',
+    title: 'Machado de Lenhador',
+    equipLayerId: 'machado',
+    itemId: 'machado',
+    locksUntilOwned: true,
+  },
   { id: 'slot5', shortcut: '5', iconSymbol: 'cadeado', title: 'Reservado' },
   { id: 'slot6', shortcut: '6', iconSymbol: 'cadeado', title: 'Reservado' },
   { id: 'slot7', shortcut: '7', iconSymbol: 'cadeado', title: 'Reservado' },
@@ -193,16 +218,20 @@ export function bindMenuButtons({ onPersonagem, onInventario, onMapa }) {
 }
 
 // `equipped` é o mesmo equipState.equippedLayerId de character/layers.js
-// ('sword' | 'vara-de-pescar' | null) — hud.js só espelha, não decide.
-// `hasRod` trava o slot da vara (visual + clique) até ela existir de
-// verdade no inventário (ver refreshHotbar em islandScene.js). Genérico
-// pra qualquer slot com `equipLayerId`/`locksUntilOwned` — somar um novo
-// item equipável é só mais uma entrada em HOTBAR_SLOTS, sem mexer aqui.
-export function setHotbarState({ equipped, hasRod }) {
+// ('sword' | 'vara-de-pescar' | 'arco' | 'machado' | null) — hud.js só
+// espelha, não decide. `inventory` trava o slot (visual + clique) até o
+// item existir de verdade no inventário (ver refreshHotbar em
+// islandScene.js), checado por `slot.itemId` — genérico pra qualquer slot
+// com `equipLayerId`/`itemId`/`locksUntilOwned`: somar um novo item
+// equipável é só mais uma entrada em HOTBAR_SLOTS, sem mexer aqui. Antes
+// disso o trava era um `hasRod` boolean único, hardcoded só pra vara —
+// quebraria (todos os slots travados compartilhando o mesmo boolean) assim
+// que um segundo item com `locksUntilOwned` fosse somado.
+export function setHotbarState({ equipped, inventory }) {
   HOTBAR_SLOTS.forEach((slot) => {
     const el = hotbarEls[slot.id];
     if (slot.equipLayerId) el.classList.toggle('equipped', equipped === slot.equipLayerId);
-    if (slot.locksUntilOwned) el.classList.toggle('locked', !hasRod);
+    if (slot.locksUntilOwned) el.classList.toggle('locked', !hasItem(inventory, slot.itemId));
   });
 }
 

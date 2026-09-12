@@ -14,13 +14,24 @@ function iconSvg(key) {
   return `<svg class="icon" aria-hidden="true"><use href="#i-${key}"></use></svg>`;
 }
 
-// Nome de exibição do que está na mão — arma OU ferramenta, é o mesmo slot
-// único (ver character/layers.js: equipState só guarda UM equippedLayerId
-// por vez, trocar de vara pra espada substitui, nunca soma).
+// Nome/ícone de exibição do que está na mão — arma OU ferramenta, é o mesmo
+// slot único (ver character/layers.js: equipState só guarda UM
+// equippedLayerId por vez, trocar de vara pra espada substitui, nunca
+// soma). Espada não vem de ITEM_DEFS (é equipada direto por Q, sem passar
+// pelo inventário — ver EQUIPMENT_ASSETS_TODO.md), então mantém tabela
+// própria em vez de tentar puxar de lá.
+const EQUIP_LABELS = { sword: 'Cutlass de Ferro', 'vara-de-pescar': 'Vara de Pescar', arco: 'Arco Curto', machado: 'Machado de Lenhador' };
+const EQUIP_ICONS = {
+  sword: '/assets/icons/sword.png',
+  'vara-de-pescar': '/assets/icons/rod.png',
+  arco: '/assets/icons/arco.png',
+  machado: '/assets/icons/machado.png',
+};
 function equippedLabel(equipState) {
-  if (equipState.equippedLayerId === 'sword') return 'Cutlass de Ferro';
-  if (equipState.equippedLayerId === 'vara-de-pescar') return 'Vara de Pescar';
-  return 'Vazio';
+  return EQUIP_LABELS[equipState.equippedLayerId] ?? 'Vazio';
+}
+function equippedIcon(equipState) {
+  return EQUIP_ICONS[equipState.equippedLayerId] ?? '/assets/icons/sword.png';
 }
 
 function renderItemsTab(ctx) {
@@ -46,7 +57,7 @@ function renderItemsTab(ctx) {
         <div class="paperdoll-silhouette"></div>
         <div class="eq-slots">
           <div class="eq-slot">
-            <div class="icon-badge"><img class="icon pixel-icon" src="/assets/icons/sword.png" alt="Espada"></div>
+            <div class="icon-badge"><img class="icon pixel-icon" src="${equippedIcon(equipState)}" alt="${equippedLabel(equipState)}"></div>
             <div><div class="label">Mão</div><div class="value">${equippedLabel(equipState)}</div></div>
           </div>
           <div class="eq-slot">

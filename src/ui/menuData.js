@@ -66,7 +66,7 @@ export const COMBAT_SKILLS = [
   { key: 'armas-fogo', icon: 'armas-fogo', name: 'Armas de fogo', real: false, trainedBy: 'Sem arma de fogo no jogo ainda.' },
   { key: 'luta', icon: 'luta', name: 'Luta (desarmado)', real: true, trainedBy: 'Sobe acertando inimigos sem nenhuma arma equipada.' },
   { key: 'lancas', icon: 'lancas', name: 'Lanças/hastes', real: false, trainedBy: 'Sem lança/haste no jogo ainda.' },
-  { key: 'arremesso', icon: 'arremesso', name: 'Arremesso', real: false, trainedBy: 'Sem arma de arremesso no jogo ainda.' },
+  { key: 'arremesso', icon: 'arremesso', name: 'Arremesso', real: true, trainedBy: 'Sobe acertando inimigos com o arco equipado.' },
 ];
 
 export const OFICIO_SKILLS = [

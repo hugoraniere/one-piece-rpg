@@ -42,6 +42,41 @@ export const LAYER_DEFS = {
     right: { idle: ['rod-side'], idleFlip: false, walk: ['rod-side'], walkFlip: false },
     left: { idle: ['rod-side'], idleFlip: true, walk: ['rod-side'], walkFlip: true },
   },
+  // Arco — arma (ver sim/equipmentDefs.js), então precisa de 'attack'.
+  // Diferente da espada, os frames de CORPO do golpe (races.js, gerados via
+  // PixelLab) foram desenhados especificamente pra um swing de espada — não
+  // existe (ainda) uma animação de corpo "puxando a corda do arco". Por
+  // ora a camada do arco simplesmente continua visível e estática durante o
+  // golpe (mesma pose de idle) — igual às outras camadas, updateLayerVisual
+  // só esconde a camada durante attack pro caso específico da espada (ver
+  // comentário lá). É uma limitação conhecida de placeholder, não um bug —
+  // ver ITEMS_PROGRESS.md.
+  arco: {
+    down: { idle: ['weapon-bow-front'], walk: ['weapon-bow-front'], attack: ['weapon-bow-front'] },
+    up: { idle: ['weapon-bow-back'], walk: ['weapon-bow-back'], attack: ['weapon-bow-back'] },
+    right: {
+      idle: ['weapon-bow-side'],
+      idleFlip: false,
+      walk: ['weapon-bow-side'],
+      walkFlip: false,
+      attack: ['weapon-bow-side'],
+    },
+    left: {
+      idle: ['weapon-bow-side'],
+      idleFlip: true,
+      walk: ['weapon-bow-side'],
+      walkFlip: true,
+      attack: ['weapon-bow-side'],
+    },
+  },
+  // Machado — ferramenta (kind: 'tool' em equipmentDefs.js), não arma: sem
+  // golpe de ataque, mesmo caso da vara de pescar acima.
+  machado: {
+    down: { idle: ['weapon-axe-front'], walk: ['weapon-axe-front'] },
+    up: { idle: ['weapon-axe-back'], walk: ['weapon-axe-back'] },
+    right: { idle: ['weapon-axe-side'], idleFlip: false, walk: ['weapon-axe-side'], walkFlip: false },
+    left: { idle: ['weapon-axe-side'], idleFlip: true, walk: ['weapon-axe-side'], walkFlip: true },
+  },
 };
 
 // Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md
@@ -92,6 +127,26 @@ export function generatePlaceholderRodTextures(scene) {
   drawPlaceholderRod(scene, 'rod-front', 19, 19, -8);
   drawPlaceholderRod(scene, 'rod-back', 12, 18, -8);
   drawPlaceholderRod(scene, 'rod-side', 18, 19, -4);
+}
+
+// PLACEHOLDER — mesmos anchors de cintura/mão da espada e da vara (ver
+// comentário de generatePlaceholderWeaponTextures acima), mas empunhado
+// ERGUIDO ao lado do corpo (não pendurado como a espada) — um arco vai na
+// mão, não na bainha. Arco simples: madeira curva + corda reta + grip no
+// meio, sem ângulo de rotação (fica vertical, do jeito que se segura).
+export function generatePlaceholderBowTextures(scene) {
+  drawPlaceholderBow(scene, 'weapon-bow-front', 19, 19);
+  drawPlaceholderBow(scene, 'weapon-bow-back', 12, 18);
+  drawPlaceholderBow(scene, 'weapon-bow-side', 18, 19);
+}
+
+// PLACEHOLDER — mesma lógica de pendurar na cintura da espada (ponta pra
+// baixo, acompanha a perna), só que com cabeça de machado (lâmina larga de
+// um lado só) em vez de lâmina reta dos dois lados.
+export function generatePlaceholderAxeTextures(scene) {
+  drawPlaceholderAxe(scene, 'weapon-axe-front', 19, 19, 20);
+  drawPlaceholderAxe(scene, 'weapon-axe-back', 12, 18, 20);
+  drawPlaceholderAxe(scene, 'weapon-axe-side', 18, 19, 15);
 }
 
 function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
@@ -152,6 +207,83 @@ function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
 
   ctx.restore();
 
+  scene.textures.addCanvas(key, canvas);
+}
+
+function drawPlaceholderBow(scene, key, gripX, gripY) {
+  const size = PLACEHOLDER_CANVAS_SIZE;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  ctx.save();
+  ctx.translate(gripX, gripY);
+
+  // Madeira curva do arco — barriga arredondada pro lado direito (fora do
+  // corpo), pontas em cima e embaixo na altura de ombro/quadril.
+  ctx.strokeStyle = '#8a5a2e';
+  ctx.lineWidth = 1.4;
+  ctx.beginPath();
+  ctx.moveTo(1, -8);
+  ctx.quadraticCurveTo(4.5, 0, 1, 8);
+  ctx.stroke();
+
+  // Corda esticada, reta, mais perto do corpo que a madeira
+  ctx.strokeStyle = '#e6e0d0';
+  ctx.lineWidth = 0.6;
+  ctx.beginPath();
+  ctx.moveTo(1, -8);
+  ctx.lineTo(1, 8);
+  ctx.stroke();
+
+  // Empunhadura no meio do arco
+  ctx.fillStyle = '#4a2c17';
+  ctx.fillRect(0, -1.5, 2, 3);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 0.4;
+  ctx.strokeRect(0, -1.5, 2, 3);
+
+  ctx.restore();
+  scene.textures.addCanvas(key, canvas);
+}
+
+function drawPlaceholderAxe(scene, key, hiltX, hiltY, angleDeg) {
+  const size = PLACEHOLDER_CANVAS_SIZE;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  ctx.save();
+  ctx.translate(hiltX, hiltY);
+  ctx.rotate(Phaser.Math.DegToRad(angleDeg));
+
+  // Cabo de madeira pendurado na cintura — mesma orientação (ponta pra
+  // baixo) da espada.
+  ctx.fillStyle = '#5c3a1e';
+  ctx.fillRect(-1, -2, 2, 9);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 0.4;
+  ctx.strokeRect(-1, -2, 2, 9);
+
+  // Cabeça do machado — lâmina larga de um lado só (silhueta legível de
+  // machado, não espelhada como um bipene de batalha).
+  ctx.fillStyle = '#9aa0ab';
+  ctx.beginPath();
+  ctx.moveTo(1, -4);
+  ctx.lineTo(5, -3);
+  ctx.lineTo(5, 1);
+  ctx.lineTo(1, 2);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#5a5e68';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.fillStyle = '#ced2da'; // friso/brilho
+  ctx.fillRect(4, -3, 1, 4);
+
+  ctx.restore();
   scene.textures.addCanvas(key, canvas);
 }
 

@@ -29,7 +29,10 @@ function buildInitialState() {
   const equipState = createLayerState();
   equipLayer(equipState, 'sword'); // equipada por padrão só pra já dar pra ver funcionando
   return {
-    inventory: createInventory({ 'linha-de-nylon': 2 }),
+    // corda/ferro-bruto seguem o mesmo padrão da linha-de-nylon: suprimento
+    // inicial fixo, sem coleta própria ainda (ver ITEMS_PROGRESS.md) — dá
+    // exatamente pra uma fabricação de cada item novo (arco, machado).
+    inventory: createInventory({ 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 1 }),
     berries: 0,
     progression: createProgression(),
     equipState,
@@ -88,7 +91,7 @@ function loadFromStorage() {
 
   const maxHp = saved.playerHealth?.max ?? PLAYER_MAX_HP;
   return {
-    inventory: createInventory(saved.inventory?.items ?? { 'linha-de-nylon': 2 }),
+    inventory: createInventory(saved.inventory?.items ?? { 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 1 }),
     berries: typeof saved.berries === 'number' ? saved.berries : 0,
     progression: mergeProgression(saved.progression),
     equipState,

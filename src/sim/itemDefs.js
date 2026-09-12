@@ -16,9 +16,31 @@ export const ITEM_DEFS = {
     category: 'ferramentas',
     equipLayerId: 'vara-de-pescar',
   },
+  arco: {
+    name: 'Arco Curto',
+    icon: '🏹',
+    category: 'armas',
+    equipLayerId: 'arco',
+  },
+  machado: {
+    name: 'Machado de Lenhador',
+    icon: '🪓',
+    category: 'ferramentas',
+    equipLayerId: 'machado',
+  },
   graveto: {
     name: 'Graveto',
     icon: '🪵',
+    category: 'materiais',
+  },
+  corda: {
+    name: 'Corda Trançada',
+    icon: '🪢',
+    category: 'materiais',
+  },
+  'ferro-bruto': {
+    name: 'Ferro Bruto',
+    icon: '⛏️',
     category: 'materiais',
   },
   'linha-de-nylon': {

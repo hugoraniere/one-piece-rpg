@@ -10,6 +10,7 @@ import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPo
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
+import { getEquipmentDef } from '../sim/equipmentDefs.js';
 import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
 import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
@@ -201,12 +202,11 @@ export default class IslandScene extends Phaser.Scene {
     // Hotbar — troca rápida do que está na mão sem abrir o Inventário,
     // clique OU tecla de número (1-4, layout/atalho de cada slot em
     // HOTBAR_SLOTS, ui/hud.js). O slot da espada reusa o mesmo toggle da
-    // tecla Q; o da vara avisa com o toast já existente se ainda não foi
-    // fabricada, em vez de deixar clicar num slot "travado" sem feedback
-    // nenhum. Os dois últimos são permanentemente travados — reserva de
-    // espaço pra quando existir mais alguma coisa equipável — e usam o
-    // mesmo toast só que com o ícone de cadeado, deixando claro que a
-    // trava aqui é "não existe ainda", não "falta fabricar".
+    // tecla Q; os outros três (vara, arco, machado) avisam com um toast se
+    // ainda não foram fabricados, em vez de deixar clicar num slot
+    // "travado" sem feedback nenhum. Mesmo padrão repetido pros três — dá
+    // pra generalizar numa função só quando um quarto item equipável
+    // aparecer (YAGNI até lá).
     const onHotbarRod = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
       if (!hasItem(this.state.inventory, 'vara-de-pescar')) {
@@ -215,15 +215,23 @@ export default class IslandScene extends Phaser.Scene {
       }
       handleEquip(this, 'vara-de-pescar');
     };
-    const onHotbarAbility = () => {
+    const onHotbarArco = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Habilidade ainda não existe.');
+      if (!hasItem(this.state.inventory, 'arco')) {
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'espada', 'Você ainda não tem um arco — fabrique um no Inventário.');
+        return;
+      }
+      handleEquip(this, 'arco');
     };
-    const onHotbarReserved = () => {
+    const onHotbarMachado = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Slot reservado — ainda não existe.');
+      if (!hasItem(this.state.inventory, 'machado')) {
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'sobrevivencia', 'Você ainda não tem um machado — fabrique um no Inventário.');
+        return;
+      }
+      handleEquip(this, 'machado');
     };
-    const hotbarHandlers = { sword: toggleSwordEquip, rod: onHotbarRod, ability: onHotbarAbility, slot4: onHotbarReserved };
+    const hotbarHandlers = { sword: toggleSwordEquip, rod: onHotbarRod, arco: onHotbarArco, machado: onHotbarMachado };
     bindHotbar(hotbarHandlers);
     // Mesmos handlers do clique, só que pela tecla de número — nomes de
     // evento do Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
@@ -261,17 +269,19 @@ export default class IslandScene extends Phaser.Scene {
         if (getFishingPhase() === 'mordida') releaseFishingAttempt();
         return;
       }
-      // Perto do boneco de treino com espada equipada? O clique vira golpe,
+      // Perto do boneco de treino com arma equipada? O clique vira golpe,
       // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
       if (tryAttack(this)) return;
-      // Espada equipada mas SEM alvo (longe demais, ou nem existe boneco por
+      // Arma equipada mas SEM alvo (longe demais, ou nem existe boneco por
       // perto) — não é uma tentativa de pesca, então não pode cair no
       // tryStartFishing só porque não é 'vara-de-pescar': isso mostrava
-      // "Você precisa de uma vara equipada" pra quem tinha a ESPADA na mão,
+      // "Você precisa de uma vara equipada" pra quem tinha uma ARMA na mão,
       // uma mensagem sobre o item errado (achado em revisão de bug pelo
       // usuário). Mesmo padrão de aviso com cooldown já usado pra pesca/
-      // coleta, só que pro contexto de ataque.
-      if (this.state.equipState.equippedLayerId === 'sword') {
+      // coleta, só que pro contexto de ataque. Generalizado pra qualquer
+      // arma (não só espada) via equipmentDefs — arco cai aqui também.
+      const equippedWeaponDef = getEquipmentDef(this.state.equipState.equippedLayerId);
+      if (equippedWeaponDef?.kind === 'weapon') {
         showBlockedThrottled(this, 'lastAttackBlockHintAt', 'espada', 'Ninguém por perto pra atacar.');
         return;
       }
@@ -558,15 +568,17 @@ function itemLabel(itemId, qty) {
 // jogador treinar Força de verdade batendo no boneco.
 function tryAttack(scene) {
   const enemy = scene.enemy;
-  if (scene.state.equipState.equippedLayerId !== 'sword') return false;
+  const weaponDef = getEquipmentDef(scene.state.equipState.equippedLayerId);
+  if (!weaponDef || weaponDef.kind !== 'weapon') return false;
   if (!enemy || enemy.respawnTimer > 0) return false;
+  const range = weaponDef.range ?? MELEE_RANGE;
   const dist = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, enemy.sprite.x, enemy.sprite.y);
-  if (dist > MELEE_RANGE) return false;
+  if (dist > range) return false;
 
-  const damage = Math.round(MELEE_DAMAGE + getForcaDamageBonus(scene.state.progression));
+  const damage = Math.round(MELEE_DAMAGE + weaponDef.damage + getForcaDamageBonus(scene.state.progression));
   damageEnemy(scene, enemy, damage);
   scene.attackAnimTimer = ATTACK_DURATION_MS;
-  trainAndNotify(scene, 'espada');
+  trainAndNotify(scene, weaponDef.skillKey);
   trainAttributeAndNotify(scene, 'forca');
   return true;
 }
@@ -636,8 +648,13 @@ function handleGather(scene) {
   const inventory = scene.state.inventory;
   const nearTree = scene.treePositions.some((t) => Phaser.Math.Distance.Between(player.x, player.y, t.x, t.y) <= GATHER_TREE_RANGE);
   if (nearTree) {
-    addItem(inventory, 'graveto', 1);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel('graveto', 1));
+    // Machado equipado multiplica o graveto por coleta (ver
+    // sim/equipmentDefs.js) — sem machado continua 1 por coleta, igual
+    // sempre foi.
+    const toolDef = getEquipmentDef(scene.state.equipState.equippedLayerId);
+    const gatherQty = toolDef?.kind === 'tool' && toolDef.gatherMultiplier ? toolDef.gatherMultiplier : 1;
+    addItem(inventory, 'graveto', gatherQty);
+    spawnItemText(scene, player.x, player.y - 60, itemLabel('graveto', gatherQty));
     // Forrageamento (graveto/isca) treina Sobrevivência — ver menuData.js,
     // que até aqui dizia "sem forrageamento ainda". Separado de Caça
     // (minhoca, logo abaixo): forragear é achar o que já está largado por
@@ -697,7 +714,7 @@ function handleCraft(scene, recipeId) {
 // chamado depois de qualquer coisa que possa mudar "o que está na mão" ou
 // "tem vara ou não" (equipar, fabricar, teclado ou clique na hotbar).
 function refreshHotbar(scene) {
-  setHotbarState({ equipped: scene.state.equipState.equippedLayerId, hasRod: hasItem(scene.state.inventory, 'vara-de-pescar') });
+  setHotbarState({ equipped: scene.state.equipState.equippedLayerId, inventory: scene.state.inventory });
 }
 
 // ============================================================================

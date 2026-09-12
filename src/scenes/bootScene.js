@@ -1,6 +1,11 @@
 import Phaser from 'phaser';
 import { generateShadowTexture } from '../character/character.js';
-import { generatePlaceholderRodTextures, generatePlaceholderWeaponTextures } from '../character/layers.js';
+import {
+  generatePlaceholderAxeTextures,
+  generatePlaceholderBowTextures,
+  generatePlaceholderRodTextures,
+  generatePlaceholderWeaponTextures,
+} from '../character/layers.js';
 import { generatePlaceholderEnemyTexture } from '../world/enemy.js';
 import { getPlayerState } from '../state/playerState.js';
 
@@ -19,6 +24,8 @@ export default class BootScene extends Phaser.Scene {
     generateShadowTexture(this);
     generatePlaceholderWeaponTextures(this);
     generatePlaceholderRodTextures(this);
+    generatePlaceholderBowTextures(this);
+    generatePlaceholderAxeTextures(this);
     generatePlaceholderEnemyTexture(this);
     this.scene.start('island', { islandId: getPlayerState().currentIslandId });
   }
