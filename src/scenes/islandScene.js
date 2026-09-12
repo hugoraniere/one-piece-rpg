@@ -156,9 +156,7 @@ export default class IslandScene extends Phaser.Scene {
       // andamento (ou por trás de um menu aberto) — a animação continuava
       // rodando com a linha "largada sem dono" (ver auditoria de bugs).
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      this.state.equipState.equippedLayerId
-        ? this.characterManager.unequipLayer('mainHand')
-        : this.characterManager.equipLayer('sword', 'mainHand');
+      this.state.equipState.equippedLayerId ? unequipLayer(this.state.equipState) : equipLayer(this.state.equipState, 'sword');
       refreshHotbar(this);
     };
     this.input.keyboard.on('keydown-Q', toggleSwordEquip);
