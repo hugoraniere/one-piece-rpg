@@ -65,21 +65,25 @@ export const ITEM_DEFS = {
     name: 'Graveto',
     icon: '🪵',
     category: 'materiais',
+    iconPath: '/assets/icons/graveto.png',
   },
   corda: {
     name: 'Corda Trançada',
     icon: '🪢',
     category: 'materiais',
+    iconPath: '/assets/icons/corda.png',
   },
   'ferro-bruto': {
     name: 'Ferro Bruto',
     icon: '⛏️',
     category: 'materiais',
+    iconPath: '/assets/icons/ferro-bruto.png',
   },
   'linha-de-nylon': {
     name: 'Linha de Nylon',
     icon: '🧵',
     category: 'materiais',
+    iconPath: '/assets/icons/linha-de-nylon.png',
   },
   minhoca: {
     name: 'Minhoca',
@@ -87,6 +91,7 @@ export const ITEM_DEFS = {
     category: 'materiais',
     isBait: true,
     baitTier: 2,
+    iconPath: '/assets/icons/minhoca.png',
   },
   'isca-improvisada': {
     name: 'Isca Improvisada',
@@ -94,6 +99,7 @@ export const ITEM_DEFS = {
     category: 'materiais',
     isBait: true,
     baitTier: 1,
+    iconPath: '/assets/icons/isca-improvisada.png',
   },
   // Peixe da praia/vila — a espécie original, mantida como padrão. As duas
   // espécies novas (uma por ilha) e o "pescar lixo" eram debatidos e
@@ -105,6 +111,7 @@ export const ITEM_DEFS = {
     icon: '🐟',
     category: 'comida',
     sellPrice: 4,
+    iconPath: '/assets/icons/peixe.png',
   },
   // Portomares — água salgada de porto movimentado.
   robalo: {
@@ -112,6 +119,7 @@ export const ITEM_DEFS = {
     icon: '🐠',
     category: 'comida',
     sellPrice: 6,
+    iconPath: '/assets/icons/robalo.png',
   },
   // Floresta Sussurro — lago/rio de água doce.
   truta: {
@@ -119,6 +127,7 @@ export const ITEM_DEFS = {
     icon: '🐡',
     category: 'comida',
     sellPrice: 5,
+    iconPath: '/assets/icons/truta.png',
   },
   // "Pescar lixo" — chance pequena (por ilha, ver islandConfig.fishing) de a
   // isca voltar com isto em vez de um peixe de verdade: mordida real,
@@ -129,5 +138,6 @@ export const ITEM_DEFS = {
     name: 'Lixo do Mar',
     icon: '🥫',
     category: 'materiais',
+    iconPath: '/assets/icons/lixo-marinho.png',
   },
 };
