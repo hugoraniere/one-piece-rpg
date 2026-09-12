@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ATTACK_DURATION_MS, PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
+import { ATTACK_DURATION_MS, CAMERA_ZOOM, PLAYER_SPEED, RUN_SPEED, SHADOW_OFFSET_Y } from '../config.js';
 import { createEnemy, damageEnemy, updateEnemy } from '../world/enemy.js';
 import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, updateCharacterVisual } from '../character/character.js';
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
@@ -8,13 +8,12 @@ import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js'
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
-import { trainSkill } from '../sim/progression.js';
-import { addItem, hasItem, removeItem } from '../sim/inventory.js';
+import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
+import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
+import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, craft } from '../sim/crafting.js';
 import {
-  CAST_DEFAULT_DIST,
-  CAST_DEFAULT_QUALITY,
   CAST_MAX_RANGE,
   MAX_WAIT_TICKS,
   computeCastQuality,
@@ -22,7 +21,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindHotbar, bindMenuButtons, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
+import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -32,10 +31,11 @@ import { cancelFishingAttempt, getFishingPhase, isFishingActive, releaseFishingA
 import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
 import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
-import { getPlayerState } from '../state/playerState.js';
+import { getPlayerState, resetPlayerState, saveState } from '../state/playerState.js';
 import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
+const MARKET_INTERACT_RANGE = 110; // pixels — perto o bastante das barracas pra "G" vender em vez de coletar
 const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
 const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
 
@@ -49,6 +49,22 @@ const GATHER_TREE_RANGE = 90; // pixels
 const GATHER_COOLDOWN_MS = 2500;
 const MINHOCA_SUCCESS_CHANCE = 0.7;
 const BLOCK_HINT_COOLDOWN_MS = 1500; // evita reiniciar a animação do aviso a cada repetição de tecla segurada
+
+// Mostra um toast de "ação bloqueada" com cooldown — sem isso, qualquer
+// clique/tecla repetida (slot de hotbar travado, vender sem nada pra
+// vender, etc.) reinicia a animação do toast a cada acionamento, virando
+// um piscar contínuo em vez de um aviso só (achado em revisão de UX:
+// "notificações aparecendo de forma desnecessária"). `hintKey` é o nome
+// do campo em `scene` que guarda o timestamp do último aviso DESSE tipo
+// (cada tipo de aviso tem o seu, inicializado em create() — não
+// compartilham cooldown entre si de propósito, senão um aviso de pesca
+// silenciaria um aviso de ataque que aconteça logo em seguida).
+function showBlockedThrottled(scene, hintKey, iconKey, message) {
+  const now = scene.time.now;
+  if (now - scene[hintKey] < BLOCK_HINT_COOLDOWN_MS) return;
+  scene[hintKey] = now;
+  showBlocked(iconKey, message);
+}
 
 // Cena única, reutilizada por qualquer ilha (ver plano de múltiplas ilhas) —
 // trocar de ilha é `this.scene.restart({ islandId })`, não uma cena nova por
@@ -78,11 +94,21 @@ export default class IslandScene extends Phaser.Scene {
     this.islandConfig.preloadAssets(this);
   }
 
-  create() {
+  create(data) {
     // Estado que PRECISA sobreviver a uma troca de ilha — ver
     // state/playerState.js. Mantemos a referência ao objeto (não uma cópia),
     // então mutar `this.state.berries` etc. já persiste sozinho.
     this.state = getPlayerState();
+
+    // Chegou de barco de verdade (ver sailingTransition.js) — treina
+    // Navegação, que até aqui não tinha nenhum gatilho real ("sem
+    // travessia marítima ainda", ver menuData.js). Não dispara no primeiro
+    // boot (sem data.arrivedByBoat) nem no teste de auto-viagem do
+    // __gameDebug.travelTo quando o destino é a própria ilha atual — só
+    // quando a ilha realmente mudou.
+    if (data?.arrivedByBoat && this.islandConfig.id !== data.previousIslandId) {
+      trainAndNotify(this, 'navegacao');
+    }
 
     // Estado que é OK (e correto) resetar a cada troca de ilha/restart.
     this.facing = 'down'; // 'up' | 'down' | 'left' | 'right'
@@ -90,6 +116,9 @@ export default class IslandScene extends Phaser.Scene {
     this.lastGatherAt = -Infinity;
     this.lastGatherBlockHintAt = -Infinity;
     this.lastFishBlockHintAt = -Infinity;
+    this.lastAttackBlockHintAt = -Infinity;
+    this.lastHotbarBlockHintAt = -Infinity;
+    this.lastSellBlockHintAt = -Infinity;
     this.attackAnimTimer = 0;
 
     // Limpa estado de módulo do editor deixado pela ilha anterior (ver
@@ -164,28 +193,40 @@ export default class IslandScene extends Phaser.Scene {
     this.input.keyboard.on('keydown-M', openMapMenu);
     bindMenuButtons({ onPersonagem: openCharacterMenu, onInventario: openInventoryMenu, onMapa: openMapMenu });
 
-    // Hotbar — troca rápida do que está na mão sem abrir o Inventário. Só 2
-    // slots de item de verdade porque só existem 2 coisas equipáveis hoje
-    // (ver setHotbarState em ui/hud.js). O slot da espada reusa o mesmo
-    // toggle da tecla Q; o da vara avisa com o toast já existente se ainda
-    // não foi fabricada, em vez de deixar clicar num slot "travado" sem
-    // feedback nenhum. O 4º slot é permanentemente travado — reserva de
-    // espaço pra quando existir alguma habilidade de verdade — e usa o mesmo
-    // toast só que com o ícone de cadeado, deixando claro que a trava aqui é
-    // "não existe ainda", não "falta fabricar".
+    // Hotbar — troca rápida do que está na mão sem abrir o Inventário,
+    // clique OU tecla de número (1-4, layout/atalho de cada slot em
+    // HOTBAR_SLOTS, ui/hud.js). O slot da espada reusa o mesmo toggle da
+    // tecla Q; o da vara avisa com o toast já existente se ainda não foi
+    // fabricada, em vez de deixar clicar num slot "travado" sem feedback
+    // nenhum. Os dois últimos são permanentemente travados — reserva de
+    // espaço pra quando existir mais alguma coisa equipável — e usam o
+    // mesmo toast só que com o ícone de cadeado, deixando claro que a
+    // trava aqui é "não existe ainda", não "falta fabricar".
     const onHotbarRod = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
       if (!hasItem(this.state.inventory, 'vara-de-pescar')) {
-        showBlocked('pesca', 'Você ainda não tem uma vara de pescar — fabrique uma no Inventário.');
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'pesca', 'Você ainda não tem uma vara de pescar — fabrique uma no Inventário.');
         return;
       }
       handleEquip(this, 'vara-de-pescar');
     };
     const onHotbarAbility = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      showBlocked('cadeado', 'Habilidade ainda não existe.');
+      showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Habilidade ainda não existe.');
     };
-    bindHotbar({ onSword: toggleSwordEquip, onRod: onHotbarRod, onAbility: onHotbarAbility });
+    const onHotbarReserved = () => {
+      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+      showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Slot reservado — ainda não existe.');
+    };
+    const hotbarHandlers = { sword: toggleSwordEquip, rod: onHotbarRod, ability: onHotbarAbility, slot4: onHotbarReserved };
+    bindHotbar(hotbarHandlers);
+    // Mesmos handlers do clique, só que pela tecla de número — nomes de
+    // evento do Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
+    // KeyMap.js), não "keydown-1".
+    ['ONE', 'TWO', 'THREE', 'FOUR'].forEach((keyName, i) => {
+      const slotId = getHotbarSlotIdByShortcut(String(i + 1));
+      this.input.keyboard.on(`keydown-${keyName}`, () => hotbarHandlers[slotId]?.());
+    });
     refreshHotbar(this);
 
     // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
@@ -200,25 +241,35 @@ export default class IslandScene extends Phaser.Scene {
 
     // Pesca — primeira fonte de renda real do jogo (ver conversa de design:
     // combate deveria ser raro, o dinheiro vem de trabalho/ofício, não de
-    // matar). Segurar F (ou clicar na água e segurar) joga a vara; soltar
-    // puxa — ver sim/fishing.js pras fórmulas e ui/fishingHud.js pro
-    // minigame de duas fases (espera + mordida).
-    this.input.keyboard.on('keydown-F', () => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      tryStartFishing(this, null);
-    });
-    this.input.keyboard.on('keyup-F', () => {
-      if (isFishingActive()) releaseFishingAttempt();
-    });
+    // matar). A vara é só mais um equipamento: o MESMO clique que ataca com
+    // a espada arremessa com a vara — sem tecla dedicada (F) só pra ela.
+    // Dois cliques, não segurar/soltar: um pra jogar a isca, outro pra
+    // fisgar quando morder — ver sim/fishing.js pras fórmulas e
+    // ui/fishingHud.js pro minigame de duas fases (espera + mordida).
     this.input.on('pointerdown', (pointer) => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+      if (isEditorModeActive() || isMenuOpen()) return;
+      if (isFishingActive()) {
+        // Clique durante a espera não faz nada (sem mordida ainda, nada pra
+        // fisgar) — só a mordida reage ao clique. Assim não existe mais
+        // jeito de "puxar cedo demais" por um clique impaciente.
+        if (getFishingPhase() === 'mordida') releaseFishingAttempt();
+        return;
+      }
       // Perto do boneco de treino com espada equipada? O clique vira golpe,
       // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
       if (tryAttack(this)) return;
+      // Espada equipada mas SEM alvo (longe demais, ou nem existe boneco por
+      // perto) — não é uma tentativa de pesca, então não pode cair no
+      // tryStartFishing só porque não é 'vara-de-pescar': isso mostrava
+      // "Você precisa de uma vara equipada" pra quem tinha a ESPADA na mão,
+      // uma mensagem sobre o item errado (achado em revisão de bug pelo
+      // usuário). Mesmo padrão de aviso com cooldown já usado pra pesca/
+      // coleta, só que pro contexto de ataque.
+      if (this.state.equipState.equippedLayerId === 'sword') {
+        showBlockedThrottled(this, 'lastAttackBlockHintAt', 'espada', 'Ninguém por perto pra atacar.');
+        return;
+      }
       tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
-    });
-    this.input.on('pointerup', () => {
-      if (isFishingActive()) releaseFishingAttempt();
     });
 
     const { worldWidth, worldHeight } = this.islandConfig;
@@ -229,6 +280,7 @@ export default class IslandScene extends Phaser.Scene {
     // quando a janela muda de tamanho — não precisamos fazer isso na mão.
     this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
     this.cameras.main.startFollow(this.player, true, 0.1, 0.1);
+    this.cameras.main.setZoom(CAMERA_ZOOM);
     // Simétrico com o fadeOut de travelToIsland (ui/sailingTransition.js) —
     // roda também no primeiro boot (fade a partir de preto), o que é
     // inofensivo/discreto o bastante pra não precisar de um caso especial
@@ -286,9 +338,9 @@ export default class IslandScene extends Phaser.Scene {
         isEditorModeActive: () => isEditorModeActive(),
         getFacing: () => this.facing,
         tryStartFishing: (point) => tryStartFishing(this, point),
-        // Solta a vara de fora (equivalente ao keyup-F/pointerup) — junto com
+        // Aciona o mesmo caminho do segundo clique (fisgar) — junto com
         // tryStartFishing, dá pra simular uma captura de ponta a ponta sem
-        // depender de segurar tecla de verdade (pouco confiável em automação).
+        // depender de cliques de verdade (pouco confiável em automação).
         releaseFishingAttempt: () => releaseFishingAttempt(),
         getFishingPhase: () => getFishingPhase(),
         // Teleporta o jogador pra testar coisas que dependem de posição
@@ -303,6 +355,21 @@ export default class IslandScene extends Phaser.Scene {
         // pipeline de viagem (fade + scene.restart + estado preservado)
         // isoladamente (ver ui/sailingTransition.js).
         travelTo: (islandId) => travelToIsland(this, islandId),
+        // Força o RESULTADO de uma captura sem depender do sorteio real de
+        // mordida (que usa Math.random() dentro de um setInterval — sob
+        // throttling de aba oculta em automação, esperar uma mordida de
+        // verdade pode levar minutos; forçar o outcome aqui testa a lógica
+        // de recompensa/espécie/lixo sem precisar disso). NÃO usar pra
+        // simular sucesso de jogador de verdade — é só pra depuração.
+        forceCatch: (outcome = 'sucesso', baitId = null) => handleFishingResult(this, outcome, baitId),
+        // Save de verdade agora existe (localStorage, ver state/playerState.js)
+        // — saveNow força fora do intervalo de 5s do autosave, resetSave
+        // apaga e recarrega a página com jogo novo.
+        saveNow: () => saveState(),
+        resetSave: () => {
+          resetPlayerState();
+          location.reload();
+        },
       };
     }
   }
@@ -326,7 +393,8 @@ export default class IslandScene extends Phaser.Scene {
     }
 
     if (isFishingActive()) {
-      // Parado olhando a água enquanto a barra de reação roda — ver keydown-F.
+      // Parado olhando a água enquanto a barra de reação roda — ver o
+      // pointerdown único que decide arremessar/fisgar conforme a fase.
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -370,7 +438,13 @@ export default class IslandScene extends Phaser.Scene {
       vy *= norm;
     }
 
-    this.player.body.setVelocity(vx * PLAYER_SPEED, vy * PLAYER_SPEED);
+    // Corrida — segurar Shift (this.cursors.shift já vem de graça do
+    // createCursorKeys(), sem precisar registrar tecla nova). Só importa
+    // enquanto o jogador estiver de fato andando pra algum lado; segurar
+    // Shift parado não faz nada (nem tem por quê — ver isMoving abaixo).
+    const isRunning = this.cursors.shift.isDown && (vx !== 0 || vy !== 0);
+    const speed = isRunning ? RUN_SPEED : PLAYER_SPEED;
+    this.player.body.setVelocity(vx * speed, vy * speed);
     this.shadow.setPosition(this.player.x, this.player.y + SHADOW_OFFSET_Y);
 
     // Y-sorting: quem estiver mais "embaixo" na tela desenha por cima.
@@ -391,8 +465,9 @@ export default class IslandScene extends Phaser.Scene {
       }
     }
 
-    updateCharacterVisual(this.player, this.animState, delta, isMoving ? 'walk' : 'idle', this.facing);
-    updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, isMoving ? 'walk' : 'idle', this.facing);
+    const visualMode = isRunning ? 'run' : isMoving ? 'walk' : 'idle';
+    updateCharacterVisual(this.player, this.animState, delta, visualMode, this.facing);
+    updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, visualMode, this.facing);
   }
 }
 
@@ -412,13 +487,49 @@ export default class IslandScene extends Phaser.Scene {
 // ============================================================================
 
 function trainAndNotify(scene, key) {
+  const levelBefore = getCharacterLevel(scene.state.progression);
   const result = trainSkill(scene.state.progression, key);
   const meta = findStatMeta(key);
   if (meta) {
     if (result.leveledUp) showLevelUp(meta);
     else showTrainingProgress(meta, scene.state.progression.skills[key]);
   }
+  reportCharacterLevel(scene, levelBefore);
   return result;
+}
+
+// Mesma ideia de trainAndNotify, só que pra atributo (trainAttribute em
+// vez de trainSkill) — hoje só chamada pra Força (ver tryAttack). Duas
+// funções pequenas em vez de uma genérica com parâmetro "tipo": os dois
+// motores (trainSkill/trainAttribute) já são separados em
+// sim/progression.js por terem tetos diferentes (nível 10 vs sem teto),
+// então espelhar essa separação aqui é mais claro que esconder um `if`.
+function trainAttributeAndNotify(scene, key) {
+  const levelBefore = getCharacterLevel(scene.state.progression);
+  const result = trainAttribute(scene.state.progression, key);
+  const meta = findStatMeta(key);
+  if (meta) {
+    if (result.leveledUp) showLevelUp(meta);
+    else showTrainingProgress(meta, scene.state.progression.attributes[key]);
+  }
+  reportCharacterLevel(scene, levelBefore);
+  return result;
+}
+
+// Nível de PERSONAGEM (agregado de todas as perícias/atributos, ver
+// sim/characterLevel.js) — chamado de dentro de trainAndNotify/
+// trainAttributeAndNotify pra todo ponto que já treina algo participar
+// automaticamente, sem precisar mexer em cada um dos 7 call sites. Sem
+// chip fixo no HUD (removido — ficava grande demais e nem precisava estar
+// sempre visível, ver revisão de UX); o texto flutuante de nível já basta
+// como feedback no momento, e a Ficha de Personagem mostra o número/
+// patente completos sob demanda.
+function reportCharacterLevel(scene, levelBefore) {
+  const level = getCharacterLevel(scene.state.progression);
+  if (level > levelBefore) {
+    const rank = getCharacterRank(level);
+    spawnLevelUpText(scene, scene.player.x, scene.player.y - 100, `Nível ${level} — ${rank.name}`);
+  }
 }
 
 function itemLabel(itemId, qty) {
@@ -432,6 +543,13 @@ function itemLabel(itemId, qty) {
 // alcance curto; sem trava de cooldown própria porque a animação de ataque
 // (ATTACK_DURATION_MS, ver update()) já ocupa o jogador tempo suficiente
 // entre um clique e outro.
+//
+// Treina Espada e Força de verdade (antes não treinava nada, apesar das
+// duas aparecerem como "real" no menu — achado ao planejar o sistema de
+// nível de personagem: um nível que ignora combate ficaria estranho pra
+// quem só luta). getForcaDamageBonus já existia em sim/progression.js mas
+// nunca tinha sido chamada — o dano segue fixo (MELEE_DAMAGE) até o
+// jogador treinar Força de verdade batendo no boneco.
 function tryAttack(scene) {
   const enemy = scene.enemy;
   if (scene.state.equipState.equippedLayerId !== 'sword') return false;
@@ -439,9 +557,46 @@ function tryAttack(scene) {
   const dist = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, enemy.sprite.x, enemy.sprite.y);
   if (dist > MELEE_RANGE) return false;
 
-  damageEnemy(scene, enemy, MELEE_DAMAGE);
+  const damage = Math.round(MELEE_DAMAGE + getForcaDamageBonus(scene.state.progression));
+  damageEnemy(scene, enemy, damage);
   scene.attackAnimTimer = ATTACK_DURATION_MS;
+  trainAndNotify(scene, 'espada');
+  trainAttributeAndNotify(scene, 'forca');
   return true;
+}
+
+// Vende TODO item com sellPrice no inventário de uma vez (hoje só peixe/
+// robalo/truta) — só existe onde há mercado de verdade (marketSpawn, só em
+// Portomares por enquanto). Substitui/estende a "ponte temporária" de
+// Berries direto na captura (ver handleFishingResult): aquela continua
+// existindo (ainda não dá pra remover sem esvaziar a renda de quem nunca
+// visitou um porto), mas agora carregar o peixe até um mercado de verdade
+// rende Berries A MAIS — o comércio de verdade que os comentários antigos
+// esperavam. Também é o primeiro gatilho real da perícia Comércio (ver
+// menuData.js, que até aqui dizia "sem mercador ainda").
+function handleSell(scene) {
+  const inventory = scene.state.inventory;
+  let total = 0;
+  let count = 0;
+  for (const [itemId, def] of Object.entries(ITEM_DEFS)) {
+    if (!def.sellPrice) continue;
+    const qty = getQuantity(inventory, itemId);
+    if (qty <= 0) continue;
+    total += def.sellPrice * qty;
+    count += qty;
+    removeItem(inventory, itemId, qty);
+  }
+
+  if (count === 0) {
+    showBlockedThrottled(scene, 'lastSellBlockHintAt', 'comercio', 'Nada pra vender agora.');
+    return;
+  }
+
+  scene.state.berries += total;
+  setBerries(scene.state.berries);
+  spawnMoneyText(scene, scene.player.x, scene.player.y - 60, total);
+  const skillResult = trainAndNotify(scene, 'comercio');
+  if (skillResult.leveledUp) spawnLevelUpText(scene, scene.player.x, scene.player.y - 76, 'Comércio');
 }
 
 function handleGather(scene) {
@@ -456,12 +611,17 @@ function handleGather(scene) {
     return;
   }
 
+  // Mesma lógica pro mercado (só existe em Portomares, ver marketSpawn) —
+  // vender também não deveria ficar preso atrás do cooldown de coleta.
+  const marketSpawn = scene.islandConfig.marketSpawn;
+  if (marketSpawn && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, marketSpawn.x, marketSpawn.y) <= MARKET_INTERACT_RANGE) {
+    handleSell(scene);
+    return;
+  }
+
   const now = scene.time.now;
   if (now - scene.lastGatherAt < GATHER_COOLDOWN_MS) {
-    if (now - scene.lastGatherBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-      scene.lastGatherBlockHintAt = now;
-      showBlocked('sobrevivencia', 'Ainda recuperando fôlego da coleta.');
-    }
+    showBlockedThrottled(scene, 'lastGatherBlockHintAt', 'sobrevivencia', 'Ainda recuperando fôlego da coleta.');
     return;
   }
   scene.lastGatherAt = now;
@@ -472,12 +632,20 @@ function handleGather(scene) {
   if (nearTree) {
     addItem(inventory, 'graveto', 1);
     spawnItemText(scene, player.x, player.y - 60, itemLabel('graveto', 1));
+    // Forrageamento (graveto/isca) treina Sobrevivência — ver menuData.js,
+    // que até aqui dizia "sem forrageamento ainda". Separado de Caça
+    // (minhoca, logo abaixo): forragear é achar o que já está largado por
+    // aí, caçar é perseguir bicho.
+    const skillResult = trainAndNotify(scene, 'sobrevivencia');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Sobrevivência');
     return;
   }
 
   if (isNearWater(scene, player.x, player.y)) {
     addItem(inventory, 'isca-improvisada', 1);
     spawnItemText(scene, player.x, player.y - 60, itemLabel('isca-improvisada', 1));
+    const skillResult = trainAndNotify(scene, 'sobrevivencia');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Sobrevivência');
     return;
   }
 
@@ -528,56 +696,34 @@ function refreshHotbar(scene) {
 
 // ============================================================================
 // PESCA — arremesso (mira/qualidade) + espera/mordida (ver sim/fishing.js
-// pras fórmulas e ui/fishingHud.js pro minigame). `targetPoint` é o clique
-// n'água, ou null se foi F sem mirar (arremesso reto, qualidade fixa).
+// pras fórmulas e ui/fishingHud.js pro minigame). `targetPoint` é sempre o
+// clique n'água — sem tecla dedicada pra arremesso "cego" (ver clique único
+// pro item equipado, acima).
 // ============================================================================
-
-function facingVector(dir) {
-  if (dir === 'up') return { x: 0, y: -1 };
-  if (dir === 'left') return { x: -1, y: 0 };
-  if (dir === 'right') return { x: 1, y: 0 };
-  return { x: 0, y: 1 }; // 'down'
-}
 
 function tryStartFishing(scene, targetPoint) {
   const player = scene.player;
   if (scene.state.equipState.equippedLayerId !== 'vara-de-pescar') {
-    const now = scene.time.now;
-    if (now - scene.lastFishBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-      scene.lastFishBlockHintAt = now;
-      showBlocked('pesca', 'Você precisa de uma vara equipada.');
-    }
+    showBlockedThrottled(scene, 'lastFishBlockHintAt', 'pesca', 'Você precisa de uma vara equipada.');
     return;
   }
   if (!isNearWater(scene, player.x, player.y)) {
-    const now = scene.time.now;
-    if (now - scene.lastFishBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-      scene.lastFishBlockHintAt = now;
-      showBlocked('pesca', 'Muito longe da água pra pescar.');
-    }
+    showBlockedThrottled(scene, 'lastFishBlockHintAt', 'pesca', 'Muito longe da água pra pescar.');
     return;
   }
 
-  let target;
-  let castQuality;
-  if (targetPoint) {
-    const dx = targetPoint.x - player.x;
-    const dy = targetPoint.y - player.y;
-    // Vira o personagem (e a vara) pro lado do clique — sem isso o arremesso
-    // ia sempre visualmente pra direção que o personagem já estava olhando
-    // antes de pescar, mesmo mirando pro lado oposto na água.
-    scene.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
+  const dx = targetPoint.x - player.x;
+  const dy = targetPoint.y - player.y;
+  // Vira o personagem (e a vara) pro lado do clique — sem isso o arremesso
+  // ia sempre visualmente pra direção que o personagem já estava olhando
+  // antes de pescar, mesmo mirando pro lado oposto na água.
+  scene.facing = Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'right' : 'left') : dy > 0 ? 'down' : 'up';
 
-    const dist = Phaser.Math.Distance.Between(player.x, player.y, targetPoint.x, targetPoint.y);
-    const clampedDist = Math.min(dist, CAST_MAX_RANGE);
-    const angle = Phaser.Math.Angle.Between(player.x, player.y, targetPoint.x, targetPoint.y);
-    target = { x: player.x + Math.cos(angle) * clampedDist, y: player.y + Math.sin(angle) * clampedDist };
-    castQuality = computeCastQuality(clampedDist);
-  } else {
-    const dir = facingVector(scene.facing);
-    target = { x: player.x + dir.x * CAST_DEFAULT_DIST, y: player.y + dir.y * CAST_DEFAULT_DIST };
-    castQuality = CAST_DEFAULT_QUALITY;
-  }
+  const dist = Phaser.Math.Distance.Between(player.x, player.y, targetPoint.x, targetPoint.y);
+  const clampedDist = Math.min(dist, CAST_MAX_RANGE);
+  const angle = Phaser.Math.Angle.Between(player.x, player.y, targetPoint.x, targetPoint.y);
+  const target = { x: player.x + Math.cos(angle) * clampedDist, y: player.y + Math.sin(angle) * clampedDist };
+  const castQuality = computeCastQuality(clampedDist);
 
   if (!isWaterPoint(scene, target.x, target.y)) {
     spawnMissText(scene, player.x, player.y - 60, 'Aí não tem água pra pescar.');
@@ -606,18 +752,31 @@ function handleFishingResult(scene, outcome, baitId) {
   }
 
   if (outcome === 'sucesso') {
-    addItem(scene.state.inventory, 'peixe', 1);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel('peixe', 1));
-    // Berries direto na captura é ponte temporária, igual a linha de nylon
-    // de graça no create() — o peixe de verdade já existe no inventário
-    // (dá pra guardar, cozinhar, comer), só não tem ainda pra quem vender.
-    // Quando existir um comércio de verdade, isto sai daqui e vira o preço
-    // de venda do peixe, não recompensa automática por pescar.
-    scene.state.berries += FISH_REWARD;
-    setBerries(scene.state.berries);
-    spawnMoneyText(scene, player.x, player.y - 76, FISH_REWARD);
+    // Espécie e chance de lixo variam por ilha (ver islandConfig.fishing em
+    // world/islands/*.js) — cada zona de pesca tem sua própria água, isso
+    // era debatido e propositalmente adiado desde a primeira versão da
+    // pesca (ver ITEM_DEFS), só fazia sentido depois de existir mais de uma
+    // ilha de verdade.
+    const fishing = scene.islandConfig.fishing ?? { fishItemId: 'peixe', junkChance: 0 };
+    const isJunk = Math.random() < fishing.junkChance;
+    const catchId = isJunk ? 'lixo-marinho' : fishing.fishItemId;
+
+    addItem(scene.state.inventory, catchId, 1);
+    spawnItemText(scene, player.x, player.y - 60, itemLabel(catchId, 1));
+
+    // Berries direto na captura ainda é ponte temporária, igual a linha de
+    // nylon de graça no create() — agora já existe comércio de verdade
+    // (ver handleSell, mercado de Portomares), mas removê-la totalmente
+    // deixaria a renda zerada em qualquer ilha sem porto até o jogador
+    // aprender a rota de comércio; fica pra uma passada futura de economia.
+    // Lixo não vale Berries nenhum — a mordida foi real, só não veio nada bom.
+    if (!isJunk) {
+      scene.state.berries += FISH_REWARD;
+      setBerries(scene.state.berries);
+      spawnMoneyText(scene, player.x, player.y - 76, FISH_REWARD);
+    }
     const skillResult = trainAndNotify(scene, 'pesca');
-    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 92, 'Pesca');
+    if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - (isJunk ? 76 : 92), 'Pesca');
     return;
   }
 

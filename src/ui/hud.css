@@ -18,6 +18,12 @@
   vertical-align: middle;
 }
 
+/* Ícones em PNG pixel art (ex: assets/icons/sword.png) — sem isso o
+   navegador borra ao redimensionar de 32px pro tamanho do slot. */
+.pixel-icon {
+  image-rendering: pixelated;
+}
+
 .hud-topleft {
   position: absolute;
   top: 12px;
@@ -216,6 +222,7 @@
 }
 .menu-btn {
   pointer-events: auto;
+  position: relative;
   width: 40px;
   height: 40px;
   border-radius: 50%;
@@ -298,12 +305,12 @@
   transition: left 0.1s linear, top 0.1s linear;
 }
 
-/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. Só 2
-   slots de verdade porque só existem 2 coisas equipáveis no jogo hoje
-   (espada sempre disponível, vara de pescar só se já fabricada) — ver
-   equipState em character/layers.js, que só guarda UM equippedLayerId por
-   vez. Nada de slots vazios fingindo itens que não existem. Centro-baixo,
-   único lugar ainda livre. */
+/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. Cada
+   slot tem atalho de número (1-4, ver HOTBAR_SLOTS em hud.js) mostrado no
+   canto — só 2 são itens de verdade hoje (espada sempre disponível, vara
+   de pescar só se já fabricada, ver equipState em character/layers.js),
+   os outros ficam reservados/travados pra quando existir mais alguma
+   coisa equipável. Centro-baixo, único lugar ainda livre. */
 .hotbar {
   position: absolute;
   bottom: 12px;
@@ -331,6 +338,31 @@
 .hotbar-slot .icon {
   width: 22px;
   height: 22px;
+}
+/* Indicador de atalho (número da hotbar, letra dos botões de menu) —
+   canto inferior direito, chip com FUNDO PRÓPRIO escuro em vez de só cor
+   de texto. Um texto claro direto sobre o slot (creme sobre creme, tanto
+   no fundo normal do slot quanto no do menu-btn) quase não aparecia —
+   ver conversa de revisão de contraste. Com chip escuro sólido + borda o
+   número sempre lê, não importa o que tiver atrás (slot claro, travado,
+   equipado, ou o botão redondo do menu). */
+.shortcut-badge {
+  position: absolute;
+  bottom: -3px;
+  right: -3px;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 2px;
+  border-radius: 4px;
+  background: #241a12;
+  border: 1px solid #100b07;
+  color: #f5ebc8;
+  font-size: 10px;
+  font-weight: 800;
+  line-height: 13px;
+  text-align: center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.6);
+  pointer-events: none;
 }
 .hotbar-slot:hover {
   transform: translateY(-2px);

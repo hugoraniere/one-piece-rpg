@@ -143,11 +143,36 @@ function isUnderDock(pierDock, x) {
 // curva orgânica, e isso não dá pra fazer bem só com tiles retangulares. O
 // sistema de PINTURA de terreno do editor continua funcionando por cima
 // dela, em qualquer ilha.
+// Duas formas de montar o chão-base, escolhidas por `islandConfig.ground.kind`:
+//
+//   'image' (padrão, se `kind` não for informado) — uma imagem só, esticada
+//   pro tamanho do mundo. É o que as 3 ilhas atuais usam (fundo gerado por
+//   código, ver tools/gen_floresta_bg.py) — funciona bem pra uma pintura
+//   única de litoral, mas não é o formato certo pra pixel art de verdade
+//   (esticar um tile pixelado deforma o pixel).
+//
+//   'tiled' — repete uma textura pequena (um tile só) por todo o mundo,
+//   via TileSprite (primitivo do próprio Phaser pra isso, um único draw
+//   call, sem stretch nenhum — cada cópia do tile sai no tamanho nativo em
+//   pixels). É o formato certo pro chão em pixel art: um tile de grama
+//   (32x32, 64x64, etc.) repetido, e depois a variação/transição de verdade
+//   entra por cima como PROPS individuais (bordas, água, caminho), do
+//   mesmo jeito que os props de vila já funcionam — não por outro tile
+//   embutido no chão-base.
 export function buildGround(scene) {
-  const { backgroundKey } = scene.islandConfig.ground;
-  const bg = scene.add.image(0, 0, backgroundKey);
+  const ground = scene.islandConfig.ground;
+  const { worldWidth, worldHeight } = scene.islandConfig;
+
+  if (ground.kind === 'tiled') {
+    const tile = scene.add.tileSprite(0, 0, worldWidth, worldHeight, ground.tileKey);
+    tile.setOrigin(0, 0);
+    tile.setDepth(-1);
+    return;
+  }
+
+  const bg = scene.add.image(0, 0, ground.backgroundKey);
   bg.setOrigin(0, 0);
-  bg.setDisplaySize(scene.islandConfig.worldWidth, scene.islandConfig.worldHeight);
+  bg.setDisplaySize(worldWidth, worldHeight);
   bg.setDepth(-1); // sempre atrás do personagem/props/terreno pintado
 }
 

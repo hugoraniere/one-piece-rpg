@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ATTACK_FRAME_MS, IDLE_FRAME_MS, WALK_FRAME_MS } from '../config.js';
+import { ATTACK_FRAME_MS, IDLE_FRAME_MS, RUN_FRAME_MS, WALK_FRAME_MS } from '../config.js';
 import { advanceFrame, resolveModeFrames } from './frameCycle.js';
 
 // Uma "camada" de equipamento (por enquanto só a arma) é uma segunda imagem
@@ -44,29 +44,54 @@ export const LAYER_DEFS = {
   },
 };
 
-// Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md)
-// — a arte da camada precisa nascer nesse mesmo tamanho de tela pra alinhar.
-const PLACEHOLDER_CANVAS_SIZE = 200;
+// Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md
+// — a arte da camada precisa nascer nesse mesmo tamanho de tela pra alinhar).
+// 32 pra bater com o canvas do teste de pixel art (ver character/races.js);
+// era 200 com a arte pintada anterior — todas as coordenadas de desenho
+// abaixo foram reduzidas pelo mesmo fator (32/200 = 0.16), não são mais as
+// mesmas de antes.
+const PLACEHOLDER_CANVAS_SIZE = 32;
 
 // PLACEHOLDER — desenha uma "espada" simples numa cor que não existe em
 // nenhum asset real (roxo/magenta), só pra provar que a camada de
 // equipamento funciona: acompanha a direção, anda junto, aparece/some ao
 // equipar. Troque por arte de verdade seguindo EQUIPMENT_ASSETS_TODO.md; até
-// lá, ver esse retângulo roxo em cima do personagem é esperado.
+// lá, ver esse retângulo roxo em cima do personagem é esperado. Em canvas
+// tão pequeno (32px) o desenho fica mais tosco que antes — é esperado, é
+// só um placeholder, e a escala tem que bater com o corpo (ver comentário
+// de PLACEHOLDER_CANVAS_SIZE).
+// Pontos de cintura MEDIDOS de verdade (não escalados às cegas) nos 4
+// sprites de idle do teste de pixel art — desenhei uma grade de referência
+// por cima do personagem em cada direção e conferi visualmente antes de
+// aceitar (mesmo espírito de "confirma antes de aceitar" do
+// VISUAL_STYLE_GUIDE.md, só que pra posição em vez de asset). Corpo é
+// "chibi" (cabeça grande) — a cintura fica bem mais alta no canvas do que
+// "65% da altura do conteúdo" sugere; ela está por volta de y=19-20 nos
+// 4 sprites (medido direto na grade, não estimado).
+// Primeira tentativa media o quadril certo mas desenhava a lâmina para
+// CIMA a partir dele — numa vista de perfil isso empurra a espada até a
+// altura do rosto (ruim). Corrigido: lâmina embainhada aponta pra BAIXO
+// a partir da cintura (acompanha a perna), cabo/punho fica ligeiramente
+// acima da cintura — é assim que uma espada na cintura realmente pendura.
+// 'side' usa a cintura do east (18,19); o west reaproveita a MESMA textura
+// espelhada (ver LAYER_DEFS.sword.left, idleFlip/walkFlip: true).
 export function generatePlaceholderWeaponTextures(scene) {
-  drawPlaceholderSword(scene, 'weapon-sword-front', 128, 118, -35);
-  drawPlaceholderSword(scene, 'weapon-sword-back', 76, 108, -35);
-  drawPlaceholderSword(scene, 'weapon-sword-side', 122, 118, -20);
+  drawPlaceholderSword(scene, 'weapon-sword-front', 19, 19, 20);
+  drawPlaceholderSword(scene, 'weapon-sword-back', 12, 18, 20);
+  drawPlaceholderSword(scene, 'weapon-sword-side', 18, 19, 15);
 }
 
-// PLACEHOLDER na mesma linha da espada acima: uma vara marrom simples (sem
-// arte de verdade ainda) só pra provar que o equip funciona. Ângulo mais
-// vertical que a espada — uma vara de pescar descansa quase reta, não
-// inclinada como uma lâmina embainhada.
+// PLACEHOLDER na mesma linha da espada acima, mesmo ponto de cintura
+// (rod-front/back/side usam os MESMOS anchors de weapon-sword-*): cabo e
+// carretilha ficam acima da cintura (altura da mão), vareta pendura pra
+// BAIXO ao lado da perna. Primeira versão segurava a vara quase reta pra
+// CIMA — ficava sobre o cabelo escuro do personagem e sumia por falta de
+// contraste (mesmo problema de raiz que a espada tinha antes de virar pra
+// baixo). Resolvido do mesmo jeito: pendurada, não erguida.
 export function generatePlaceholderRodTextures(scene) {
-  drawPlaceholderRod(scene, 'rod-front', 128, 150, -12);
-  drawPlaceholderRod(scene, 'rod-back', 76, 140, -12);
-  drawPlaceholderRod(scene, 'rod-side', 122, 145, -6);
+  drawPlaceholderRod(scene, 'rod-front', 19, 19, -8);
+  drawPlaceholderRod(scene, 'rod-back', 12, 18, -8);
+  drawPlaceholderRod(scene, 'rod-side', 18, 19, -4);
 }
 
 function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
@@ -79,16 +104,52 @@ function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
   ctx.save();
   ctx.translate(gripX, gripY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
-  ctx.fillStyle = '#8a5a34';
-  ctx.fillRect(-3, -95, 6, 95); // vareta
-  ctx.strokeStyle = '#e8d9b0';
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, -95);
-  ctx.lineTo(18, -20);
-  ctx.stroke(); // linha de pesca
+
+  // Cabo de cortiça (acima da cintura, altura da mão)
   ctx.fillStyle = '#3b2415';
-  ctx.fillRect(-5, -6, 10, 20); // cabo
+  ctx.fillRect(-1, -4, 2, 4);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 1;
+  ctx.strokeRect(-1, -4, 2, 4);
+
+  // Carretilha — pequena, senão vira uma bola preta dominando o desenho
+  ctx.beginPath();
+  ctx.arc(1.6, -2.5, 1.2, 0, Math.PI * 2);
+  ctx.fillStyle = '#3a3a3e';
+  ctx.fill();
+  ctx.stroke();
+  ctx.fillStyle = '#96969c';
+  ctx.fillRect(1.1, -3, 1, 1); // brilho
+
+  // Vareta afunilada pendurada (grossa no cabo, fina na ponta) — contorno
+  // preto, senão some contra o cabelo escuro do personagem
+  ctx.beginPath();
+  ctx.moveTo(-1, 0);
+  ctx.lineTo(1, 0);
+  ctx.lineTo(0.5, 9);
+  ctx.lineTo(-0.5, 9);
+  ctx.closePath();
+  ctx.fillStyle = '#a8703e';
+  ctx.fill();
+  ctx.stroke();
+  ctx.strokeStyle = '#785029'; // sombra
+  ctx.beginPath();
+  ctx.moveTo(-0.5, 1);
+  ctx.lineTo(-0.2, 8);
+  ctx.stroke();
+  ctx.strokeStyle = '#cc9c64'; // friso de luz
+  ctx.beginPath();
+  ctx.moveTo(0.5, 1);
+  ctx.lineTo(0.2, 8);
+  ctx.stroke();
+
+  // Linha de pesca escapando da ponta
+  ctx.strokeStyle = '#e6e0d0';
+  ctx.beginPath();
+  ctx.moveTo(0, 9);
+  ctx.lineTo(-2.2, 13);
+  ctx.stroke();
+
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
@@ -104,11 +165,35 @@ function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {
   ctx.save();
   ctx.translate(hiltX, hiltY);
   ctx.rotate(Phaser.Math.DegToRad(angleDeg));
-  ctx.fillStyle = '#c026d3';
-  ctx.fillRect(-4, -55, 8, 55); // lâmina
-  ctx.fillRect(-12, -8, 24, 6); // guarda
-  ctx.fillStyle = '#701a75';
-  ctx.fillRect(-4, -2, 8, 16); // cabo
+  // Lâmina embainhada aponta pra BAIXO a partir do ponto de cintura
+  // (pendura ao lado da perna) — cabo/guarda ficam ACIMA desse ponto
+  // (altura da mão que empunha). Ver comentário de generatePlaceholder-
+  // WeaponTextures acima: a versão anterior desenhava isso invertido, o
+  // que empurrava a lâmina até a altura do rosto na vista de perfil.
+  // Silhueta legível de espada: pomo, guarda mais larga que o cabo (marca
+  // a "cruz") e lâmina afunilada até uma ponta. Cores agora são as de
+  // verdade (aço/latão/couro) em vez do magenta "impossível" de antes —
+  // ainda é um placeholder (forma simples, sem arte desenhada à mão), mas
+  // já lê como espada de longe, não só como um bloco colorido.
+  ctx.fillStyle = '#8b6c27'; // pomo (latão escuro)
+  ctx.fillRect(-1, -4, 2, 1);
+  ctx.fillStyle = '#4a2c17'; // cabo (couro)
+  ctx.fillRect(-1, -3, 2, 3);
+  ctx.fillStyle = '#c49c3e'; // guarda (latão)
+  ctx.fillRect(-3, 0, 6, 1);
+  ctx.fillStyle = '#c4c8d1'; // lâmina (aço)
+  ctx.beginPath();
+  ctx.moveTo(-1, 1);
+  ctx.lineTo(1, 1);
+  ctx.lineTo(1, 6);
+  ctx.lineTo(0, 8);
+  ctx.lineTo(-1, 6);
+  ctx.closePath();
+  ctx.fill();
+  ctx.fillStyle = '#787e8a'; // sombra na lâmina (dá volume)
+  ctx.fillRect(-1, 1, 1, 5);
+  ctx.fillStyle = '#eef1f5'; // friso/brilho na lâmina
+  ctx.fillRect(0, 1, 1, 5);
   ctx.restore();
 
   scene.textures.addCanvas(key, canvas);
@@ -128,6 +213,8 @@ export function createLayerState() {
     equippedLayerId: null,
     walkTimer: 0,
     walkFrameIndex: 0,
+    runTimer: 0,
+    runFrameIndex: 0,
     idleTimer: 0,
     idleFrameIndex: 0,
     attackTimer: 0,
@@ -139,6 +226,8 @@ export function equipLayer(state, layerId) {
   state.equippedLayerId = layerId;
   state.walkTimer = 0;
   state.walkFrameIndex = 0;
+  state.runTimer = 0;
+  state.runFrameIndex = 0;
   state.idleTimer = 0;
   state.idleFrameIndex = 0;
   state.attackTimer = 0;
@@ -149,16 +238,26 @@ export function unequipLayer(state) {
   state.equippedLayerId = null;
 }
 
-const FRAME_MS_BY_MODE = { idle: IDLE_FRAME_MS, walk: WALK_FRAME_MS, attack: ATTACK_FRAME_MS };
-const TIMER_KEY_BY_MODE = { idle: 'idleTimer', walk: 'walkTimer', attack: 'attackTimer' };
-const INDEX_KEY_BY_MODE = { idle: 'idleFrameIndex', walk: 'walkFrameIndex', attack: 'attackFrameIndex' };
-const ALL_MODES = ['idle', 'walk', 'attack'];
+const FRAME_MS_BY_MODE = { idle: IDLE_FRAME_MS, walk: WALK_FRAME_MS, run: RUN_FRAME_MS, attack: ATTACK_FRAME_MS };
+const TIMER_KEY_BY_MODE = { idle: 'idleTimer', walk: 'walkTimer', run: 'runTimer', attack: 'attackTimer' };
+const INDEX_KEY_BY_MODE = { idle: 'idleFrameIndex', walk: 'walkFrameIndex', run: 'runFrameIndex', attack: 'attackFrameIndex' };
+const ALL_MODES = ['idle', 'walk', 'run', 'attack'];
 
 // Atualiza textura/frame da camada e sincroniza sua posição/escala/
 // profundidade com o sprite do corpo — é essa sincronia que faz a camada
 // "grudar" no personagem em vez de precisar de coordenadas calculadas por
 // direção. `mode` é 'idle' | 'walk' | 'attack', igual em character.js.
 export function updateLayerVisual(layerSprite, state, bodySprite, delta, mode, facing) {
+  // Os frames de golpe do CORPO (gerados via PixelLab, ver races.js) já
+  // vêm com a espada desenhada na mão — mostrar a camada de equipamento
+  // (espada "embainhada" no quadril) por cima duplicaria a arma durante o
+  // golpe. Some ela só nesse modo; idle/walk continuam mostrando a camada
+  // normalmente.
+  if (mode === 'attack' && state.equippedLayerId === 'sword') {
+    layerSprite.setVisible(false);
+    return;
+  }
+
   const layerData = state.equippedLayerId ? LAYER_DEFS[state.equippedLayerId] : null;
   const frameSet = layerData ? layerData[facing] : null;
 

@@ -3,61 +3,91 @@
 // raça nova é só mais uma entrada aqui, no mesmo formato de `human` — nenhum
 // outro código (character.js, layers.js, villageScene.js) precisa mudar.
 //
-// `attack` ainda não tem arte de verdade em nenhuma raça — por enquanto
-// reaproveita o frame de idle como placeholder (ver CHARACTER_ASSETS_TODO.md),
-// só pra a máquina de estados de animação já funcionar ponta a ponta. Trocar
-// pela arte real é só substituir esses arrays, sem mexer em código.
+// TESTE de estilo pixel art (gerado no PixelLab, ver
+// assets/characters/pixel/ — 8 direções exportadas mas só as 4 cardeais
+// estão em uso aqui, mesma limitação de sempre do sistema de facing).
+// Substituiu a arte "pintada" anterior (200x200) — ver git log pra
+// recuperar os arquivos antigos se o teste não agradar.
+//
+// Canvas NÃO é o mesmo em todo arquivo (idle/north/east/west de caminhada
+// são 32x32; o ciclo novo de caminhada pro sul é 40x40) — sem problema:
+// Phaser centraliza cada textura no x/y do sprite não importa o tamanho do
+// canvas, e o conteúdo real do personagem mede a mesma altura (~26-27px)
+// nos dois casos, então o personagem não muda de tamanho trocando de pose.
+//
+// As 4 direções cardeais agora têm idle com respiração sutil (4 frames),
+// caminhada (8 frames), corrida (8 frames, ver Shift em islandScene.js) E
+// golpe de espada (4 frames) de verdade — tudo gerado via API da PixelLab
+// (POST /v2/animate-character, mode v3)
+// reaproveitando o MESMO character_id do resto da arte, pra manter a
+// consistência visual com o sul feito à mão no editor. O modelo desenhou
+// a espada de verdade na mão nos frames de ataque (surpresa boa) — por
+// isso a camada de equipamento (arma "embainhada" no quadril) se esconde
+// durante o modo 'attack', ver updateLayerVisual em character/layers.js,
+// senão apareceriam duas espadas ao mesmo tempo.
+function poseFrames(prefix, dir, count) {
+  return Array.from({ length: count }, (_, i) => `char-${prefix}-${dir}-${i + 1}`);
+}
+
+function poseAssets(prefix, dir, count) {
+  return poseFrames(prefix, dir, count).map((key, i) => ({
+    key,
+    path: `assets/characters/pixel/${prefix}_${dir}_${String(i + 1).padStart(2, '0')}.png`,
+  }));
+}
+
+const IDLE_FRAME_COUNT = 4;
+const WALK_FRAME_COUNT = 8;
+const RUN_FRAME_COUNT = 8;
+const ATTACK_FRAME_COUNT = 4;
+
 export const RACES = {
   human: {
     assets: [
-      { key: 'char-idle-front', path: 'assets/characters/idle_front.png' },
-      { key: 'char-idle-back-1', path: 'assets/characters/idle_back_1.png' },
-      { key: 'char-idle-back-2', path: 'assets/characters/idle_back_2.png' },
-      { key: 'char-idle-left', path: 'assets/characters/idle_left.png' },
-      { key: 'char-idle-right', path: 'assets/characters/idle_right.png' },
-      { key: 'char-walk-front-1', path: 'assets/characters/walk_front_1.png' },
-      { key: 'char-walk-front-2', path: 'assets/characters/walk_front_2.png' },
-      { key: 'char-walk-back-1', path: 'assets/characters/walk_up_1.png' },
-      { key: 'char-walk-back-2', path: 'assets/characters/walk_up_2.png' },
-      { key: 'char-walk-back-3', path: 'assets/characters/walk_up_3.png' },
-      { key: 'char-walk-back-4', path: 'assets/characters/walk_up_4.png' },
-      { key: 'char-walk-back-5', path: 'assets/characters/walk_up_5.png' },
-      { key: 'char-walk-right-1', path: 'assets/characters/walk_right_1.png' },
-      { key: 'char-walk-right-2', path: 'assets/characters/walk_right_2.png' },
-      { key: 'char-walk-right-3', path: 'assets/characters/walk_right_3.png' },
-      { key: 'char-walk-right-4', path: 'assets/characters/walk_right_4.png' },
-      { key: 'char-walk-left-1', path: 'assets/characters/walk_left_1.png' },
-      { key: 'char-walk-left-2', path: 'assets/characters/walk_left_2.png' },
-      { key: 'char-walk-left-3', path: 'assets/characters/walk_left_3.png' },
-      { key: 'char-walk-left-4', path: 'assets/characters/walk_left_4.png' },
+      ...poseAssets('idle', 'south', IDLE_FRAME_COUNT),
+      ...poseAssets('idle', 'north', IDLE_FRAME_COUNT),
+      ...poseAssets('idle', 'east', IDLE_FRAME_COUNT),
+      ...poseAssets('idle', 'west', IDLE_FRAME_COUNT),
+      ...poseAssets('walk', 'south', WALK_FRAME_COUNT),
+      ...poseAssets('walk', 'north', WALK_FRAME_COUNT),
+      ...poseAssets('walk', 'east', WALK_FRAME_COUNT),
+      ...poseAssets('walk', 'west', WALK_FRAME_COUNT),
+      ...poseAssets('run', 'south', RUN_FRAME_COUNT),
+      ...poseAssets('run', 'north', RUN_FRAME_COUNT),
+      ...poseAssets('run', 'east', RUN_FRAME_COUNT),
+      ...poseAssets('run', 'west', RUN_FRAME_COUNT),
+      ...poseAssets('attack', 'south', ATTACK_FRAME_COUNT),
+      ...poseAssets('attack', 'north', ATTACK_FRAME_COUNT),
+      ...poseAssets('attack', 'east', ATTACK_FRAME_COUNT),
+      ...poseAssets('attack', 'west', ATTACK_FRAME_COUNT),
     ],
     frames: {
       down: {
-        idle: ['char-idle-front'],
-        walk: ['char-walk-front-1', 'char-walk-front-2'],
-        attack: ['char-idle-front'],
+        idle: poseFrames('idle', 'south', IDLE_FRAME_COUNT),
+        walk: poseFrames('walk', 'south', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'south', RUN_FRAME_COUNT),
+        attack: poseFrames('attack', 'south', ATTACK_FRAME_COUNT),
       },
       up: {
-        idle: ['char-idle-back-1', 'char-idle-back-2'],
-        walk: ['char-walk-back-1', 'char-walk-back-2', 'char-walk-back-3', 'char-walk-back-4', 'char-walk-back-5'],
-        attack: ['char-idle-back-1'],
+        idle: poseFrames('idle', 'north', IDLE_FRAME_COUNT),
+        walk: poseFrames('walk', 'north', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'north', RUN_FRAME_COUNT),
+        attack: poseFrames('attack', 'north', ATTACK_FRAME_COUNT),
       },
+      // Sem espelhar mais nada — o export trouxe leste E oeste de verdade
+      // (ao contrário da arte antiga, que só tinha um perfil e espelhava
+      // pra virar o outro lado).
       left: {
-        idle: ['char-idle-left'],
-        idleFlip: false,
-        // Ver nota equivalente que existia em character.js: a caminhada de
-        // perfil pra esquerda reaproveita a arte da direita espelhada (a
-        // arte própria de "caminhada contra" saiu com o tronco torcido).
-        walk: ['char-walk-right-1', 'char-walk-right-2', 'char-walk-right-3', 'char-walk-right-4'],
-        walkFlip: true,
-        attack: ['char-idle-left'],
+        idle: poseFrames('idle', 'west', IDLE_FRAME_COUNT),
+        walk: poseFrames('walk', 'west', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'west', RUN_FRAME_COUNT),
+        attack: poseFrames('attack', 'west', ATTACK_FRAME_COUNT),
       },
       right: {
-        idle: ['char-idle-right'],
-        idleFlip: false,
-        walk: ['char-walk-right-1', 'char-walk-right-2', 'char-walk-right-3', 'char-walk-right-4'],
-        walkFlip: false,
-        attack: ['char-idle-right'],
+        idle: poseFrames('idle', 'east', IDLE_FRAME_COUNT),
+        walk: poseFrames('walk', 'east', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'east', RUN_FRAME_COUNT),
+        attack: poseFrames('attack', 'east', ATTACK_FRAME_COUNT),
       },
     },
   },

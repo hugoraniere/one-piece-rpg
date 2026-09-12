@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ATTACK_FRAME_MS, CHAR_SCALE, IDLE_FRAME_MS, SHADOW_OFFSET_Y, SHADOW_SCALE_X, SHADOW_SCALE_Y, WALK_FRAME_MS } from '../config.js';
+import { ATTACK_FRAME_MS, CHAR_SCALE, IDLE_FRAME_MS, RUN_FRAME_MS, SHADOW_OFFSET_Y, SHADOW_SCALE_X, SHADOW_SCALE_Y, WALK_FRAME_MS } from '../config.js';
 import { advanceFrame, resolveModeFrames } from './frameCycle.js';
 import { RACES, preloadRaceAssets } from './races.js';
 
@@ -65,8 +65,11 @@ export function createPlayerCharacter(scene, x, y, raceId = 'human') {
   player.setScale(CHAR_SCALE);
   // Caixa de colisão pequena perto dos pés, não o corpo inteiro (a imagem
   // tem bastante espaço vazio ao redor do personagem) — ajuste fino depois.
-  player.body.setSize(90, 60);
-  player.body.setOffset(55, 120);
+  // Valores proporcionais aos antigos (90,60 / 55,120 num canvas 200x200),
+  // reduzidos pro canvas novo de 32x32 (fator 0.16) — ver CHAR_SCALE em
+  // config.js pro resto da conta do teste de pixel art.
+  player.body.setSize(14, 10);
+  player.body.setOffset(9, 19);
   player.setCollideWorldBounds(true);
 
   return { player, shadow };
@@ -80,6 +83,8 @@ export function createAnimationState() {
   return {
     walkTimer: 0,
     walkFrameIndex: 0,
+    runTimer: 0,
+    runFrameIndex: 0,
     idleTimer: 0,
     idleFrameIndex: 0,
     attackTimer: 0,
@@ -87,13 +92,14 @@ export function createAnimationState() {
   };
 }
 
-const FRAME_MS_BY_MODE = { idle: IDLE_FRAME_MS, walk: WALK_FRAME_MS, attack: ATTACK_FRAME_MS };
-const TIMER_KEY_BY_MODE = { idle: 'idleTimer', walk: 'walkTimer', attack: 'attackTimer' };
-const INDEX_KEY_BY_MODE = { idle: 'idleFrameIndex', walk: 'walkFrameIndex', attack: 'attackFrameIndex' };
-const ALL_MODES = ['idle', 'walk', 'attack'];
+const FRAME_MS_BY_MODE = { idle: IDLE_FRAME_MS, walk: WALK_FRAME_MS, run: RUN_FRAME_MS, attack: ATTACK_FRAME_MS };
+const TIMER_KEY_BY_MODE = { idle: 'idleTimer', walk: 'walkTimer', run: 'runTimer', attack: 'attackTimer' };
+const INDEX_KEY_BY_MODE = { idle: 'idleFrameIndex', walk: 'walkFrameIndex', run: 'runFrameIndex', attack: 'attackFrameIndex' };
+const ALL_MODES = ['idle', 'walk', 'run', 'attack'];
 
-// `mode` é 'idle' | 'walk' | 'attack' — substitui o antigo booleano
-// `isMoving` pra dar espaço a mais estados sem virar uma pilha de flags.
+// `mode` é 'idle' | 'walk' | 'run' | 'attack' — substitui o antigo
+// booleano `isMoving` pra dar espaço a mais estados sem virar uma pilha
+// de flags.
 export function updateCharacterVisual(player, state, delta, mode, facing, raceId = 'human') {
   const frameSet = RACES[raceId].frames[facing];
   const { frames, flip } = resolveModeFrames(frameSet, mode);

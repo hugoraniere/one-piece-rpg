@@ -2,16 +2,53 @@
 // cena, personagem, mundo e editor.
 
 export const PLAYER_SPEED = 160; // pixels por segundo
-export const CHAR_SCALE = 0.65; // escala de exibição — ajuste aqui se o tamanho não bater
-export const WALK_FRAME_MS = 180; // troca de frame do ciclo de caminhada (2 frames alternando)
+// Corrida (segurar Shift) — 1.625x a velocidade normal, mesma proporção
+// aproximada usada no RUN_FRAME_MS abaixo (pernas mais rápidas na MESMA
+// proporção do deslocamento, senão a corrida "patina" que nem o bug da
+// caminhada que a gente acabou de corrigir).
+export const RUN_SPEED = 260;
+// Escala de exibição — ajuste aqui se o tamanho não bater. Recalculada pro
+// teste de pixel art (canvas 32x32, conteúdo real ~26px de altura — ver
+// character/races.js): 113px de altura em tela / ~26.5px de conteúdo ≈ 4.26,
+// mesma altura em tela que o personagem pintado anterior tinha (200x200,
+// conteúdo 174px, escala 0.65).
+export const CHAR_SCALE = 4.26;
+// Zoom da câmera — o personagem em 113px de altura (CHAR_SCALE acima) e
+// câmera no zoom padrão (1) deixava o boneco grande demais na tela,
+// escondendo o mundo ao redor. Zoom < 1 encolhe a visão inteira igual
+// (personagem, chão, props) mantendo a proporção — mais "visão de cima"
+// de RPG top-down, menos "close no rosto".
+export const CAMERA_ZOOM = 0.5;
+// Troca de frame do ciclo de caminhada — 180ms era calibrado pro ciclo
+// ANTIGO de 2 frames só alternando (comentário desatualizado, achado numa
+// queixa do usuário: "a animação de caminhada está ruim, o personagem
+// caminha em velocidade conflitante à da animação"). O ciclo de verdade
+// hoje tem 8 frames (ver character/races.js), gerado nesta sessão, mas
+// ninguém tinha revisado esse número junto — com 180ms/frame, um ciclo
+// completo (8 frames) levava 1440ms, quase 4x mais devagar que o ciclo de
+// 2 frames original (360ms), enquanto PLAYER_SPEED continuava o mesmo:
+// as pernas pareciam "patinar" devagar demais pra velocidade real de
+// deslocamento. 125ms/frame recalibra o ciclo de 8 frames pra 1000ms —
+// 2 passos por segundo, cadência natural de caminhada — mantendo
+// PLAYER_SPEED intocado (ajustar o visual da perna, não a jogabilidade).
+export const WALK_FRAME_MS = 125;
+// Ciclo de corrida — mesma lógica do walk acima: cadência de perna
+// proporcional à velocidade real (RUN_SPEED/PLAYER_SPEED = 1.625), senão
+// a corrida "patina" igual o bug que a caminhada tinha. 125/1.625 ≈ 77,
+// arredondado.
+export const RUN_FRAME_MS = 77;
 export const IDLE_FRAME_MS = 650; // troca de frame do idle (bem mais devagar — é só uma respiração sutil)
 export const ATTACK_FRAME_MS = 90; // troca de frame do ataque — mais rápido, dá sensação de impacto
-export const ATTACK_DURATION_MS = 280; // quanto tempo o modo 'attack' fica ativo antes de voltar pra idle/walk
+// Quanto tempo o modo 'attack' fica ativo antes de voltar pra idle/walk —
+// precisa caber o ciclo inteiro (ATTACK_FRAME_MS * nº de frames de ataque
+// = 90 * 4 = 360ms) mais uma pequena folga, senão o golpe corta antes do
+// último frame aparecer.
+export const ATTACK_DURATION_MS = 400;
 
 // Sombra sob os pés — desenhada por código (gradiente radial), não é um
 // asset. Assim ela nunca desalinha entre os frames do personagem, e já
 // funciona de graça pra qualquer personagem/inimigo futuro.
-export const SHADOW_OFFSET_Y = 55; // distância dos pés até o centro do personagem, em pixels de tela
+export const SHADOW_OFFSET_Y = 49; // distância dos pés até o centro do personagem, em pixels de tela — recalculado junto com CHAR_SCALE pro teste de pixel art
 export const SHADOW_SCALE_X = 1.0;
 export const SHADOW_SCALE_Y = 0.4;
 

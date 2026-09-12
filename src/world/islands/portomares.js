@@ -90,6 +90,16 @@ export const PORTOMARES = {
   },
   props: PORTOMARES_PROPS,
 
+  // Água de porto movimentado: espécie própria (robalo) e mais chance de
+  // lixo que as outras duas ilhas — tráfego de barco de verdade.
+  fishing: { fishItemId: 'robalo', junkChance: 0.15 },
+
   boatSpawn: { x: 1600, y: 1150 },
   monsterSpawn: { x: 2300, y: 500 },
+
+  // Entre as duas barracas de mercado — ver handleSell em islandScene.js.
+  // Só Portomares tem isto por enquanto; a Vila e a Floresta não têm
+  // mercado, então G nunca cai nesse ramo lá (ver checagem `marketSpawn &&`
+  // antes de medir distância).
+  marketSpawn: { x: 1085, y: 775 },
 };

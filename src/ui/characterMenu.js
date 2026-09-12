@@ -1,6 +1,7 @@
 import { toggleMenu } from './menuManager.js';
 import { ATTRIBUTES, COMBAT_SKILLS, OFICIO_SKILLS } from './menuData.js';
 import { ACTIONS_PER_LEVEL, SKILL_MAX_LEVEL, getProgressPercent } from '../sim/progression.js';
+import { getCharacterLevel, getCharacterLevelProgress, getCharacterRank } from '../sim/characterLevel.js';
 
 // Haki não tem sistema nenhum ainda — a aba simplesmente não existe até
 // isso ser implementado (ver decisão no wireframe: nada de "???" também).
@@ -69,6 +70,20 @@ function renderCrewTab() {
   return `<div class="crew-card empty"><div class="name">Nenhum tripulante recrutado ainda</div></div>`;
 }
 
+// Nível de personagem (agregado de todas as perícias/atributos, ver
+// sim/characterLevel.js) — cabeçalho novo acima das abas, mesma ideia do
+// chip do HUD só que com a patente por extenso (tem espaço aqui).
+function renderLevelBanner(progression) {
+  const level = getCharacterLevel(progression);
+  const rank = getCharacterRank(level);
+  const progress = getCharacterLevelProgress(progression);
+  return `
+    <div class="char-level-banner">
+      <span class="char-level-label">Nível ${level} <em>— ${rank.name}</em></span>
+      <div class="char-level-track"><div class="char-level-fill" style="width:${progress}%"></div></div>
+    </div>`;
+}
+
 function buildCharacterHtml(progression) {
   const tabButtons = TABS.map((t, i) => `<button class="char-tab${i === 0 ? ' active' : ''}" data-tab="${t.key}">${t.label}</button>`).join('');
   const renderers = { atributos: () => renderAttributesTab(progression), pericias: () => renderSkillsTab(progression), tripulacao: renderCrewTab };
@@ -79,6 +94,7 @@ function buildCharacterHtml(progression) {
       <span class="menu-title">Personagem</span>
       <span class="menu-hint">Esc ou C fecha</span>
     </div>
+    ${renderLevelBanner(progression)}
     <div class="char-tabs">${tabButtons}</div>
     ${pages}
   `;

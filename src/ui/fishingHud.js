@@ -4,13 +4,17 @@ import './fishingHud.css';
 // pras fórmulas):
 //   1) ESPERA — a isca está na água, um sorteio por segundo decide se um
 //      peixe morde (chance dada pela isca usada). Sem mordida até o tempo
-//      máximo, a tentativa acaba em "nada mordeu".
+//      máximo, a tentativa acaba em "nada mordeu". Clicar aqui não faz
+//      nada — nada mordeu ainda, não tem o que fisgar.
 //   2) MORDIDA — abre uma janela curta de reação (mais generosa quanto
-//      melhor foi o arremesso); soltar a tecla/botão dentro dela é sucesso,
-//      fora dela (ou não soltar a tempo) é "o peixe escapou".
-// Soltar durante a ESPERA (antes de qualquer mordida) sempre falha na hora
-// — "puxou cedo demais". Isso é o próprio villageScene.js chamando
-// releaseFishingAttempt() a partir do keyup-F ou do pointerup do mouse.
+//      melhor foi o arremesso); um clique dentro dela é sucesso, fora dela
+//      (não clicar a tempo) é "o peixe escapou". Dois cliques, um pra
+//      arremessar e outro pra fisgar — não segurar/soltar — ver o
+//      pointerdown único em islandScene.js que decide qual dos dois é,
+//      olhando getFishingPhase().
+// releaseFishingAttempt(), apesar do nome (era literalmente soltar a tecla/
+// botão antes desta mudança), continua sendo só "reage à fase atual" —
+// chamado agora por um segundo clique, não por um pointerup.
 const TICK_MS = 1000;
 
 let rootEl;
@@ -69,7 +73,7 @@ export function startFishingAttempt({ biteChance: chance, reactionMs: reaction, 
   biteCallback = onBite;
 
   rootEl.classList.remove('bite-active');
-  hintEl.textContent = 'Aguardando mordida... segure a tecla';
+  hintEl.textContent = 'Aguardando mordida...';
   fillEl.style.transition = 'none';
   fillEl.style.width = '0%';
   rootEl.classList.add('show');
@@ -96,7 +100,7 @@ function startBiteWindow() {
 
   if (biteCallback) biteCallback();
   rootEl.classList.add('bite-active');
-  hintEl.textContent = 'MORDEU! Solte agora!';
+  hintEl.textContent = 'MORDEU! Clique agora!';
   // Força um reflow antes de trocar a transição — sem isso o navegador pode
   // agrupar o "encher" e o "esvaziar" na mesma passada e a barra nunca
   // aparece cheia visualmente.
@@ -109,7 +113,8 @@ function startBiteWindow() {
   biteTimeoutId = setTimeout(() => finish('escapou'), reactionMs);
 }
 
-// Chamado pelo keyup-F ou pointerup — solta a vara, seja qual for a fase.
+// Chamado pelo segundo clique (ver pointerdown em islandScene.js) — reage
+// à fase atual, seja qual for.
 export function releaseFishingAttempt() {
   if (phase === 'esperando') {
     finish('cedo-demais');

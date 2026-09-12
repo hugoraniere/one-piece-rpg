@@ -4,7 +4,14 @@ import { getProgressPercent } from '../sim/progression.js';
 // Chip de progressão — ver comentário no topo do CSS. Fica dentro de
 // .hud-topleft (mesma coluna de vida/Berries em hud.js) pra empilhar por
 // flexbox, sem precisar calcular posição na mão.
-const IDLE_HIDE_MS = 2200;
+// Maior que o cooldown de coleta (GATHER_COOLDOWN_MS = 2500ms em
+// islandScene.js) — sem essa folga, coletar em sequência fazia o chip
+// esconder e reaparecer a cada coleta (2200 &lt; 2500), um pisca-pisca em
+// vez de ficar continuamente visível durante uma sessão de coleta
+// (achado em revisão de UX: "notificações aparecendo de forma
+// desnecessária"). Não importa em qual arquivo o cooldown mais lento
+// vive — só precisa ficar acima dele.
+const IDLE_HIDE_MS = 2800;
 const POP_DELAY_MS = 260; // tempo que a barra fica "cheia" antes de zerar — dá tempo do olho registrar que encheu
 
 let rootEl;

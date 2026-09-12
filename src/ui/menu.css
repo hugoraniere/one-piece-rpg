@@ -55,6 +55,33 @@
   white-space: nowrap;
 }
 
+/* Nível de personagem — banner acima das abas, mesma barra dourada de
+   "subiu de nível" já usada no chip do HUD (ver hud.css .level-fill). */
+.char-level-banner {
+  margin-bottom: 10px;
+}
+.char-level-label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3b2415;
+}
+.char-level-label em {
+  font-style: normal;
+  font-weight: 500;
+  color: #6b5a3f;
+}
+.char-level-track {
+  height: 7px;
+  background: #c7b280;
+  border-radius: 3px;
+  overflow: hidden;
+  margin-top: 5px;
+}
+.char-level-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #c9992f, #f0d78a);
+}
+
 /* ---- abas de Personagem ---- */
 .char-tabs {
   display: flex;
@@ -637,6 +664,18 @@
   opacity: 0.55;
   filter: blur(0.5px);
   border-radius: 55% 45% 60% 40% / 60% 50% 50% 40%;
+}
+/* Silhueta desconhecida que tem uma ilha de verdade por trás (ver
+   buildMapHtml em mapMenu.js) — mais visível que uma puramente decorativa
+   e com cursor de mão, mas ainda sem nome/contraste de ilha conhecida:
+   dá pra perceber "isso aqui reage", sem entregar o que é antes de zarpar. */
+.map-unknown-travelable {
+  cursor: pointer;
+  transition: transform 0.15s ease, opacity 0.15s ease;
+}
+.map-unknown-travelable:hover {
+  opacity: 0.8;
+  transform: scale(1.1);
 }
 
 .map-compass {

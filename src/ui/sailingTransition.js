@@ -9,6 +9,7 @@ export const FADE_MS = 400;
 // testa o pipeline inteiro (fade + restart + estado intacto) antes de
 // existir uma segunda ilha de verdade pra viajar.
 export function travelToIsland(scene, destinationId) {
+  const previousIslandId = scene.islandConfig.id;
   scene.cameras.main.fadeOut(FADE_MS, 0, 0, 0);
   scene.cameras.main.once('camerafadeoutcomplete', () => {
     const state = getPlayerState();
@@ -18,7 +19,10 @@ export function travelToIsland(scene, destinationId) {
     }
     // IslandScene.create() termina com um fadeIn (ver islandScene.js) —
     // simétrico com este fadeOut, então a troca nunca "pisca" pro branco/
-    // preto sólido entre uma ilha e outra.
-    scene.scene.restart({ islandId: destinationId });
+    // preto sólido entre uma ilha e outra. `arrivedByBoat` é só pra
+    // IslandScene.create() saber treinar Navegação (ver menuData.js, que
+    // até aqui dizia "sem travessia marítima ainda") sem precisar importar
+    // nada daqui pra lá (evita ciclo de import entre os dois módulos).
+    scene.scene.restart({ islandId: destinationId, arrivedByBoat: true, previousIslandId });
   });
 }

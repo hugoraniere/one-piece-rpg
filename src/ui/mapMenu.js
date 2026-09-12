@@ -18,10 +18,11 @@ const KNOWN_SLOTS = [
   { top: '45%', left: '45%' },
   { top: '16%', left: '78%' },
   { top: '76%', left: '20%' },
+  { top: '58%', left: '68%' },
 ];
 const UNKNOWN_SLOTS = [
   { top: '12%', left: '13%' },
-  { top: '80%', left: '76%' },
+  { top: '80%', left: '85%' },
   { top: '48%', left: '92%' },
 ];
 
@@ -38,13 +39,17 @@ function renderCaption(panel) {
   const currentIsland = ISLANDS[context.currentIslandId];
 
   if (!pendingDestinationId) {
-    captionEl.innerHTML = `${currentIsland.name} — ilha atual. Clique numa ilha descoberta pra viajar de navio.`;
+    captionEl.innerHTML = `${currentIsland.name} — ilha atual. Clique numa ilha descoberta pra viajar de navio, ou numa silhueta desconhecida pra zarpar às cegas.`;
     return;
   }
 
-  const destination = ISLANDS[pendingDestinationId];
+  // Ilha já descoberta: mostra o nome de verdade. Silhueta desconhecida:
+  // NÃO revela o nome antes de chegar lá — é essa a diferença entre
+  // "viajar" e "zarpar rumo ao desconhecido" (ver buildMapHtml).
+  const isKnownDestination = context.discoveredIslands.includes(pendingDestinationId);
+  const question = isKnownDestination ? `Viajar até ${ISLANDS[pendingDestinationId].name}?` : 'Zarpar rumo ao desconhecido?';
   captionEl.innerHTML = `
-    <span>Viajar até ${destination.name}?</span>
+    <span>${question}</span>
     <button type="button" class="map-travel-confirm" data-action="confirm">Confirmar</button>
     <button type="button" class="map-travel-confirm" data-action="cancel">Cancelar</button>
   `;
@@ -77,12 +82,21 @@ function buildMapHtml() {
     })
     .join('');
 
-  // Preenche os slots restantes (até um total de 5, contando os conhecidos)
-  // com silhuetas nunca visitadas — mesma quantidade de antes quando só
-  // existia uma ilha descoberta.
+  // Silhuetas desconhecidas — antes eram só decorativas (nenhuma ilha de
+  // verdade por trás). Agora, as primeiras `undiscoveredIds.length` slots
+  // apontam pra ilhas reais que existem no registro mas ainda não foram
+  // visitadas (ver PANTANO_RONCO, discoveredByDefault: false) — clicáveis,
+  // sem mostrar nome (ver renderCaption). O resto continua puramente
+  // decorativo — "sabe que tem mais mundo lá fora" sem prometer nada.
+  const undiscoveredIds = Object.keys(ISLANDS).filter((id) => !context.discoveredIslands.includes(id));
   const unknownCount = Math.max(0, UNKNOWN_SLOTS.length - Math.max(0, knownIds.length - 1));
   const unknownHtml = UNKNOWN_SLOTS.slice(0, unknownCount)
-    .map((pos) => `<div class="map-unknown-island" style="top:${pos.top};left:${pos.left}"></div>`)
+    .map((pos, i) => {
+      const targetId = undiscoveredIds[i];
+      const travelable = targetId ? ' map-unknown-travelable' : '';
+      const dataAttr = targetId ? ` data-island-id="${targetId}"` : '';
+      return `<div class="map-unknown-island${travelable}"${dataAttr} style="top:${pos.top};left:${pos.left}"></div>`;
+    })
     .join('');
 
   return `
@@ -114,7 +128,7 @@ function mountMapMenu(panel) {
   panel.innerHTML = buildMapHtml();
   renderCaption(panel);
 
-  panel.querySelectorAll('.map-island-travelable').forEach((el) => {
+  panel.querySelectorAll('.map-island-travelable, .map-unknown-travelable').forEach((el) => {
     el.addEventListener('click', () => {
       pendingDestinationId = el.dataset.islandId;
       renderCaption(panel);

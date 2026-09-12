@@ -19,6 +19,39 @@ const MOODLE_DEFS = [
   { key: 'ferido', severity: 'bad-2', label: 'Ferido — sangrando aos poucos' },
 ];
 
+// Hotbar — data-driven pra dar pra somar slot novo sem tocar em mais nada
+// (render, atalho de número, bind de clique, estado equipado/travado — tudo
+// deriva desta lista). `equipLayerId` liga o slot ao equipState de verdade
+// (character/layers.js); `locksUntilOwned: true` é a trava "ainda não
+// fabricou" (some quando o item entra no inventário, ver setHotbarState);
+// sem nenhum dos dois o slot é permanentemente reservado (trava pra sempre,
+// mesmo trato que a habilidade já tinha — "não existe ainda", não "falta
+// fabricar").
+const HOTBAR_SLOTS = [
+  { id: 'sword', shortcut: '1', icon: '/assets/icons/sword.png', title: 'Cutlass de Ferro', equipLayerId: 'sword' },
+  { id: 'rod', shortcut: '2', icon: '/assets/icons/rod.png', title: 'Vara de Pescar', equipLayerId: 'vara-de-pescar', locksUntilOwned: true },
+  { id: 'ability', shortcut: '3', iconSymbol: 'cadeado', title: 'Habilidade (ainda não existe)' },
+  { id: 'slot4', shortcut: '4', iconSymbol: 'cadeado', title: 'Reservado (ainda não existe)' },
+];
+
+// Mesma ideia da hotbar: qualquer botão clicável que também tem atalho de
+// teclado mostra o indicador — não só a hotbar. `id` bate com o
+// `data-menu`/chave de handler que bindMenuButtons já esperava.
+const MENU_BUTTONS = [
+  { id: 'personagem', shortcut: 'C', iconSymbol: 'personagem', title: 'Personagem' },
+  { id: 'inventario', shortcut: 'I', iconSymbol: 'inventario', title: 'Inventário' },
+  { id: 'mapa', shortcut: 'M', iconSymbol: 'mapa', title: 'Mapa' },
+];
+
+// Badge do atalho — fundo escuro sólido próprio, não a cor de texto do
+// slot por baixo. Um slot de hotbar claro (madeira) ou um menu-btn também
+// claro (creme) deixava o número quase invisível (creme sobre creme,
+// achado em revisão de contraste); com chip escuro próprio o número
+// sempre lê, não importa o fundo por trás.
+function shortcutBadge(shortcut) {
+  return `<span class="shortcut-badge">${shortcut}</span>`;
+}
+
 let hpFrameEl;
 let hpFillEl;
 let hpNumEl;
@@ -26,9 +59,7 @@ let berriesFrameEl;
 let berriesEl;
 let moodleTrayEl;
 let minimapDotEl;
-let hotbarSwordEl;
-let hotbarRodEl;
-let hotbarAbilityEl;
+let hotbarEls = {};
 let lastHp = null;
 let lastBerries = null;
 
@@ -64,14 +95,22 @@ export function initHud() {
       </div>
     </div>
     <div class="menu-buttons" id="hud-menu-buttons">
-      <div class="menu-btn" data-menu="personagem" title="Personagem (C)"><svg class="icon" aria-hidden="true"><use href="#i-personagem"></use></svg></div>
-      <div class="menu-btn" data-menu="inventario" title="Inventário (I)"><svg class="icon" aria-hidden="true"><use href="#i-inventario"></use></svg></div>
-      <div class="menu-btn" data-menu="mapa" title="Mapa (M)"><svg class="icon" aria-hidden="true"><use href="#i-mapa"></use></svg></div>
+      ${MENU_BUTTONS.map((btn) => `
+        <div class="menu-btn" data-menu="${btn.id}" title="${btn.title} (${btn.shortcut})">
+          <svg class="icon" aria-hidden="true"><use href="#i-${btn.iconSymbol}"></use></svg>
+          ${shortcutBadge(btn.shortcut)}
+        </div>
+      `).join('')}
     </div>
     <div class="hotbar" id="hud-hotbar">
-      <div class="hotbar-slot" id="hud-hotbar-sword" title="Cutlass de Ferro (Q)"><svg class="icon" aria-hidden="true"><use href="#i-espada"></use></svg></div>
-      <div class="hotbar-slot locked" id="hud-hotbar-rod" title="Vara de Pescar"><svg class="icon" aria-hidden="true"><use href="#i-pesca"></use></svg></div>
-      <div class="hotbar-slot locked" id="hud-hotbar-ability" title="Habilidade (ainda não existe)"><svg class="icon" aria-hidden="true"><use href="#i-cadeado"></use></svg></div>
+      ${HOTBAR_SLOTS.map((slot) => `
+        <div class="hotbar-slot${slot.locksUntilOwned || !slot.equipLayerId ? ' locked' : ''}" id="hud-hotbar-${slot.id}" title="${slot.title} (${slot.shortcut})">
+          ${slot.icon
+            ? `<img class="icon pixel-icon" src="${slot.icon}" alt="${slot.title}">`
+            : `<svg class="icon" aria-hidden="true"><use href="#i-${slot.iconSymbol}"></use></svg>`}
+          ${shortcutBadge(slot.shortcut)}
+        </div>
+      `).join('')}
     </div>
   `;
 
@@ -82,9 +121,10 @@ export function initHud() {
   berriesEl = overlay.querySelector('#hud-berries');
   moodleTrayEl = overlay.querySelector('#hud-moodle-tray');
   minimapDotEl = overlay.querySelector('#hud-minimap-dot');
-  hotbarSwordEl = overlay.querySelector('#hud-hotbar-sword');
-  hotbarRodEl = overlay.querySelector('#hud-hotbar-rod');
-  hotbarAbilityEl = overlay.querySelector('#hud-hotbar-ability');
+  hotbarEls = {};
+  HOTBAR_SLOTS.forEach((slot) => {
+    hotbarEls[slot.id] = overlay.querySelector(`#hud-hotbar-${slot.id}`);
+  });
   lastHp = null;
   lastBerries = null;
 
@@ -149,15 +189,29 @@ export function bindMenuButtons({ onPersonagem, onInventario, onMapa }) {
 // `equipped` é o mesmo equipState.equippedLayerId de character/layers.js
 // ('sword' | 'vara-de-pescar' | null) — hud.js só espelha, não decide.
 // `hasRod` trava o slot da vara (visual + clique) até ela existir de
-// verdade no inventário (ver refreshHotbar em villageScene.js).
+// verdade no inventário (ver refreshHotbar em islandScene.js). Genérico
+// pra qualquer slot com `equipLayerId`/`locksUntilOwned` — somar um novo
+// item equipável é só mais uma entrada em HOTBAR_SLOTS, sem mexer aqui.
 export function setHotbarState({ equipped, hasRod }) {
-  hotbarSwordEl.classList.toggle('equipped', equipped === 'sword');
-  hotbarRodEl.classList.toggle('equipped', equipped === 'vara-de-pescar');
-  hotbarRodEl.classList.toggle('locked', !hasRod);
+  HOTBAR_SLOTS.forEach((slot) => {
+    const el = hotbarEls[slot.id];
+    if (slot.equipLayerId) el.classList.toggle('equipped', equipped === slot.equipLayerId);
+    if (slot.locksUntilOwned) el.classList.toggle('locked', !hasRod);
+  });
 }
 
-export function bindHotbar({ onSword, onRod, onAbility }) {
-  hotbarSwordEl.addEventListener('click', () => onSword?.());
-  hotbarRodEl.addEventListener('click', () => onRod?.());
-  hotbarAbilityEl.addEventListener('click', () => onAbility?.());
+// `handlers` é `{ <id do slot>: () => void }` — mesmos ids de HOTBAR_SLOTS,
+// chamado tanto pelo clique quanto pelo atalho de número (ver
+// bindHotbarShortcuts, que reusa os MESMOS handlers pelo teclado 1-4).
+export function bindHotbar(handlers) {
+  HOTBAR_SLOTS.forEach((slot) => {
+    hotbarEls[slot.id].addEventListener('click', () => handlers[slot.id]?.());
+  });
+}
+
+// Mapa atalho-de-número → id do slot, pra quem liga a tecla (ver
+// keydown-ONE..FOUR em islandScene.js) saber qual handler chamar sem
+// precisar conhecer a lista de slots.
+export function getHotbarSlotIdByShortcut(shortcut) {
+  return HOTBAR_SLOTS.find((slot) => slot.shortcut === shortcut)?.id;
 }

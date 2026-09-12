@@ -46,7 +46,7 @@ function renderItemsTab(ctx) {
         <div class="paperdoll-silhouette"></div>
         <div class="eq-slots">
           <div class="eq-slot">
-            <div class="icon-badge">${iconSvg('espada')}</div>
+            <div class="icon-badge"><img class="icon pixel-icon" src="/assets/icons/sword.png" alt="Espada"></div>
             <div><div class="label">Mão</div><div class="value">${equippedLabel(equipState)}</div></div>
           </div>
           <div class="eq-slot">
