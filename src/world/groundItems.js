@@ -117,6 +117,7 @@ export function spawnGroundItem(scene, itemId, qty, x, y) {
     bobTween,
     pulseTween: null,
     inRange: false,
+    collected: false, // ver collectGroundItem — trava contra coletar o mesmo item duas vezes (G + clique na caixa quase juntos)
   };
   scene.groundItems.push(entry);
   return entry;
@@ -166,13 +167,23 @@ export function removeGroundItem(scene, entry) {
 
 // Animação de "apanhar" — contida de propósito (ver comentário no topo
 // do arquivo): o item sobe um pouco e some no próprio lugar, sem viajar
-// pela tela até o jogador. Remove da lista de coletáveis JÁ NO INÍCIO
-// (não só quando a animação termina) — sem isso, um clique na caixa de
-// itens próximos e um G quase simultâneos coletariam o mesmo item duas
-// vezes durante os ~220ms de animação.
+// pela tela até o jogador.
+//
+// `entry.collected` é a trava real contra coletar duas vezes — tirar da
+// lista `scene.groundItems` no início SOZINHO não bastava: a caixa de
+// itens próximos (ui/nearbyLootPanel.js) só reconstrói seu HTML/listeners
+// uma vez por frame, então o botão de um item continua no DOM, com o
+// clique ainda referenciando o MESMO objeto `entry` direto (não procura
+// de novo no array), por até um frame depois dele já ter sido coletado
+// por outro caminho (G, testado de propósito: apertar G e clicar no
+// botão antigo do mesmo item quase juntos duplicava o item — +2 em vez
+// de +1). Com a trava, a segunda chamada vira no-op.
 const PICKUP_ANIM_MS = 220;
 
 export function collectGroundItem(scene, entry) {
+  if (entry.collected) return;
+  entry.collected = true;
+
   const i = scene.groundItems.indexOf(entry);
   if (i !== -1) scene.groundItems.splice(i, 1);
   entry.bobTween?.stop();

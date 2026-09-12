@@ -681,6 +681,12 @@ function handleSell(scene) {
 // apanhar um item do chão fazem exatamente a mesma coisa, só mudam em
 // COMO o item foi escolhido.
 function pickUpGroundItem(scene, entry) {
+  // Trava contra coletar duas vezes (G e a caixa de itens próximos podem
+  // disparar quase juntos pro MESMO item — ver comentário de
+  // entry.collected em world/groundItems.js). Checa ANTES do addItem,
+  // não só dentro de collectGroundItem, senão o item duplicaria no
+  // inventário mesmo com a animação protegida.
+  if (entry.collected) return;
   addItem(scene.state.inventory, entry.itemId, entry.qty);
   spawnItemText(scene, scene.player.x, scene.player.y - 60, itemLabel(entry.itemId, entry.qty));
   collectGroundItem(scene, entry);
