@@ -49,6 +49,22 @@ const GATHER_COOLDOWN_MS = 2500;
 const MINHOCA_SUCCESS_CHANCE = 0.7;
 const BLOCK_HINT_COOLDOWN_MS = 1500; // evita reiniciar a animação do aviso a cada repetição de tecla segurada
 
+// Mostra um toast de "ação bloqueada" com cooldown — sem isso, qualquer
+// clique/tecla repetida (slot de hotbar travado, vender sem nada pra
+// vender, etc.) reinicia a animação do toast a cada acionamento, virando
+// um piscar contínuo em vez de um aviso só (achado em revisão de UX:
+// "notificações aparecendo de forma desnecessária"). `hintKey` é o nome
+// do campo em `scene` que guarda o timestamp do último aviso DESSE tipo
+// (cada tipo de aviso tem o seu, inicializado em create() — não
+// compartilham cooldown entre si de propósito, senão um aviso de pesca
+// silenciaria um aviso de ataque que aconteça logo em seguida).
+function showBlockedThrottled(scene, hintKey, iconKey, message) {
+  const now = scene.time.now;
+  if (now - scene[hintKey] < BLOCK_HINT_COOLDOWN_MS) return;
+  scene[hintKey] = now;
+  showBlocked(iconKey, message);
+}
+
 // Cena única, reutilizada por qualquer ilha (ver plano de múltiplas ilhas) —
 // trocar de ilha é `this.scene.restart({ islandId })`, não uma cena nova por
 // lugar. Por isso todo estado que precisa sobreviver à troca (inventário,
@@ -100,6 +116,8 @@ export default class IslandScene extends Phaser.Scene {
     this.lastGatherBlockHintAt = -Infinity;
     this.lastFishBlockHintAt = -Infinity;
     this.lastAttackBlockHintAt = -Infinity;
+    this.lastHotbarBlockHintAt = -Infinity;
+    this.lastSellBlockHintAt = -Infinity;
     this.attackAnimTimer = 0;
 
     // Limpa estado de módulo do editor deixado pela ilha anterior (ver
@@ -186,18 +204,18 @@ export default class IslandScene extends Phaser.Scene {
     const onHotbarRod = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
       if (!hasItem(this.state.inventory, 'vara-de-pescar')) {
-        showBlocked('pesca', 'Você ainda não tem uma vara de pescar — fabrique uma no Inventário.');
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'pesca', 'Você ainda não tem uma vara de pescar — fabrique uma no Inventário.');
         return;
       }
       handleEquip(this, 'vara-de-pescar');
     };
     const onHotbarAbility = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      showBlocked('cadeado', 'Habilidade ainda não existe.');
+      showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Habilidade ainda não existe.');
     };
     const onHotbarReserved = () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      showBlocked('cadeado', 'Slot reservado — ainda não existe.');
+      showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Slot reservado — ainda não existe.');
     };
     const hotbarHandlers = { sword: toggleSwordEquip, rod: onHotbarRod, ability: onHotbarAbility, slot4: onHotbarReserved };
     bindHotbar(hotbarHandlers);
@@ -247,11 +265,7 @@ export default class IslandScene extends Phaser.Scene {
       // usuário). Mesmo padrão de aviso com cooldown já usado pra pesca/
       // coleta, só que pro contexto de ataque.
       if (this.state.equipState.equippedLayerId === 'sword') {
-        const now = this.time.now;
-        if (now - this.lastAttackBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-          this.lastAttackBlockHintAt = now;
-          showBlocked('espada', 'Ninguém por perto pra atacar.');
-        }
+        showBlockedThrottled(this, 'lastAttackBlockHintAt', 'espada', 'Ninguém por perto pra atacar.');
         return;
       }
       tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
@@ -520,7 +534,7 @@ function handleSell(scene) {
   }
 
   if (count === 0) {
-    showBlocked('comercio', 'Nada pra vender agora.');
+    showBlockedThrottled(scene, 'lastSellBlockHintAt', 'comercio', 'Nada pra vender agora.');
     return;
   }
 
@@ -553,10 +567,7 @@ function handleGather(scene) {
 
   const now = scene.time.now;
   if (now - scene.lastGatherAt < GATHER_COOLDOWN_MS) {
-    if (now - scene.lastGatherBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-      scene.lastGatherBlockHintAt = now;
-      showBlocked('sobrevivencia', 'Ainda recuperando fôlego da coleta.');
-    }
+    showBlockedThrottled(scene, 'lastGatherBlockHintAt', 'sobrevivencia', 'Ainda recuperando fôlego da coleta.');
     return;
   }
   scene.lastGatherAt = now;
@@ -639,19 +650,11 @@ function refreshHotbar(scene) {
 function tryStartFishing(scene, targetPoint) {
   const player = scene.player;
   if (scene.state.equipState.equippedLayerId !== 'vara-de-pescar') {
-    const now = scene.time.now;
-    if (now - scene.lastFishBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-      scene.lastFishBlockHintAt = now;
-      showBlocked('pesca', 'Você precisa de uma vara equipada.');
-    }
+    showBlockedThrottled(scene, 'lastFishBlockHintAt', 'pesca', 'Você precisa de uma vara equipada.');
     return;
   }
   if (!isNearWater(scene, player.x, player.y)) {
-    const now = scene.time.now;
-    if (now - scene.lastFishBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
-      scene.lastFishBlockHintAt = now;
-      showBlocked('pesca', 'Muito longe da água pra pescar.');
-    }
+    showBlockedThrottled(scene, 'lastFishBlockHintAt', 'pesca', 'Muito longe da água pra pescar.');
     return;
   }
 
