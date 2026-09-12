@@ -15,15 +15,15 @@
 // canvas, e o conteúdo real do personagem mede a mesma altura (~26-27px)
 // nos dois casos, então o personagem não muda de tamanho trocando de pose.
 //
-// As 4 direções cardeais agora têm ciclo de caminhada (8 frames) E golpe de
-// espada (4 frames) de verdade — geradas via API da PixelLab (POST /v2/
-// animate-character, mode v3) reaproveitando o MESMO character_id do resto
-// da arte, pra manter a consistência visual com o sul feito à mão no
-// editor. O modelo desenhou a espada de verdade na mão nos frames de
-// ataque (surpresa boa) — por isso a camada de equipamento (arma
-// "embainhada" no quadril) se esconde durante o modo 'attack', ver
-// updateLayerVisual em character/layers.js, senão apareceriam duas
-// espadas ao mesmo tempo.
+// As 4 direções cardeais agora têm idle com respiração sutil (4 frames),
+// ciclo de caminhada (8 frames) E golpe de espada (4 frames) de verdade —
+// tudo gerado via API da PixelLab (POST /v2/animate-character, mode v3)
+// reaproveitando o MESMO character_id do resto da arte, pra manter a
+// consistência visual com o sul feito à mão no editor. O modelo desenhou
+// a espada de verdade na mão nos frames de ataque (surpresa boa) — por
+// isso a camada de equipamento (arma "embainhada" no quadril) se esconde
+// durante o modo 'attack', ver updateLayerVisual em character/layers.js,
+// senão apareceriam duas espadas ao mesmo tempo.
 function poseFrames(prefix, dir, count) {
   return Array.from({ length: count }, (_, i) => `char-${prefix}-${dir}-${i + 1}`);
 }
@@ -35,16 +35,17 @@ function poseAssets(prefix, dir, count) {
   }));
 }
 
+const IDLE_FRAME_COUNT = 4;
 const WALK_FRAME_COUNT = 8;
 const ATTACK_FRAME_COUNT = 4;
 
 export const RACES = {
   human: {
     assets: [
-      { key: 'char-idle-south', path: 'assets/characters/pixel/idle_south.png' },
-      { key: 'char-idle-north', path: 'assets/characters/pixel/idle_north.png' },
-      { key: 'char-idle-east', path: 'assets/characters/pixel/idle_east.png' },
-      { key: 'char-idle-west', path: 'assets/characters/pixel/idle_west.png' },
+      ...poseAssets('idle', 'south', IDLE_FRAME_COUNT),
+      ...poseAssets('idle', 'north', IDLE_FRAME_COUNT),
+      ...poseAssets('idle', 'east', IDLE_FRAME_COUNT),
+      ...poseAssets('idle', 'west', IDLE_FRAME_COUNT),
       ...poseAssets('walk', 'south', WALK_FRAME_COUNT),
       ...poseAssets('walk', 'north', WALK_FRAME_COUNT),
       ...poseAssets('walk', 'east', WALK_FRAME_COUNT),
@@ -56,12 +57,12 @@ export const RACES = {
     ],
     frames: {
       down: {
-        idle: ['char-idle-south'],
+        idle: poseFrames('idle', 'south', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'south', WALK_FRAME_COUNT),
         attack: poseFrames('attack', 'south', ATTACK_FRAME_COUNT),
       },
       up: {
-        idle: ['char-idle-north'],
+        idle: poseFrames('idle', 'north', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'north', WALK_FRAME_COUNT),
         attack: poseFrames('attack', 'north', ATTACK_FRAME_COUNT),
       },
@@ -69,12 +70,12 @@ export const RACES = {
       // (ao contrário da arte antiga, que só tinha um perfil e espelhava
       // pra virar o outro lado).
       left: {
-        idle: ['char-idle-west'],
+        idle: poseFrames('idle', 'west', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'west', WALK_FRAME_COUNT),
         attack: poseFrames('attack', 'west', ATTACK_FRAME_COUNT),
       },
       right: {
-        idle: ['char-idle-east'],
+        idle: poseFrames('idle', 'east', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'east', WALK_FRAME_COUNT),
         attack: poseFrames('attack', 'east', ATTACK_FRAME_COUNT),
       },
