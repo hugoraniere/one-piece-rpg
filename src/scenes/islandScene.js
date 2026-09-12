@@ -31,7 +31,7 @@ import {
   getReactionWindowMs,
 } from '../sim/fishing.js';
 import { bindHotbar, bindMenuButtons, flashEmptyHotbarSlot, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
-import { isMenuOpen } from '../ui/menuManager.js';
+import { getActiveMenuKey, isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
 import { toggleChestMenu } from '../ui/chestMenu.js';
@@ -49,6 +49,18 @@ import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
 const MARKET_INTERACT_RANGE = 110; // pixels — perto o bastante das barracas pra "G" vender em vez de coletar
 const CHEST_INTERACT_RANGE = 90; // pixels — perto o bastante do baú pra "G" abrir o menu dele em vez de coletar
+
+// Escala do sprite do baú (ver createChestSprite) — calibrada igual o resto
+// dos props (ver comentário de defaultScale em propRegistry.js), só que
+// maior de propósito: achado em teste, na escala genérica de prop pequeno
+// (0.06, mesma da paleta do editor) o baú ficava quase invisível perto do
+// personagem, pequeno demais pra um objeto interativo (não só decoração).
+// Aberto e fechado usam escalas DIFERENTES pra render na MESMA altura
+// aparente nos dois estados (a imagem "aberta" tem menos altura de
+// conteúdo que a "fechada" — a tampa deitada pra trás ocupa mais largura,
+// não mais altura) — sem isso, trocar de estado dava um "pulo" de tamanho.
+const CHEST_SCALE_CLOSED = 0.14;
+const CHEST_SCALE_OPEN = 0.16;
 const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
 const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
 
@@ -353,6 +365,8 @@ export default class IslandScene extends Phaser.Scene {
     this.wasd = this.input.keyboard.addKeys('W,A,S,D');
 
     buildVillageProps(this, this.player, this.islandConfig.props);
+    this.chestSprite = createChestSprite(this);
+    this.chestIsOpen = false;
     buildPierDock(this);
     buildWaterCollision(this, this.player);
     setupEditor(this, this.player);
@@ -449,6 +463,12 @@ export default class IslandScene extends Phaser.Scene {
     // jogador entra/sai do alcance de apanhar (ver world/groundItems.js) —
     // mesma ideia sempre-em-dia de cima, funciona mesmo parado num menu.
     updateGroundItemHighlights(this);
+    // Mesma ideia sempre-em-dia de cima — espelha o Baú aberto/fechado no
+    // MUNDO conforme o menu dele está aberto (ver syncChestVisual). Não dá
+    // pra fazer isso só no momento de abrir via G (openChestMenu): o menu
+    // também fecha pelo Esc ou clicando fora do backdrop
+    // (ui/menuManager.js), nenhum dos quais passa por islandScene.js.
+    syncChestVisual(this);
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
@@ -879,6 +899,68 @@ function handleMoveToInventory(scene, itemId) {
   removeItem(scene.state.chestInventory, itemId, 1);
   addItem(scene.state.inventory, itemId, 1);
   refreshHotbar(scene);
+}
+
+// Sprite do baú no MUNDO — fora do pipeline genérico de props decorativos
+// (buildVillageProps/propRegistry.js) de propósito: ele precisa trocar de
+// textura fechado/aberto e animar quando o menu abre/fecha (ver
+// syncChestVisual/playChestToggleAnim logo abaixo), algo que um prop comum
+// nunca faz. `village-chest-closed`/`-open` já são carregados por
+// preloadVillageAssets (mesmo pacote de assets da vila, arte real, não
+// placeholder). Sem chestSpawn (ilha ainda sem baú), não cria nada.
+function createChestSprite(scene) {
+  const chestSpawn = scene.islandConfig.chestSpawn;
+  if (!chestSpawn) return null;
+  const sprite = scene.add.image(chestSpawn.x, chestSpawn.y, 'village-chest-closed');
+  sprite.setOrigin(0.5, 1); // pivô nos "pés", mesma régua de Y-sorting dos props (ver createPropImage)
+  sprite.setScale(CHEST_SCALE_CLOSED);
+  sprite.setDepth(chestSpawn.y);
+  return sprite;
+}
+
+// Chamada todo frame (ver update()) — compara o estado atual do menu do
+// Baú contra o que o sprite já está mostrando, só mexe em algo quando MUDA.
+// Cobre tanto abrir via G (openChestMenu) quanto fechar por qualquer
+// caminho (Esc, clique fora, trocar de menu) sem precisar de um callback
+// próprio pra cada um.
+function syncChestVisual(scene) {
+  if (!scene.chestSprite) return;
+  const shouldBeOpen = getActiveMenuKey() === 'bau';
+  if (shouldBeOpen === scene.chestIsOpen) return;
+  scene.chestIsOpen = shouldBeOpen;
+  playChestToggleAnim(scene, shouldBeOpen);
+}
+
+// Troca a textura fechado/aberto no FUNDO de uma "batida" de escala
+// (encolhe, troca a arte no ponto mais comprimido, estica de volta com
+// Back.easeOut) — só duas imagens estáticas no pacote de assets, sem
+// spritesheet com quadros intermediários de tampa abrindo, mas o tween
+// vende a sensação de abrir/fechar de verdade em vez de só "piscar" pra
+// outra arte.
+const CHEST_ANIM_SQUASH_MS = 70;
+const CHEST_ANIM_POP_MS = 160;
+function playChestToggleAnim(scene, isOpen) {
+  const sprite = scene.chestSprite;
+  const currentScale = sprite.scaleX;
+  scene.tweens.add({
+    targets: sprite,
+    scaleX: currentScale * 1.08,
+    scaleY: currentScale * 0.6,
+    duration: CHEST_ANIM_SQUASH_MS,
+    ease: 'Cubic.easeIn',
+    onComplete: () => {
+      const targetScale = isOpen ? CHEST_SCALE_OPEN : CHEST_SCALE_CLOSED;
+      sprite.setTexture(isOpen ? 'village-chest-open' : 'village-chest-closed');
+      sprite.setScale(targetScale * 1.08, targetScale * 0.6);
+      scene.tweens.add({
+        targets: sprite,
+        scaleX: targetScale,
+        scaleY: targetScale,
+        duration: CHEST_ANIM_POP_MS,
+        ease: 'Back.easeOut',
+      });
+    },
+  });
 }
 
 // Atribui `itemId` ao slot `slotId` — clicar no MESMO slot que já tinha

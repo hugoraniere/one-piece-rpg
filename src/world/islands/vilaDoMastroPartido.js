@@ -48,10 +48,13 @@ export const VILA_DO_MASTRO_PARTIDO = {
   // barco a vela de verdade (marco 6).
   boatSpawn: { x: 2266, y: 1607 },
 
-  // Baú da vila (ver propRegistry.js#VILLAGE_PROPS) — mesmas coordenadas do
-  // prop visual, igual boatSpawn/marketSpawn fazem com o barco/barraca:
-  // isto é o ponto lógico de "G abre o Baú em vez de coletar" (ver
-  // handleGather em islandScene.js), o desenho é só mais um prop decorativo.
+  // Baú da vila — ao contrário de boatSpawn/marketSpawn (que só reaproveitam
+  // um prop decorativo já colocado em VILLAGE_PROPS), o sprite do baú é
+  // criado à parte em islandScene.js (createChestSprite), nestas MESMAS
+  // coordenadas: ele precisa trocar de textura fechado/aberto e animar
+  // quando o menu abre/fecha, algo que o pipeline genérico de props não
+  // faz. Isto aqui é só o ponto lógico de "G abre o Baú em vez de coletar"
+  // (ver handleGather).
   chestSpawn: { x: 1170, y: 1560 },
 
   // Só um valor provisório — o marco 5 do plano (boneco de treino) é quem
