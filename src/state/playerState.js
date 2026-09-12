@@ -1,6 +1,7 @@
 import { createHealth } from '../sim/health.js';
 import { createProgression } from '../sim/progression.js';
 import { createInventory } from '../sim/inventory.js';
+import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { createLayerState, equipLayer } from '../character/layers.js';
 import { PLAYER_MAX_HP } from '../config.js';
 import { DEFAULT_ISLAND_ID, getDefaultDiscoveredIslands, ISLANDS } from '../world/islands/index.js';
