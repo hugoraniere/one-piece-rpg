@@ -58,7 +58,14 @@ function renderItemsTab(ctx) {
     // clique escolhe o item pra atribuir a um slot, não equipa direto (ver
     // mountInventoryMenu abaixo).
     const title = equipable ? (hotbarEditMode ? `${def.name} — clique pra escolher pra hotbar` : `${def.name} — clique pra equipar/desequipar`) : def.name;
-    return `<div class="slot${equipable ? ' equipable' : ''}${equipped ? ' equipped' : ''}${selecting ? ' selecting' : ''}" data-cat="${def.category}" data-item="${itemId}" title="${title}">${def.icon}${qtyHtml}</div>`;
+    // Botão de descartar — próprio elemento (não o slot inteiro) pra não
+    // brigar com o clique de equipar/selecionar-pra-hotbar do slot; o
+    // handler dele chama stopPropagation (ver mountInventoryMenu). Some 1
+    // unidade por clique (ver handleDropItem em islandScene.js) — sem
+    // seletor de quantidade de propósito, clique repetido é simples o
+    // bastante pra descartar mais de uma.
+    const dropBtn = `<button class="slot-drop-btn" data-drop-item="${itemId}" title="Descartar 1x ${def.name}">✕</button>`;
+    return `<div class="slot${equipable ? ' equipable' : ''}${equipped ? ' equipped' : ''}${selecting ? ' selecting' : ''}" data-cat="${def.category}" data-item="${itemId}" title="${title}">${def.icon}${qtyHtml}${dropBtn}</div>`;
   }).join('');
 
   return `
@@ -196,6 +203,14 @@ function mountInventoryMenu(panel, ctx) {
     });
   });
 
+  panel.querySelectorAll('.slot-drop-btn').forEach((btn) => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation(); // não deixa o clique "vazar" pro slot por baixo (equiparia/selecionaria pra hotbar sem querer)
+      ctx.onDropItem(btn.dataset.dropItem);
+      mountInventoryMenu(panel, ctx);
+    });
+  });
+
   panel.querySelector('#inv-hotbar-edit-toggle')?.addEventListener('click', () => {
     ctx.onToggleHotbarEditMode();
     mountInventoryMenu(panel, ctx);
@@ -226,14 +241,16 @@ function flashOnce(el) {
 
 // `onEquip(itemId)` alterna equipar/desequipar (chamando de novo no mesmo
 // item já equipado desequipa); `onCraft(recipeId)` tenta fabricar;
-// `onToggleHotbarEditMode()`/`onSelectForHotbar(itemId)` controlam o modo
-// "Organizar Hotbar" (ver comentário em renderItemsTab). Todos vivem em
-// islandScene.js — este módulo só monta HTML e delega.
+// `onDropItem(itemId)` descarta 1 unidade pro chão (ver world/
+// groundItems.js); `onToggleHotbarEditMode()`/`onSelectForHotbar(itemId)`
+// controlam o modo "Organizar Hotbar" (ver comentário em renderItemsTab).
+// Todos vivem em islandScene.js — este módulo só monta HTML e delega.
 export function toggleInventoryMenu({
   inventory,
   equipState,
   onEquip,
   onCraft,
+  onDropItem,
   getHotbarEditMode,
   getPendingHotbarAssignItemId,
   onToggleHotbarEditMode,
@@ -245,6 +262,7 @@ export function toggleInventoryMenu({
       equipState,
       onEquip,
       onCraft,
+      onDropItem,
       getHotbarEditMode,
       getPendingHotbarAssignItemId,
       onToggleHotbarEditMode,

@@ -553,6 +553,34 @@
   border-radius: 3px;
   padding: 0 3px;
 }
+/* Descartar 1x pro chão (ver inventoryMenu.js / world/groundItems.js) —
+   canto oposto ao da quantidade (bottom-right) pra nunca sobrepor.
+   Discreto por padrão (opacity baixa) e só "acende" no hover do slot —
+   é uma ação destrutiva, não deveria competir visualmente com o ícone do
+   item o tempo todo. */
+.slot .slot-drop-btn {
+  position: absolute;
+  top: 1px;
+  right: 1px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: none;
+  border-radius: 3px;
+  background: rgba(43, 27, 18, 0.55);
+  color: #f0e6cc;
+  font-size: 9px;
+  line-height: 14px;
+  cursor: pointer;
+  opacity: 0.35;
+  transition: opacity 0.12s ease, background 0.12s ease;
+}
+.slot:hover .slot-drop-btn {
+  opacity: 1;
+}
+.slot .slot-drop-btn:hover {
+  background: #8a2e1f;
+}
 .slot.dim {
   opacity: 0.18;
 }

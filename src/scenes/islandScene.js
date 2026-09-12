@@ -9,6 +9,7 @@ import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js'
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
+import { findNearestGroundItem, removeGroundItem, spawnGroundItem } from '../world/groundItems.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
 import { getEquipmentDef } from '../sim/equipmentDefs.js';
 import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
@@ -32,6 +33,7 @@ import { findStatMeta } from '../ui/menuData.js';
 import { cancelFishingAttempt, getFishingPhase, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
 import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
+import { logEvent, bindJournalShortcut } from '../ui/eventLog.js';
 import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
 import { getPlayerState, resetPlayerState, saveState } from '../state/playerState.js';
 import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
@@ -115,6 +117,10 @@ export default class IslandScene extends Phaser.Scene {
     // Estado que é OK (e correto) resetar a cada troca de ilha/restart.
     this.facing = 'down'; // 'up' | 'down' | 'left' | 'right'
     this.treePositions = [];
+    // Itens largados no chão (ver world/groundItems.js) — sem persistência
+    // entre troca de ilha/reload de propósito (ver comentário no módulo):
+    // recomeça vazio a cada create(), igual this.treePositions.
+    this.groundItems = [];
     this.lastGatherAt = -Infinity;
     this.lastGatherBlockHintAt = -Infinity;
     this.lastFishBlockHintAt = -Infinity;
@@ -175,6 +181,7 @@ export default class IslandScene extends Phaser.Scene {
         equipState: this.state.equipState,
         onEquip: (itemId) => handleEquip(this, itemId),
         onCraft: (recipeId) => handleCraft(this, recipeId),
+        onDropItem: (itemId) => handleDropItem(this, itemId),
         // Função, não valor — o painel re-renderiza a si mesmo depois de
         // cada clique (ver mountInventoryMenu) reusando o MESMO ctx; um
         // valor capturado aqui (this.hotbarEditMode no momento de abrir)
@@ -254,6 +261,9 @@ export default class IslandScene extends Phaser.Scene {
     });
     this.input.keyboard.on('keydown-Q', () => onHotbarSlotClick('slot1'));
     refreshHotbar(this);
+
+    // Journal — "J" para abrir/fechar o diário de eventos
+    bindJournalShortcut(this);
 
     // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
     // atalho do modo editor, ver editor/editorMode.js — os dois listeners
@@ -519,8 +529,13 @@ function trainAndNotify(scene, key) {
   const result = trainSkill(scene.state.progression, key);
   const meta = findStatMeta(key);
   if (meta) {
-    if (result.leveledUp) showLevelUp(meta);
-    else showTrainingProgress(meta, scene.state.progression.skills[key]);
+    if (result.leveledUp) {
+      showLevelUp(meta);
+      logEvent('PROGRESSION', `${meta.name} ↑`, {
+        level: `${result.level}`,
+        xp: `+${result.xpGained}`,
+      });
+    } else showTrainingProgress(meta, scene.state.progression.skills[key]);
   }
   reportCharacterLevel(scene, levelBefore);
   return result;
@@ -630,11 +645,26 @@ function handleSell(scene) {
 }
 
 function handleGather(scene) {
-  // Prioridade máxima: perto do barco, G abre o mapa de viagem em vez de
-  // coletar — mesma tecla de "interagir com o que tem por perto" de sempre,
-  // só que aqui o contexto é "quer navegar", não "quer um recurso". Fica
-  // antes até do cooldown de coleta pra nunca ficar bloqueado tentando abrir
-  // o mapa só porque acabou de coletar algo.
+  // Prioridade MÁXIMA de todas: tem um item largado bem ali (ver
+  // world/groundItems.js), G sempre pega ele antes de qualquer outra
+  // interação de contexto — é o gesto mais específico e imediato possível
+  // (o jogador está literalmente em cima do item), então nada mais deveria
+  // competir com isso. Fora do cooldown de coleta de propósito, igual
+  // barco/mercado abaixo: pegar um item específico não devia ficar preso
+  // atrás do cooldown do "procurar minhoca no mato".
+  const nearbyGroundItem = findNearestGroundItem(scene, scene.player.x, scene.player.y);
+  if (nearbyGroundItem) {
+    addItem(scene.state.inventory, nearbyGroundItem.itemId, nearbyGroundItem.qty);
+    spawnItemText(scene, scene.player.x, scene.player.y - 60, itemLabel(nearbyGroundItem.itemId, nearbyGroundItem.qty));
+    removeGroundItem(scene, nearbyGroundItem);
+    return;
+  }
+
+  // Prioridade máxima entre o resto: perto do barco, G abre o mapa de
+  // viagem em vez de coletar — mesma tecla de "interagir com o que tem
+  // por perto" de sempre, só que aqui o contexto é "quer navegar", não
+  // "quer um recurso". Fica antes até do cooldown de coleta pra nunca
+  // ficar bloqueado tentando abrir o mapa só porque acabou de coletar algo.
   const boatSpawn = scene.islandConfig.boatSpawn;
   if (boatSpawn && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, boatSpawn.x, boatSpawn.y) <= BOAT_INTERACT_RANGE) {
     scene.openMapMenu();
@@ -720,6 +750,28 @@ function handleCraft(scene, recipeId) {
   // equipar/desequipar alguma coisa.
   if (crafted) refreshHotbar(scene);
   return crafted;
+}
+
+// Descarta 1 unidade de `itemId` do inventário pro chão, na posição do
+// jogador (ver world/groundItems.js) — chamado pelo botão de descartar de
+// cada slot do Inventário (ver inventoryMenu.js). Se era o item
+// equipado e a última unidade acabou de sair do inventário, desequipa
+// também: continuar "equipado" um item que você não tem mais deixaria o
+// weaponSprite desenhado sem dono (mesmo cuidado que já existia pro caso
+// de trocar de vara no meio de uma pescaria, ver toggleSwordEquip
+// histórico).
+function handleDropItem(scene, itemId) {
+  const def = ITEM_DEFS[itemId];
+  if (!def || getQuantity(scene.state.inventory, itemId) <= 0) return;
+
+  removeItem(scene.state.inventory, itemId, 1);
+  spawnGroundItem(scene, itemId, 1, scene.player.x, scene.player.y);
+
+  const equipState = scene.state.equipState;
+  if (def.equipLayerId && equipState.equippedLayerId === def.equipLayerId && !hasItem(scene.state.inventory, itemId)) {
+    unequipLayer(equipState);
+  }
+  refreshHotbar(scene);
 }
 
 // Atribui `itemId` ao slot `slotId` — clicar no MESMO slot que já tinha
