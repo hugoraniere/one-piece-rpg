@@ -917,6 +917,18 @@ function createChestSprite(scene) {
   sprite.setScale(CHEST_SCALE_CLOSED);
   sprite.setDepth(chestSpawn.y);
 
+  // Corpo estático sólido — mesmo padrão de colisão dos props com `collision`
+  // em propRegistry.js (zone + corpo físico estático + collider), só que
+  // fora daquele pipeline (ver comentário no topo da função). Bem menor que
+  // o sprite inteiro de propósito: só a "caixa" da base bloqueia passagem,
+  // não a área toda até o topo da tampa — mesma ideia de casas/poço lá,
+  // onde a caixa de colisão também é bem mais rasa que a arte visível.
+  const collisionWidth = 46;
+  const collisionHeight = 28;
+  const collisionZone = scene.add.zone(chestSpawn.x, chestSpawn.y - collisionHeight / 2, collisionWidth, collisionHeight);
+  scene.physics.add.existing(collisionZone, true);
+  scene.physics.add.collider(scene.player, collisionZone);
+
   // Clicável direto no sprite (além do G perto dele, ver handleGather) —
   // achado em teste do usuário: um baú que só abre por atalho de teclado
   // não é óbvio, clicar nele é o gesto mais natural pra um objeto do
