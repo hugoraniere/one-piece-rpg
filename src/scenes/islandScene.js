@@ -9,7 +9,13 @@ import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js'
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
-import { collectGroundItem, findNearestGroundItem, spawnGroundItem, updateGroundItemHighlights } from '../world/groundItems.js';
+import {
+  collectGroundItem,
+  findNearbyGroundItems,
+  findNearestGroundItem,
+  spawnGroundItem,
+  updateGroundItemHighlights,
+} from '../world/groundItems.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
 import { getEquipmentDef } from '../sim/equipmentDefs.js';
 import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
@@ -34,6 +40,7 @@ import { cancelFishingAttempt, getFishingPhase, isFishingActive, releaseFishingA
 import { showBlocked } from '../ui/blockToast.js';
 import { showLevelUp, showTrainingProgress } from '../ui/progressChip.js';
 import { logEvent, bindJournalShortcut } from '../ui/eventLog.js';
+import { hideNearbyLootPanel, initNearbyLootPanel, updateNearbyLootPanel } from '../ui/nearbyLootPanel.js';
 import { playBiteJitter, playCast, playReelResult, resetRod } from '../character/fishingAnimation.js';
 import { getPlayerState, resetPlayerState, saveState } from '../state/playerState.js';
 import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
@@ -143,6 +150,7 @@ export default class IslandScene extends Phaser.Scene {
     resetEditorState();
 
     initHud();
+    initNearbyLootPanel();
     buildGround(this);
 
     const { spawnPoint } = this.islandConfig;
@@ -427,7 +435,10 @@ export default class IslandScene extends Phaser.Scene {
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
-      // Phaser própria (ver ui/menuManager.js).
+      // Phaser própria (ver ui/menuManager.js). Caixa de itens próximos
+      // some junto — não faz sentido apanhar item enquanto o mundo tá
+      // parado (ui/nearbyLootPanel.js).
+      hideNearbyLootPanel();
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -437,6 +448,7 @@ export default class IslandScene extends Phaser.Scene {
     if (isFishingActive()) {
       // Parado olhando a água enquanto a barra de reação roda — ver o
       // pointerdown único que decide arremessar/fisgar conforme a fase.
+      hideNearbyLootPanel();
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -444,12 +456,19 @@ export default class IslandScene extends Phaser.Scene {
     }
 
     if (isEditorModeActive()) {
+      hideNearbyLootPanel();
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
       panEditorCamera(this, delta, this.cursors, this.wasd);
       return;
     }
+
+    // Caixa suspensa de itens próximos (ver ui/nearbyLootPanel.js) — só
+    // no fluxo normal de jogo (os três "congela o mundo" acima já
+    // esconderam ela e voltaram). Clique num item da lista chama o mesmo
+    // pickUpGroundItem que a tecla G usa.
+    updateNearbyLootPanel(this, findNearbyGroundItems(this, this.player.x, this.player.y), (entry) => pickUpGroundItem(this, entry));
 
     if (this.attackAnimTimer > 0) {
       // Parado durante o golpe (ver tryAttack) — mesma ideia de "congela o
@@ -656,21 +675,31 @@ function handleSell(scene) {
   if (skillResult.leveledUp) spawnLevelUpText(scene, scene.player.x, scene.player.y - 76, 'Comércio');
 }
 
+// Compartilhado entre a tecla G (pega o mais perto, ver handleGather
+// abaixo) e o clique na caixa de itens próximos (ver ui/nearbyLootPanel.js
+// e a chamada de updateNearbyLootPanel em update()) — as duas formas de
+// apanhar um item do chão fazem exatamente a mesma coisa, só mudam em
+// COMO o item foi escolhido.
+function pickUpGroundItem(scene, entry) {
+  addItem(scene.state.inventory, entry.itemId, entry.qty);
+  spawnItemText(scene, scene.player.x, scene.player.y - 60, itemLabel(entry.itemId, entry.qty));
+  collectGroundItem(scene, entry);
+}
+
 function handleGather(scene) {
   // Prioridade MÁXIMA de todas: tem um item largado bem ali (ver
-  // world/groundItems.js), G sempre pega ele antes de qualquer outra
-  // interação de contexto — é o gesto mais específico e imediato possível
-  // (o jogador está literalmente em cima do item), então nada mais deveria
-  // competir com isso. Fora do cooldown de coleta de propósito, igual
-  // barco/mercado abaixo: pegar um item específico não devia ficar preso
-  // atrás do cooldown do "procurar minhoca no mato".
+  // world/groundItems.js), G sempre pega o mais próximo antes de qualquer
+  // outra interação de contexto — é o gesto mais específico e imediato
+  // possível (o jogador está literalmente em cima do item), então nada
+  // mais deveria competir com isso. Fora do cooldown de coleta de
+  // propósito, igual barco/mercado abaixo: pegar um item específico não
+  // devia ficar preso atrás do cooldown do "procurar minhoca no mato".
+  // Pra escolher QUAL item apanhar (quando tem mais de um por perto), ver
+  // a caixa suspensa (ui/nearbyLootPanel.js) — G é só o atalho "o mais
+  // perto, sem escolher".
   const nearbyGroundItem = findNearestGroundItem(scene, scene.player.x, scene.player.y);
   if (nearbyGroundItem) {
-    addItem(scene.state.inventory, nearbyGroundItem.itemId, nearbyGroundItem.qty);
-    spawnItemText(scene, scene.player.x, scene.player.y - 60, itemLabel(nearbyGroundItem.itemId, nearbyGroundItem.qty));
-    // Animado (pop + voa até o jogador encolhendo/sumindo), não some na
-    // hora — ver comentário de collectGroundItem em world/groundItems.js.
-    collectGroundItem(scene, nearbyGroundItem);
+    pickUpGroundItem(scene, nearbyGroundItem);
     return;
   }
 

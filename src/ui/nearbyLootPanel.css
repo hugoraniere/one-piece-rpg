@@ -1,0 +1,64 @@
+/* Caixa suspensa de itens próximos (ver nearbyLootPanel.js) — mesma
+   paleta madeira/pergaminho do resto da UI. Fixa na tela mas reposicionada
+   a cada frame pra acompanhar o personagem (ver JS), por isso `position:
+   fixed` em vez de um lugar fixo de layout. */
+.nearby-loot-panel {
+  position: fixed;
+  transform: translate(-50%, -100%);
+  background: linear-gradient(180deg, #e8d9b0, #c7b280);
+  border: 2px solid #3b2415;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  padding: 5px;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.12s ease;
+  z-index: 900;
+  font-family: 'Archivo', sans-serif;
+  max-width: 220px;
+}
+.nearby-loot-panel.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+/* Ponta da caixa apontando pro personagem embaixo — deixa claro que ela
+   pertence a ele/ao chão ali perto, não é um painel solto no vazio. */
+.nearby-loot-panel::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  bottom: -8px;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border: 7px solid transparent;
+  border-top-color: #3b2415;
+  border-bottom: 0;
+}
+
+.nearby-loot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.nearby-loot-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 9px;
+  border-radius: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.nearby-loot-item:hover {
+  background: rgba(255, 255, 255, 0.45);
+}
+.nearby-loot-icon {
+  font-size: 17px;
+  line-height: 1;
+}
+.nearby-loot-name {
+  font-size: 12px;
+  font-weight: 700;
+  color: #3b2415;
+}

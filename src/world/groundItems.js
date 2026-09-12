@@ -1,17 +1,19 @@
 // Itens largados no chão — descartados pelo jogador no Inventário (ver
-// handleDropItem em scenes/islandScene.js) e recolhidos de volta com a
-// mesma tecla G de sempre (ver handleGather — checado ANTES de
-// árvore/água/caça, é a interação mais específica: se tem algo largado
-// bem ali, isso sempre ganha da coleta genérica).
+// handleDropItem em scenes/islandScene.js) e recolhidos de volta via a
+// caixa de itens próximos (ver ui/nearbyLootPanel.js: aparece sozinha
+// quando o jogador chega perto, clique num item da lista apanha ele) ou
+// pela tecla G, que continua apanhando o mais próximo direto — a caixa é
+// a forma "escolher qual", G é o atalho "só pega o mais perto".
 //
 // Referência de UX pedida: Baldur's Gate 3 / Project Zomboid — nos dois,
-// pegar um item no chão é uma ação contida (chega perto, o jogo destaca
-// o item e mostra o nome, você interage, item some), NÃO um efeito
+// pegar um item no chão é uma ação contida (chega perto, o jogo destaca o
+// item, você interage por uma lista/menu, item some), NÃO um efeito
 // vistoso de moeda voando até o personagem (isso é linguagem de jogo
-// arcade/mobile, destoa do tom do resto do jogo). Aqui: badge muda de cor
-// e o nome aparece quando o jogador entra no alcance (mesmo estilo do
-// nameText de world/hpBar.js), e o "apanhar" é só um levantar+sumir no
-// próprio lugar — sem viajar pela tela.
+// arcade/mobile, destoa do tom do resto do jogo). Aqui: sem nenhum
+// círculo/badge de fundo (achado em revisão: competia com o ícone em vez
+// de ajudar) — só o emoji do item, grande, com sombra embaixo pra
+// ancorar no chão. O "apanhar" é um levantar+sumir no próprio lugar, sem
+// viajar pela tela.
 //
 // Sem física/grupo do Phaser — todo o resto do mundo (árvore, água,
 // barco, mercado, boneco de treino) já resolve proximidade com
@@ -23,41 +25,35 @@
 import Phaser from 'phaser';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 
-export const PICKUP_RANGE = 50; // pixels — bem apertado, precisa chegar quase em cima
+export const PICKUP_RANGE = 60; // pixels — um pouco maior que antes: agora é o raio que faz a caixa de itens próximos aparecer, não só o alcance "encostado" do G
 
 // Espalha um pouco a posição de dois descartes seguidos no mesmo lugar,
 // pra não nascerem exatamente empilhados (mesmo problema que
 // floatingText.js resolve pra texto, aqui resolvido na hora do spawn em
-// vez de exigir estado contínuo). Maior que o raio do badge (ver
-// BADGE_RADIUS abaixo) pra dois itens grandes não nascerem sobrepostos.
-const SPREAD_PX = 30;
+// vez de exigir estado contínuo).
+const SPREAD_PX = 26;
 
 // Tamanho calibrado pro CAMERA_ZOOM 0.5 do jogo (ver config.js) — tudo na
-// tela renderiza pela metade do tamanho de verdade, então um badge "de
-// UI" normal (uns 20px) virava quase invisível contra terrenos de cor
-// parecida (achado em revisão visual: sumia contra areia). Estes valores
-// foram calibrados testando direto no jogo até ficar claramente legível.
-const BADGE_RADIUS = 27;
-const ICON_FONT_PX = 36;
+// tela renderiza pela metade do tamanho de verdade. Sem círculo de fundo
+// agora, o ícone sozinho precisa carregar toda a legibilidade — maior que
+// antes de propósito.
+const ICON_FONT_PX = 50;
 
-const COLOR_NORMAL = 0x3b2415; // borda marrom escura padrão (mesma paleta de UI do jogo)
-const COLOR_HIGHLIGHT = 0xe6c66e; // dourado — mesma cor de "isso é notável" já usada (level-up, ponto do minimapa)
+let nextUid = 1;
 
 export function spawnGroundItem(scene, itemId, qty, x, y) {
   const def = ITEM_DEFS[itemId];
   const spawnX = x + (Math.random() - 0.5) * SPREAD_PX;
   const spawnY = y + (Math.random() - 0.5) * SPREAD_PX;
 
-  const shadow = scene.add.ellipse(0, 16, 34, 15, 0x000000, 0.35);
-  const badge = scene.add.circle(0, 0, BADGE_RADIUS, 0xe8d9b0, 1);
-  badge.setStrokeStyle(4, COLOR_NORMAL, 1);
+  const shadow = scene.add.ellipse(0, 20, 30, 12, 0x000000, 0.35);
   const icon = scene.add.text(0, 0, def.icon, { font: `${ICON_FONT_PX}px sans-serif` });
   icon.setOrigin(0.5, 0.5);
-  const children = [shadow, badge, icon];
+  const children = [shadow, icon];
 
   let qtyBadge = null;
   if (qty > 1) {
-    qtyBadge = scene.add.text(16, 14, `x${qty}`, {
+    qtyBadge = scene.add.text(18, 16, `x${qty}`, {
       font: 'bold 13px monospace',
       color: '#f5ebc8',
       backgroundColor: '#241a12',
@@ -69,11 +65,11 @@ export function spawnGroundItem(scene, itemId, qty, x, y) {
 
   // Nome do item — mesmo estilo do nameText de world/hpBar.js (rótulo
   // flutuante consistente em qualquer coisa "no mundo" que precisa se
-  // identificar). Só aparece quando o jogador entra no alcance de
-  // apanhar (ver updateGroundItemHighlights) — igual ao "destacar item
-  // por perto" de BG3/Project Zomboid, não fica poluindo a tela o tempo
-  // todo.
-  const nameLabel = scene.add.text(0, -BADGE_RADIUS - 8, def.name, {
+  // identificar). Só aparece quando o jogador entra no alcance — a caixa
+  // de itens próximos (ui/nearbyLootPanel.js) já mostra o nome de todos
+  // de uma vez, mas esse rótulo aqui ajuda a identificar QUAL sprite no
+  // chão é qual item antes mesmo de abrir/olhar a caixa.
+  const nameLabel = scene.add.text(0, -ICON_FONT_PX / 2 - 10, def.name, {
     font: '10px Arial',
     color: '#ffffff',
     backgroundColor: '#000000aa',
@@ -98,18 +94,30 @@ export function spawnGroundItem(scene, itemId, qty, x, y) {
   });
 
   // Balanço contínuo do ÍCONE — a pista visual "ambiente" de que isso é
-  // pegável, mesmo fora de alcance (o destaque dourado + nome, por outro
-  // lado, só aparecem DENTRO do alcance — ver updateGroundItemHighlights).
+  // pegável, mesmo fora de alcance (o pulso de escala do container,
+  // separado, só liga DENTRO do alcance — ver updateGroundItemHighlights).
   const bobTween = scene.tweens.add({
     targets: icon,
-    y: -4,
+    y: -5,
     duration: 700,
     yoyo: true,
     repeat: -1,
     ease: 'Sine.inOut',
   });
 
-  const entry = { itemId, qty, x: spawnX, y: spawnY, container, badge, nameLabel, bobTween, pulseTween: null, inRange: false };
+  const entry = {
+    uid: nextUid++,
+    itemId,
+    qty,
+    x: spawnX,
+    y: spawnY,
+    container,
+    icon,
+    nameLabel,
+    bobTween,
+    pulseTween: null,
+    inRange: false,
+  };
   scene.groundItems.push(entry);
   return entry;
 }
@@ -117,8 +125,8 @@ export function spawnGroundItem(scene, itemId, qty, x, y) {
 // Chamada todo frame (ver update() em islandScene.js) — liga/desliga o
 // destaque de "dá pra apanhar agora" conforme o jogador entra/sai do
 // alcance de cada item. Só mexe em alguma coisa quando o estado realmente
-// MUDA (entra['inRange'] como cache) — recriar tween/trocar cor a cada
-// frame seria desperdício e reiniciaria a animação de pulso sem parar.
+// MUDA (entry.inRange como cache) — reprocessar a cada frame reiniciaria
+// a animação de pulso sem parar.
 export function updateGroundItemHighlights(scene) {
   for (const entry of scene.groundItems) {
     const inRange = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, entry.x, entry.y) <= PICKUP_RANGE;
@@ -127,10 +135,9 @@ export function updateGroundItemHighlights(scene) {
     entry.nameLabel.setVisible(inRange);
 
     if (inRange) {
-      entry.badge.setStrokeStyle(4, COLOR_HIGHLIGHT, 1);
       entry.pulseTween = scene.tweens.add({
-        targets: entry.badge,
-        scale: 1.12,
+        targets: entry.icon,
+        scale: 1.15,
         duration: 420,
         yoyo: true,
         repeat: -1,
@@ -139,8 +146,7 @@ export function updateGroundItemHighlights(scene) {
     } else {
       entry.pulseTween?.stop();
       entry.pulseTween = null;
-      entry.badge.setStrokeStyle(4, COLOR_NORMAL, 1);
-      entry.badge.setScale(1);
+      entry.icon.setScale(1);
     }
   }
 }
@@ -161,8 +167,9 @@ export function removeGroundItem(scene, entry) {
 // Animação de "apanhar" — contida de propósito (ver comentário no topo
 // do arquivo): o item sobe um pouco e some no próprio lugar, sem viajar
 // pela tela até o jogador. Remove da lista de coletáveis JÁ NO INÍCIO
-// (não só quando a animação termina) — sem isso, dois "G" rápidos
-// durante os ~220ms de animação coletariam o mesmo item duas vezes.
+// (não só quando a animação termina) — sem isso, um clique na caixa de
+// itens próximos e um G quase simultâneos coletariam o mesmo item duas
+// vezes durante os ~220ms de animação.
 const PICKUP_ANIM_MS = 220;
 
 export function collectGroundItem(scene, entry) {
@@ -184,10 +191,9 @@ export function collectGroundItem(scene, entry) {
   });
 }
 
-// O mais próximo dentro do alcance, ou null. Alcance bem menor que
-// GATHER_TREE_RANGE de propósito — coleta de árvore/água é "por perto
-// dela", pegar um item largado é "encostar nele", senão ficaria fácil
-// demais varrer vários itens sem se aproximar de cada um.
+// O mais próximo dentro do alcance, ou null — usado pelo atalho da tecla
+// G (pega o mais perto direto, sem precisar abrir a caixa de itens
+// próximos).
 export function findNearestGroundItem(scene, x, y, range = PICKUP_RANGE) {
   let nearest = null;
   let nearestDist = Infinity;
@@ -199,4 +205,15 @@ export function findNearestGroundItem(scene, x, y, range = PICKUP_RANGE) {
     }
   }
   return nearest;
+}
+
+// TODOS dentro do alcance, mais perto primeiro — usado pela caixa de
+// itens próximos (ver ui/nearbyLootPanel.js) pra listar tudo que dá pra
+// escolher, não só o mais perto.
+export function findNearbyGroundItems(scene, x, y, range = PICKUP_RANGE) {
+  return scene.groundItems
+    .map((entry) => ({ entry, dist: Phaser.Math.Distance.Between(x, y, entry.x, entry.y) }))
+    .filter(({ dist }) => dist <= range)
+    .sort((a, b) => a.dist - b.dist)
+    .map(({ entry }) => entry);
 }
