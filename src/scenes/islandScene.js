@@ -99,6 +99,7 @@ export default class IslandScene extends Phaser.Scene {
     this.lastGatherAt = -Infinity;
     this.lastGatherBlockHintAt = -Infinity;
     this.lastFishBlockHintAt = -Infinity;
+    this.lastAttackBlockHintAt = -Infinity;
     this.attackAnimTimer = 0;
 
     // Limpa estado de módulo do editor deixado pela ilha anterior (ver
@@ -238,6 +239,21 @@ export default class IslandScene extends Phaser.Scene {
       // Perto do boneco de treino com espada equipada? O clique vira golpe,
       // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
       if (tryAttack(this)) return;
+      // Espada equipada mas SEM alvo (longe demais, ou nem existe boneco por
+      // perto) — não é uma tentativa de pesca, então não pode cair no
+      // tryStartFishing só porque não é 'vara-de-pescar': isso mostrava
+      // "Você precisa de uma vara equipada" pra quem tinha a ESPADA na mão,
+      // uma mensagem sobre o item errado (achado em revisão de bug pelo
+      // usuário). Mesmo padrão de aviso com cooldown já usado pra pesca/
+      // coleta, só que pro contexto de ataque.
+      if (this.state.equipState.equippedLayerId === 'sword') {
+        const now = this.time.now;
+        if (now - this.lastAttackBlockHintAt >= BLOCK_HINT_COOLDOWN_MS) {
+          this.lastAttackBlockHintAt = now;
+          showBlocked('espada', 'Ninguém por perto pra atacar.');
+        }
+        return;
+      }
       tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
     });
 
