@@ -81,4 +81,23 @@ Por duas vezes, uma chamada JS no console (`window.__game.scene.scenes[1].state`
 
 - Talvez uma segunda arma corpo-a-corpo (lança?) reaproveitando o padrão já estabelecido — adicionar um item novo agora é: 1 entrada em `ITEM_DEFS`, 1 em `LAYER_DEFS` (+ placeholder canvas), 1 em `EQUIPMENT_DEFS`, 1 em `RECIPES`, 1 em `HOTBAR_SLOTS` (se for pra hotbar) — o padrão está reutilizável e agora tem 4 exemplos de referência (arco, machado, vara-reforçada, mais a espada original)
 - Considerar dar à `machado` também algum papel em combate (unequip → 'luta' desarmado já é `real: true` em menuData.js mas `tryAttack()` não permite ataque sem arma nenhuma — inconsistência PRÉ-EXISTENTE, não introduzida nesta sessão, mas vale nota pra quando alguém for mexer em combate desarmado)
-- Regressão geral: nenhuma rodada de teste completo (fabricar TODOS os itens numa run só, testar cada slot 1-5) foi feita depois da vara reforçada — vale uma passada final antes de considerar a sessão "pronta pra revisão"
+## Regressão completa (todos os itens juntos, do zero)
+
+Feita depois da vara reforçada: save resetado, os 4 itens fabricados na
+mesma run (sem conflito de material — `graveto` é o único compartilhado e
+tem gather infinito perto de árvore), cada equipLayerId testado:
+
+- Fabricação simultânea dos 4: todos `true`, inventário final consistente
+  (materiais raros zerados exatamente como esperado, nada sobrou nem faltou)
+- Dano: espada 5, arco 4 — mesmos valores de sempre, sem regressão
+- `machado.canFish` é `false` (não tem a propriedade) — não pesca, correto
+- Chance de mordida: vara comum 0.4, reforçada 0.5 (minhoca) — bônus
+  aplicado corretamente
+- Coleta perto de árvore: machado 2 graveto, espada (sem ferramenta) 1
+  graveto — multiplicador aplicado só quando deveria
+- Nenhum erro no console em nenhum momento
+
+Sessão de itens equipáveis considerada **pronta pra revisão** — os 4 itens
+novos (arco, machado, vara reforçada) mais a base (espada, vara comum)
+funcionam de forma consistente e sem regressão entre si. Pendência real é
+só a arte de verdade via PixelLab (bloqueada, ver topo do arquivo).
