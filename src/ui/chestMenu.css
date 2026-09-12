@@ -1,0 +1,36 @@
+/* Baú — duas grades lado a lado (ver chestMenu.js). Reaproveita .inv-grid/
+   .slot/.qty de menu.css (mesma grade do Inventário), só a moldura em volta
+   é específica daqui. */
+.chest-layout {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex: 1;
+  min-height: 0;
+}
+.chest-col {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.chest-col h4 {
+  font-family: 'Pirata One', serif;
+  font-size: 13px;
+  font-weight: 400;
+  margin: 0 0 8px;
+}
+.chest-arrows {
+  font-size: 20px;
+  color: #5a4632;
+  align-self: center;
+  margin-top: 30px;
+}
+.chest-slot {
+  cursor: pointer;
+}
+.chest-hint {
+  font-size: 10.5px;
+  color: #5a4632;
+  margin: 12px 0 0;
+}

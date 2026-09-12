@@ -76,6 +76,13 @@ export const VILLAGE_PROPS = [
   { key: 'village-fence', x: 742, y: 557, scale: 0.59, collision: { width: 110, height: 20 } },
   { key: 'village-fence', x: 1446, y: 557, scale: 0.59, collision: { width: 110, height: 20 } },
 
+  // Baú da vila — guarda um estoque de TODOS os itens do jogo pra quem
+  // quiser guardar/tirar item sem depender só do que já coletou em campo
+  // (ver chestSpawn em islands/vilaDoMastroPartido.js e toggleChestMenu em
+  // ui/chestMenu.js). Perto do ponto de partida de propósito, fácil de
+  // achar assim que a ilha carrega — ver islandConfig.spawnPoint.
+  { key: 'village-chest-closed', x: 1170, y: 1560, scale: 0.06 },
+
   // --- Barris, caixas, sacos, floreiras perto das portas ---
   { key: 'village-barrel', x: 525, y: 528, scale: 0.39 },
   { key: 'village-lootsack', x: 602, y: 538, scale: 0.07 },

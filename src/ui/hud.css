@@ -445,3 +445,21 @@
 .hotbar-slot.locked .icon {
   filter: grayscale(1);
 }
+
+/* Slot vazio clicado sem item pra equipar — antes disparava um toast (ver
+   comentário de flashEmptyHotbarSlot em hud.js), achado ruim em revisão de
+   UX. Agora só o próprio slot pisca rápido 2x (contorno vermelho), sem
+   texto nenhum sobreposto ao jogo. */
+@keyframes hotbar-slot-blink {
+  0%,
+  100% {
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.4);
+  }
+  25%,
+  75% {
+    box-shadow: 0 0 0 3px #9c2b2b, inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  }
+}
+.hotbar-slot.blink {
+  animation: hotbar-slot-blink 0.35s ease-in-out 2;
+}

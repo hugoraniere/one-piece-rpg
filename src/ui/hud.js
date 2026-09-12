@@ -208,6 +208,18 @@ export function setHotbarState({ equipped, inventory, assignments }) {
   });
 }
 
+// Pisca rápido o slot clicado sem nada atribuído — antes disparava um toast
+// de aviso (ver showBlockedThrottled em islandScene.js), achado ruim em
+// revisão de UX: o próprio slot piscando já avisa "não dá fazer nada aqui",
+// sem precisar de texto flutuando por cima do jogo.
+export function flashEmptyHotbarSlot(slotId) {
+  const el = hotbarEls[slotId];
+  if (!el) return;
+  el.classList.remove('blink');
+  void el.offsetWidth; // reflow — sem isso o navegador não reinicia a animação numa segunda piscada rápida
+  el.classList.add('blink');
+}
+
 // Clique de QUALQUER slot chama o MESMO handler — o que ele faz (equipar,
 // atribuir, remover) depende do modo em que o jogo está no momento
 // (ver onHotbarSlotClick em islandScene.js), não mais de qual item está

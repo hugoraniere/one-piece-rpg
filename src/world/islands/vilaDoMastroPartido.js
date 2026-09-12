@@ -48,6 +48,12 @@ export const VILA_DO_MASTRO_PARTIDO = {
   // barco a vela de verdade (marco 6).
   boatSpawn: { x: 2266, y: 1607 },
 
+  // Baú da vila (ver propRegistry.js#VILLAGE_PROPS) — mesmas coordenadas do
+  // prop visual, igual boatSpawn/marketSpawn fazem com o barco/barraca:
+  // isto é o ponto lógico de "G abre o Baú em vez de coletar" (ver
+  // handleGather em islandScene.js), o desenho é só mais um prop decorativo.
+  chestSpawn: { x: 1170, y: 1560 },
+
   // Só um valor provisório — o marco 5 do plano (boneco de treino) é quem
   // decide de verdade onde ele fica; até lá, ninguém lê este campo.
   monsterSpawn: { x: 700, y: 700 },

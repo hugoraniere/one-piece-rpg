@@ -52,6 +52,26 @@ function mergeHotbarAssignments(saved) {
   return fresh;
 }
 
+// Baú do jogador (ver ui/chestMenu.js) — guarda/retira item livremente, sem
+// filtro de categoria. Nasce abastecido com TODOS os itens de ITEM_DEFS
+// (10 de cada), pra dar pra testar/usar qualquer item sem depender só do
+// que já foi coletado em campo. `mergeChestInventory` funde o que foi salvo
+// por cima desse estoque padrão — mesmo espírito de mergeProgression/
+// mergeDiscoveredIslands: se um item novo entrar em ITEM_DEFS depois de já
+// existir um save, ele aparece no baú com o estoque padrão em vez de faltar
+// só porque o save antigo não conhecia essa chave; itens que o save JÁ
+// conhece mantêm a quantidade real (o que o jogador guardou/tirou).
+const CHEST_STOCK_QTY = 10;
+function createFullChestStock() {
+  const stock = {};
+  for (const itemId of Object.keys(ITEM_DEFS)) stock[itemId] = CHEST_STOCK_QTY;
+  return stock;
+}
+function mergeChestInventory(saved) {
+  const items = { ...createFullChestStock(), ...(saved?.items ?? {}) };
+  return createInventory(items);
+}
+
 function buildInitialState() {
   const saved = loadFromStorage();
   if (saved) return saved;
@@ -73,6 +93,7 @@ function buildInitialState() {
     currentIslandId: DEFAULT_ISLAND_ID,
     discoveredIslands: getDefaultDiscoveredIslands(),
     hotbarAssignments: createDefaultHotbarAssignments(),
+    chestInventory: createInventory(createFullChestStock()),
   };
 }
 
@@ -133,6 +154,7 @@ function loadFromStorage() {
     currentIslandId: ISLANDS[saved.currentIslandId] ? saved.currentIslandId : DEFAULT_ISLAND_ID,
     discoveredIslands: mergeDiscoveredIslands(saved.discoveredIslands),
     hotbarAssignments: mergeHotbarAssignments(saved.hotbarAssignments),
+    chestInventory: mergeChestInventory(saved.chestInventory),
   };
 }
 
@@ -148,6 +170,7 @@ function serialize(s) {
     currentIslandId: s.currentIslandId,
     discoveredIslands: s.discoveredIslands,
     hotbarAssignments: s.hotbarAssignments,
+    chestInventory: s.chestInventory,
   });
 }
 

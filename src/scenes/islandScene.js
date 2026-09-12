@@ -30,10 +30,11 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
+import { bindHotbar, bindMenuButtons, flashEmptyHotbarSlot, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
+import { toggleChestMenu } from '../ui/chestMenu.js';
 import { toggleMapMenu } from '../ui/mapMenu.js';
 import { findStatMeta } from '../ui/menuData.js';
 import { cancelFishingAttempt, getFishingPhase, isFishingActive, releaseFishingAttempt, startFishingAttempt } from '../ui/fishingHud.js';
@@ -47,6 +48,7 @@ import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
 const MARKET_INTERACT_RANGE = 110; // pixels — perto o bastante das barracas pra "G" vender em vez de coletar
+const CHEST_INTERACT_RANGE = 90; // pixels — perto o bastante do baú pra "G" abrir o menu dele em vez de coletar
 const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
 const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
 
@@ -216,10 +218,22 @@ export default class IslandScene extends Phaser.Scene {
         onTravel: (destinationId) => travelToIsland(this, destinationId),
       });
     };
-    // Guardada na cena (não só na closure local) pra handleGather() poder
-    // abrir o mapa quando o jogador estiver perto do barco — ver
-    // BOAT_INTERACT_RANGE logo abaixo.
+    // Mesma ideia do Inventário/Mapa, só que sem tecla dedicada — abre via G
+    // perto do baú (ver chestSpawn/CHEST_INTERACT_RANGE, handleGather()).
+    const openChestMenu = () => {
+      if (isEditorModeActive() || isFishingActive()) return;
+      toggleChestMenu({
+        inventory: this.state.inventory,
+        chestInventory: this.state.chestInventory,
+        onMoveToChest: (itemId) => handleMoveToChest(this, itemId),
+        onMoveToInventory: (itemId) => handleMoveToInventory(this, itemId),
+      });
+    };
+    // Guardadas na cena (não só na closure local) pra handleGather() poder
+    // abrir o mapa/baú quando o jogador estiver perto do barco/baú — ver
+    // BOAT_INTERACT_RANGE/CHEST_INTERACT_RANGE logo abaixo.
     this.openMapMenu = openMapMenu;
+    this.openChestMenu = openChestMenu;
     this.input.keyboard.on('keydown-C', openCharacterMenu);
     this.input.keyboard.on('keydown-I', openInventoryMenu);
     this.input.keyboard.on('keydown-M', openMapMenu);
@@ -248,7 +262,9 @@ export default class IslandScene extends Phaser.Scene {
       if (isMenuOpen()) return; // Inventário aberto mas sem item selecionado pra atribuir — hotbar fica quieta, evita equipar sem querer atrás do menu.
       const itemId = this.state.hotbarAssignments[slotId];
       if (!itemId) {
-        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Slot vazio — abra o Inventário, ligue "Organizar Hotbar" e escolha um item pra atribuir aqui.');
+        // Sem toast aqui de propósito (achado ruim em revisão de UX) — só o
+        // próprio slot pisca rápido, ver flashEmptyHotbarSlot em ui/hud.js.
+        flashEmptyHotbarSlot(slotId);
         return;
       }
       if (!hasItem(this.state.inventory, itemId)) {
@@ -368,6 +384,7 @@ export default class IslandScene extends Phaser.Scene {
           berries: this.state.berries,
           progression: this.state.progression,
           inventory: this.state.inventory,
+          chestInventory: this.state.chestInventory,
           equipState: this.state.equipState,
         }),
         // Pra testar a animação de pesca sem precisar chegar perto d'água de
@@ -728,6 +745,15 @@ function handleGather(scene) {
     return;
   }
 
+  // Mesma lógica pro baú (ver chestSpawn, só existe na Vila do Mastro
+  // Partido por enquanto) — abrir o Baú também não deveria ficar preso
+  // atrás do cooldown de coleta.
+  const chestSpawn = scene.islandConfig.chestSpawn;
+  if (chestSpawn && Phaser.Math.Distance.Between(scene.player.x, scene.player.y, chestSpawn.x, chestSpawn.y) <= CHEST_INTERACT_RANGE) {
+    scene.openChestMenu();
+    return;
+  }
+
   const now = scene.time.now;
   if (now - scene.lastGatherAt < GATHER_COOLDOWN_MS) {
     showBlockedThrottled(scene, 'lastGatherBlockHintAt', 'sobrevivencia', 'Ainda recuperando fôlego da coleta.');
@@ -827,6 +853,31 @@ function handleDropItem(scene, itemId) {
   if (def.equipLayerId && equipState.equippedLayerId === def.equipLayerId && !hasItem(scene.state.inventory, itemId)) {
     unequipLayer(equipState);
   }
+  refreshHotbar(scene);
+}
+
+// Transfere 1 unidade do Inventário pro Baú (ver ui/chestMenu.js) — mesmo
+// cuidado de handleDropItem com item equipado: se a última unidade saiu do
+// inventário e era o que estava na mão, desequipa.
+function handleMoveToChest(scene, itemId) {
+  const def = ITEM_DEFS[itemId];
+  if (!def || getQuantity(scene.state.inventory, itemId) <= 0) return;
+
+  removeItem(scene.state.inventory, itemId, 1);
+  addItem(scene.state.chestInventory, itemId, 1);
+
+  const equipState = scene.state.equipState;
+  if (def.equipLayerId && equipState.equippedLayerId === def.equipLayerId && !hasItem(scene.state.inventory, itemId)) {
+    unequipLayer(equipState);
+  }
+  refreshHotbar(scene);
+}
+
+// Inverso — tira 1 unidade do Baú de volta pro Inventário.
+function handleMoveToInventory(scene, itemId) {
+  if (getQuantity(scene.state.chestInventory, itemId) <= 0) return;
+  removeItem(scene.state.chestInventory, itemId, 1);
+  addItem(scene.state.inventory, itemId, 1);
   refreshHotbar(scene);
 }
 
