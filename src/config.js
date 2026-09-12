@@ -14,7 +14,19 @@ export const CHAR_SCALE = 4.26;
 // (personagem, chão, props) mantendo a proporção — mais "visão de cima"
 // de RPG top-down, menos "close no rosto".
 export const CAMERA_ZOOM = 0.5;
-export const WALK_FRAME_MS = 180; // troca de frame do ciclo de caminhada (2 frames alternando)
+// Troca de frame do ciclo de caminhada — 180ms era calibrado pro ciclo
+// ANTIGO de 2 frames só alternando (comentário desatualizado, achado numa
+// queixa do usuário: "a animação de caminhada está ruim, o personagem
+// caminha em velocidade conflitante à da animação"). O ciclo de verdade
+// hoje tem 8 frames (ver character/races.js), gerado nesta sessão, mas
+// ninguém tinha revisado esse número junto — com 180ms/frame, um ciclo
+// completo (8 frames) levava 1440ms, quase 4x mais devagar que o ciclo de
+// 2 frames original (360ms), enquanto PLAYER_SPEED continuava o mesmo:
+// as pernas pareciam "patinar" devagar demais pra velocidade real de
+// deslocamento. 125ms/frame recalibra o ciclo de 8 frames pra 1000ms —
+// 2 passos por segundo, cadência natural de caminhada — mantendo
+// PLAYER_SPEED intocado (ajustar o visual da perna, não a jogabilidade).
+export const WALK_FRAME_MS = 125;
 export const IDLE_FRAME_MS = 650; // troca de frame do idle (bem mais devagar — é só uma respiração sutil)
 export const ATTACK_FRAME_MS = 90; // troca de frame do ataque — mais rápido, dá sensação de impacto
 // Quanto tempo o modo 'attack' fica ativo antes de voltar pra idle/walk —
