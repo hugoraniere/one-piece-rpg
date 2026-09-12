@@ -148,6 +148,7 @@ export default class IslandScene extends Phaser.Scene {
     this.lastAttackBlockHintAt = -Infinity;
     this.lastHotbarBlockHintAt = -Infinity;
     this.lastSellBlockHintAt = -Infinity;
+    this.lastChestBlockHintAt = -Infinity;
     this.attackAnimTimer = 0;
     // Modo "Organizar Hotbar" do Inventário (ver inventoryMenu.js) — sem
     // isso o clique na hotbar sempre equiparia; com isso ativo, clicar num
@@ -915,6 +916,26 @@ function createChestSprite(scene) {
   sprite.setOrigin(0.5, 1); // pivô nos "pés", mesma régua de Y-sorting dos props (ver createPropImage)
   sprite.setScale(CHEST_SCALE_CLOSED);
   sprite.setDepth(chestSpawn.y);
+
+  // Clicável direto no sprite (além do G perto dele, ver handleGather) —
+  // achado em teste do usuário: um baú que só abre por atalho de teclado
+  // não é óbvio, clicar nele é o gesto mais natural pra um objeto do
+  // mundo. `event.stopPropagation()` impede o clique de "vazar" pro
+  // handler global de pointerdown da cena (ataque/pesca, ver create()) —
+  // sem isso, clicar no baú também tentaria atacar ou arremessar a vara
+  // na mesma tacada.
+  sprite.setInteractive({ useHandCursor: true });
+  sprite.on('pointerdown', (pointer, localX, localY, event) => {
+    event.stopPropagation();
+    if (isEditorModeActive() || isFishingActive()) return;
+    const dist = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, chestSpawn.x, chestSpawn.y);
+    if (dist > CHEST_INTERACT_RANGE) {
+      showBlockedThrottled(scene, 'lastChestBlockHintAt', 'cadeado', 'Chegue mais perto do baú pra abrir.');
+      return;
+    }
+    scene.openChestMenu();
+  });
+
   return sprite;
 }
 
