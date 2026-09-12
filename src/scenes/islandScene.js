@@ -156,7 +156,9 @@ export default class IslandScene extends Phaser.Scene {
       // andamento (ou por trás de um menu aberto) — a animação continuava
       // rodando com a linha "largada sem dono" (ver auditoria de bugs).
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      this.state.equipState.equippedLayerId ? unequipLayer(this.state.equipState) : equipLayer(this.state.equipState, 'sword');
+      this.state.equipState.equippedLayerId
+        ? this.characterManager.unequipLayer('mainHand')
+        : this.characterManager.equipLayer('sword', 'mainHand');
       refreshHotbar(this);
     };
     this.input.keyboard.on('keydown-Q', toggleSwordEquip);
@@ -228,8 +230,9 @@ export default class IslandScene extends Phaser.Scene {
     // Mesmos handlers do clique, só que pela tecla de número — nomes de
     // evento do Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
     // KeyMap.js), não "keydown-1".
-    ['ONE', 'TWO', 'THREE', 'FOUR'].forEach((keyName, i) => {
-      const slotId = getHotbarSlotIdByShortcut(String(i + 1));
+    ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'ZERO'].forEach((keyName, i) => {
+      const num = i < 9 ? i + 1 : 0;
+      const slotId = getHotbarSlotIdByShortcut(String(num));
       this.input.keyboard.on(`keydown-${keyName}`, () => hotbarHandlers[slotId]?.());
     });
     refreshHotbar(this);
@@ -709,8 +712,7 @@ function refreshHotbar(scene) {
 function tryStartFishing(scene, targetPoint) {
   const player = scene.player;
   if (scene.state.equipState.equippedLayerId !== 'vara-de-pescar') {
-    showBlockedThrottled(scene, 'lastFishBlockHintAt', 'pesca', 'Você precisa de uma vara equipada.');
-    return;
+    return; // Se não tem vara equipada, não dá pra pescar — silencioso
   }
   if (!isNearWater(scene, player.x, player.y)) {
     showBlockedThrottled(scene, 'lastFishBlockHintAt', 'pesca', 'Muito longe da água pra pescar.');

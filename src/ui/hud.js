@@ -32,6 +32,12 @@ const HOTBAR_SLOTS = [
   { id: 'rod', shortcut: '2', icon: '/assets/icons/rod.png', title: 'Vara de Pescar', equipLayerId: 'vara-de-pescar', locksUntilOwned: true },
   { id: 'ability', shortcut: '3', iconSymbol: 'cadeado', title: 'Habilidade (ainda não existe)' },
   { id: 'slot4', shortcut: '4', iconSymbol: 'cadeado', title: 'Reservado (ainda não existe)' },
+  { id: 'slot5', shortcut: '5', iconSymbol: 'cadeado', title: 'Reservado' },
+  { id: 'slot6', shortcut: '6', iconSymbol: 'cadeado', title: 'Reservado' },
+  { id: 'slot7', shortcut: '7', iconSymbol: 'cadeado', title: 'Reservado' },
+  { id: 'slot8', shortcut: '8', iconSymbol: 'cadeado', title: 'Reservado' },
+  { id: 'slot9', shortcut: '9', iconSymbol: 'cadeado', title: 'Reservado' },
+  { id: 'slot0', shortcut: '0', iconSymbol: 'cadeado', title: 'Reservado' },
 ];
 
 // Mesma ideia da hotbar: qualquer botão clicável que também tem atalho de

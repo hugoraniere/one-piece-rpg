@@ -1,9 +1,8 @@
 import './blockToast.css';
 
-// Aviso de bloqueio ("por que essa ação não rolou") — ver comentário no
-// topo do CSS. Um só de cada vez: chamar de novo troca ícone/texto e
-// reinicia a contagem, não empilha.
-const DURATION_MS = 2600;
+// Aviso de bloqueio ("por que essa ação não rolou") — muito pequeno, sem
+// barra visual, 1.5s e some. Um só de cada vez: chamar de novo sobrescreve.
+const DURATION_MS = 1500;
 
 let rootEl;
 let iconUseEl;
@@ -19,7 +18,6 @@ function ensureDom() {
       <div class="badge-circle"><svg class="icon" aria-hidden="true"><use id="block-toast-icon-use"></use></svg></div>
       <span class="msg" id="block-toast-msg"></span>
     </div>
-    <div class="drain-track"><div class="drain-fill"></div></div>
   `;
   document.body.appendChild(rootEl);
   iconUseEl = rootEl.querySelector('#block-toast-icon-use');
@@ -32,9 +30,7 @@ export function showBlocked(iconKey, message) {
   iconUseEl.setAttribute('href', `#i-${iconKey}`);
   msgEl.textContent = message;
 
-  rootEl.classList.remove('drain-anim');
-  void rootEl.offsetWidth; // força reflow — sem isso a animação não reinicia numa segunda chamada rápida
-  rootEl.classList.add('show', 'drain-anim');
+  rootEl.classList.add('show');
 
   clearTimeout(hideTimer);
   hideTimer = setTimeout(() => rootEl.classList.remove('show'), DURATION_MS);

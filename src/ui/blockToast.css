@@ -64,30 +64,3 @@
   font-weight: 700;
   color: #ece2c8;
 }
-
-.block-toast .drain-track {
-  height: 3px;
-  background: rgba(0, 0, 0, 0.4);
-  border-radius: 2px;
-  overflow: hidden;
-}
-.block-toast .drain-fill {
-  height: 100%;
-  width: 100%;
-  background: #b8752e;
-  transform-origin: left;
-}
-/* A transição/duração é montada por código a cada chamada (ver
-   blockToast.js) — precisa ser reiniciada do zero toda vez, senão um
-   segundo aviso rápido herda a barra já pela metade do anterior. */
-.block-toast.drain-anim .drain-fill {
-  animation: block-drain 2.6s linear forwards;
-}
-@keyframes block-drain {
-  from {
-    transform: scaleX(1);
-  }
-  to {
-    transform: scaleX(0);
-  }
-}
