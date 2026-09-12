@@ -122,6 +122,13 @@ export default class IslandScene extends Phaser.Scene {
     this.lastHotbarBlockHintAt = -Infinity;
     this.lastSellBlockHintAt = -Infinity;
     this.attackAnimTimer = 0;
+    // Modo "Organizar Hotbar" do Inventário (ver inventoryMenu.js) — sem
+    // isso o clique na hotbar sempre equiparia; com isso ativo, clicar num
+    // item do Inventário guarda o itemId aqui (`pendingHotbarAssignItemId`)
+    // e o PRÓXIMO clique na hotbar atribui ele ao slot em vez de equipar
+    // (ver onHotbarSlotClick abaixo).
+    this.hotbarEditMode = false;
+    this.pendingHotbarAssignItemId = null;
 
     // Limpa estado de módulo do editor deixado pela ilha anterior (ver
     // comentário nas próprias funções) — precisa vir antes de qualquer
@@ -149,18 +156,6 @@ export default class IslandScene extends Phaser.Scene {
     // pro plano de trocar os placeholders pela arte de verdade. As texturas
     // em si já foram geradas uma vez só, na BootScene (ver bootScene.js).
     this.weaponSprite = createLayerSprite(this, 'weapon-sword-front');
-    // Nomeada (em vez de inline) pra reaproveitar no clique do slot de espada
-    // da hotbar — mesmo padrão já usado pros menus (ver openCharacterMenu
-    // etc. logo abaixo).
-    const toggleSwordEquip = () => {
-      // Sem essa trava, Q desequipava a vara no meio de uma pescaria em
-      // andamento (ou por trás de um menu aberto) — a animação continuava
-      // rodando com a linha "largada sem dono" (ver auditoria de bugs).
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      this.state.equipState.equippedLayerId ? unequipLayer(this.state.equipState) : equipLayer(this.state.equipState, 'sword');
-      refreshHotbar(this);
-    };
-    this.input.keyboard.on('keydown-Q', toggleSwordEquip);
 
     this.treePositions = this.islandConfig.props.filter((p) => TREE_KEYS.includes(p.key)).map((p) => ({ x: p.x, y: p.y }));
 
@@ -180,6 +175,22 @@ export default class IslandScene extends Phaser.Scene {
         equipState: this.state.equipState,
         onEquip: (itemId) => handleEquip(this, itemId),
         onCraft: (recipeId) => handleCraft(this, recipeId),
+        // Função, não valor — o painel re-renderiza a si mesmo depois de
+        // cada clique (ver mountInventoryMenu) reusando o MESMO ctx; um
+        // valor capturado aqui (this.hotbarEditMode no momento de abrir)
+        // ficaria congelado pra sempre nesse render, nunca refletindo o
+        // toggle que aconteceu depois. Getter sempre lê o estado atual.
+        getHotbarEditMode: () => this.hotbarEditMode,
+        getPendingHotbarAssignItemId: () => this.pendingHotbarAssignItemId,
+        onToggleHotbarEditMode: () => {
+          this.hotbarEditMode = !this.hotbarEditMode;
+          if (!this.hotbarEditMode) this.pendingHotbarAssignItemId = null;
+        },
+        // Clicar no MESMO item selecionado de novo desmarca (dá pra
+        // desistir de atribuir sem precisar clicar na hotbar).
+        onSelectForHotbar: (itemId) => {
+          this.pendingHotbarAssignItemId = this.pendingHotbarAssignItemId === itemId ? null : itemId;
+        },
       });
     };
     const openMapMenu = () => {
@@ -200,43 +211,48 @@ export default class IslandScene extends Phaser.Scene {
     bindMenuButtons({ onPersonagem: openCharacterMenu, onInventario: openInventoryMenu, onMapa: openMapMenu });
 
     // Hotbar — troca rápida do que está na mão sem abrir o Inventário,
-    // clique OU tecla de número (1-4, layout/atalho de cada slot em
-    // HOTBAR_SLOTS, ui/hud.js). O slot da espada reusa o mesmo toggle da
-    // tecla Q; os outros avisam com um toast se ainda não foram fabricados,
-    // em vez de deixar clicar num slot "travado" sem feedback nenhum.
-    // Generalizado numa fábrica de handler (antes era uma cópia quase
-    // idêntica por item — virou repetitivo demais assim que o quarto
-    // apareceu, vara reforçada).
-    const makeEquipHotbarHandler = (itemId, iconKey, itemLabelText) => () => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
+    // clique OU tecla de número (1-9, 0). Sem item fixo por slot (ver
+    // ITEMS_PROGRESS.md): cada slot guarda o que o JOGADOR atribuiu
+    // (this.state.hotbarAssignments, ver state/playerState.js), atribuído
+    // pelo modo "Organizar Hotbar" do Inventário. UM handler só cobre os
+    // 10 slots — o que ele faz depende do modo atual (ver comentário de
+    // pendingHotbarAssignItemId acima):
+    //  - com um item pendente (veio do Inventário): atribui esse item ao
+    //    slot clicado (ou remove, se já era o mesmo item nesse slot);
+    //  - sem pendência: equipa/desequipa o que já está atribuído ali,
+    //    igual sempre foi.
+    const onHotbarSlotClick = (slotId) => {
+      if (isEditorModeActive() || isFishingActive()) return;
+      const pendingItemId = this.pendingHotbarAssignItemId;
+      if (pendingItemId && isMenuOpen()) {
+        assignItemToHotbarSlot(this.state.hotbarAssignments, slotId, pendingItemId);
+        this.pendingHotbarAssignItemId = null;
+        refreshHotbar(this);
+        return;
+      }
+      if (isMenuOpen()) return; // Inventário aberto mas sem item selecionado pra atribuir — hotbar fica quieta, evita equipar sem querer atrás do menu.
+      const itemId = this.state.hotbarAssignments[slotId];
+      if (!itemId) {
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', 'Slot vazio — abra o Inventário, ligue "Organizar Hotbar" e escolha um item pra atribuir aqui.');
+        return;
+      }
       if (!hasItem(this.state.inventory, itemId)) {
-        showBlockedThrottled(this, 'lastHotbarBlockHintAt', iconKey, `Você ainda não tem ${itemLabelText} — fabrique em Inventário.`);
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'cadeado', `Você não tem mais ${ITEM_DEFS[itemId].name} — atribua outro item a este slot.`);
         return;
       }
       handleEquip(this, itemId);
     };
-    const onHotbarRod = makeEquipHotbarHandler('vara-de-pescar', 'pesca', 'uma vara de pescar');
-    const onHotbarArco = makeEquipHotbarHandler('arco', 'espada', 'um arco');
-    const onHotbarMachado = makeEquipHotbarHandler('machado', 'sobrevivencia', 'um machado');
-    const onHotbarVaraReforcada = makeEquipHotbarHandler('vara-reforcada', 'pesca', 'uma vara reforçada');
-    const onHotbarLanca = makeEquipHotbarHandler('lanca', 'espada', 'uma lança');
-    const hotbarHandlers = {
-      sword: toggleSwordEquip,
-      rod: onHotbarRod,
-      arco: onHotbarArco,
-      machado: onHotbarMachado,
-      'vara-reforcada': onHotbarVaraReforcada,
-      lanca: onHotbarLanca,
-    };
-    bindHotbar(hotbarHandlers);
-    // Mesmos handlers do clique, só que pela tecla de número — nomes de
-    // evento do Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
-    // KeyMap.js), não "keydown-1".
+    bindHotbar(onHotbarSlotClick);
+    // Mesmo handler, só que pela tecla de número — nomes de evento do
+    // Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
+    // KeyMap.js), não "keydown-1". Q continua como atalho rápido, agora
+    // só um alias do slot 1 (antes era hardcoded pra espada).
     ['ONE', 'TWO', 'THREE', 'FOUR', 'FIVE', 'SIX', 'SEVEN', 'EIGHT', 'NINE', 'ZERO'].forEach((keyName, i) => {
       const num = i < 9 ? i + 1 : 0;
       const slotId = getHotbarSlotIdByShortcut(String(num));
-      this.input.keyboard.on(`keydown-${keyName}`, () => hotbarHandlers[slotId]?.());
+      this.input.keyboard.on(`keydown-${keyName}`, () => onHotbarSlotClick(slotId));
     });
+    this.input.keyboard.on('keydown-Q', () => onHotbarSlotClick('slot1'));
     refreshHotbar(this);
 
     // Coleta — G é a tecla de "interagir com o que tem por perto" (E já é o
@@ -706,11 +722,32 @@ function handleCraft(scene, recipeId) {
   return crafted;
 }
 
-// Espelha equipState/inventory pro HUD (ver setHotbarState em ui/hud.js) —
-// chamado depois de qualquer coisa que possa mudar "o que está na mão" ou
-// "tem vara ou não" (equipar, fabricar, teclado ou clique na hotbar).
+// Atribui `itemId` ao slot `slotId` — clicar no MESMO slot que já tinha
+// esse item remove a atribuição (desatribuir sem precisar de um segundo
+// gesto). Um item só fica em UM slot por vez: se já estava atribuído em
+// outro, limpa de lá antes (evita duplicar o mesmo item em dois slots,
+// que seria confuso sem trazer nenhum benefício de gameplay).
+function assignItemToHotbarSlot(assignments, slotId, itemId) {
+  if (assignments[slotId] === itemId) {
+    assignments[slotId] = null;
+    return;
+  }
+  for (const id of Object.keys(assignments)) {
+    if (assignments[id] === itemId) assignments[id] = null;
+  }
+  assignments[slotId] = itemId;
+}
+
+// Espelha equipState/inventory/hotbarAssignments pro HUD (ver
+// setHotbarState em ui/hud.js) — chamado depois de qualquer coisa que
+// possa mudar "o que está na mão", "o que tenho" ou "o que atribuí a cada
+// slot" (equipar, fabricar, teclado, clique na hotbar, organizar).
 function refreshHotbar(scene) {
-  setHotbarState({ equipped: scene.state.equipState.equippedLayerId, inventory: scene.state.inventory });
+  setHotbarState({
+    equipped: scene.state.equipState.equippedLayerId,
+    inventory: scene.state.inventory,
+    assignments: scene.state.hotbarAssignments,
+  });
 }
 
 // ============================================================================

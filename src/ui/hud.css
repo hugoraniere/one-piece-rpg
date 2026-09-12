@@ -305,12 +305,11 @@
   transition: left 0.1s linear, top 0.1s linear;
 }
 
-/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. Cada
-   slot tem atalho de número (1-4, ver HOTBAR_SLOTS em hud.js) mostrado no
-   canto — só 2 são itens de verdade hoje (espada sempre disponível, vara
-   de pescar só se já fabricada, ver equipState em character/layers.js),
-   os outros ficam reservados/travados pra quando existir mais alguma
-   coisa equipável. Centro-baixo, único lugar ainda livre. */
+/* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. 10
+   slots genéricos (atalho 1-9, 0, ver HOTBAR_SLOTS em hud.js), cada um
+   com o item que o JOGADOR atribuiu (modo "Organizar Hotbar" do
+   Inventário, ver inventoryMenu.js) — não tem mais item fixo por
+   posição. Centro-baixo, único lugar ainda livre. */
 .hotbar {
   position: absolute;
   bottom: 12px;
@@ -334,6 +333,13 @@
   color: #3b2415;
   cursor: pointer;
   transition: box-shadow 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+}
+.hotbar-slot-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
 }
 .hotbar-slot .icon {
   width: 22px;
@@ -370,12 +376,32 @@
 .hotbar-slot.equipped {
   box-shadow: 0 0 0 3px #b8752e, inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15);
 }
-/* "Locked" aqui não é "nunca vai existir" (ver slot de habilidade do
-   wireframe) — é "ainda não fabricou": some o ícone, deixa o slot MUITO escuro,
-   volta a mostrar normal assim que o item entrar no inventário. */
+/* "Empty" — slot sem nenhum item atribuído ainda (ver hotbarAssignments
+   em state/playerState.js). Continua CLICÁVEL (precisa receber uma
+   atribuição no modo "Organizar Hotbar" do Inventário) — só um visual
+   discreto pra não competir com os slots que já têm algo. */
+.hotbar-slot.empty {
+  opacity: 0.45;
+}
+.hotbar-slot.empty::after {
+  content: '+';
+  position: absolute;
+  font-size: 18px;
+  font-weight: 700;
+  color: #6b5a3f;
+  pointer-events: none;
+}
+/* "Locked" é diferente de "empty": TEM um item atribuído, mas o jogador
+   não tem mais ele no inventário agora (gastou, perdeu) — mostra o ícone
+   (pra lembrar o que estava ali) esmaecido/tosco, não deixa equipar até
+   ter de novo ou reatribuir outro item. Continua clicável (o clique dá o
+   aviso certo — ver onHotbarSlotClick em islandScene.js — ou recebe uma
+   nova atribuição no modo de organizar).*/
 .hotbar-slot.locked {
   background: repeating-linear-gradient(45deg, #1f1a14, #1f1a14 3px, #12100c 3px, #12100c 6px) !important;
   color: #3a3430;
-  opacity: 0.4;
-  pointer-events: none !important;
+  opacity: 0.55;
+}
+.hotbar-slot.locked .icon {
+  filter: grayscale(1);
 }

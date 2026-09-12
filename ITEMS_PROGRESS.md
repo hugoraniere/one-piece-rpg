@@ -3,6 +3,60 @@
 Trabalho iniciado em 2026-09-12, sessão autônoma (~2h) enquanto o Hugo está
 fora. Este arquivo é o log de progresso pra revisão quando ele voltar.
 
+## Atualização (mesmo dia, sessão interativa): hotbar reconfigurável
+
+Feedback do Hugo depois de revisar a sessão autônoma: "Os slots não ficam
+predefinidos. São itens que podem ser realocados, o personagem precisar
+tê-los no seu inventário." — reescrito o sistema de hotbar (antes cada
+slot tinha um `equipLayerId` FIXO hardcoded: slot 1 sempre espada, slot 3
+sempre arco, etc; sem posse virava um cadeado permanente naquele slot
+específico). Decisões confirmadas com o Hugo antes de implementar:
+atribuição MANUAL (clicar item no Inventário → clicar slot da hotbar),
+e a espada virou item de inventário normal (antes equipava direto por Q
+sem depender de posse).
+
+**O que mudou:**
+- `HOTBAR_SLOTS` (hud.js) virou puramente posicional (10 slots genéricos,
+  atalho 1-9/0) — nenhum item fixo por posição
+- `hotbarAssignments` novo em `state/playerState.js`: `{ slot1: itemId |
+  null, ... }`, persistido no save (default: só `slot1: 'sword'`, resto
+  vazio)
+- `ITEM_DEFS.sword` novo (antes a espada nem existia como item de
+  inventário) — jogador começa com uma no inventário, igual qualquer
+  outro item agora
+- `iconPath` novo em cada ITEM_DEFS equipável (PNG 32x32, reaproveita os
+  ícones já gerados) — hotbar e o slot "Mão" do Inventário derivam
+  ícone/nome de ITEM_DEFS em runtime, em vez de tabelas hardcoded
+  duplicadas (`EQUIP_LABELS`/`EQUIP_ICONS` removidas de inventoryMenu.js)
+- Modo "Organizar Hotbar" no Inventário (botão + `.slot.selecting`
+  highlight azul, distinto do laranja de "equipado"): clique num item
+  equipável SELECIONA (não equipa mais direto nesse modo); clique num
+  slot da hotbar de verdade (continua visível/clicável com o Inventário
+  aberto — `#hud-overlay` tem z-index maior que o backdrop do menu)
+  ATRIBUI; clicar no MESMO slot que já tinha aquele item REMOVE a
+  atribuição; um item só fica em UM slot por vez (atribuir em slot novo
+  limpa o antigo automaticamente)
+- Fora do modo de organizar, hotbar continua funcionando como sempre:
+  clique/tecla equipa-desequipa o que estiver atribuído ali
+- Q vira alias do slot 1 (antes hardcoded só pra espada)
+
+**Bug pego e corrigido durante o teste**: `ctx.hotbarEditMode`/
+`ctx.pendingHotbarAssignItemId` passados como VALOR (snapshot) pro
+`toggleInventoryMenu` ficavam congelados no momento de abrir o menu — o
+toggle mudava o estado real da cena mas o painel re-renderizava com o
+valor antigo (o botão nunca trocava de "Organizar Hotbar" pra
+"Organizando Hotbar ✕"). Trocado por `getHotbarEditMode()`/
+`getPendingHotbarAssignItemId()` (funções, não valores) — sempre leem o
+estado atual no momento do render, sem essa classe de bug.
+
+Testado ponta a ponta na UI real (não só chamada direta de função):
+fabricar itens → abrir Inventário → ligar "Organizar Hotbar" → selecionar
+item → atribuir a um slot vazio → remover atribuição (clicar 2x no mesmo
+slot) → realocar (item já atribuído, clicar em slot diferente, slot
+antigo esvazia sozinho) → desligar o modo → equipar/desequipar normal via
+clique na hotbar → persistência sobrevive a um reload de página. Sem
+erros no console em nenhum passo.
+
 ## ⚠️ Bloqueio conhecido: sem geração de pixel art via PixelLab
 
 Investigado no início da sessão: não há API key da PixelLab, nem

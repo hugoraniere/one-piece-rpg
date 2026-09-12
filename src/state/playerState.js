@@ -22,6 +22,35 @@ let state = null;
 const STORAGE_KEY = 'one-piece-rpg-save-v1';
 const AUTOSAVE_INTERVAL_MS = 5000;
 
+// Hotbar não tem mais item fixo por slot (ver ITEMS_PROGRESS.md) — cada
+// slot guarda o itemId que o JOGADOR atribuiu ali (ou null, vazio), e é
+// isso que persiste no save. 10 slots genéricos (teclas 1-9, 0), mesma
+// contagem de sempre. `slot1: 'sword'` é o único default não-vazio — só
+// pra quem começa do zero já ver a espada pronta pra usar, sem precisar
+// abrir o Inventário primeiro.
+const HOTBAR_SLOT_COUNT = 10;
+function createDefaultHotbarAssignments() {
+  const assignments = {};
+  for (let i = 1; i <= HOTBAR_SLOT_COUNT; i++) {
+    assignments[`slot${i}`] = null;
+  }
+  assignments.slot1 = 'sword';
+  return assignments;
+}
+
+// Funde atribuições salvas por cima do default — mesmo espírito de
+// mergeProgression/mergeDiscoveredIslands: um save antigo (de antes de um
+// slot novo existir, se a contagem crescer no futuro) não quebra, só ganha
+// os slots que não conhecia vazios.
+function mergeHotbarAssignments(saved) {
+  const fresh = createDefaultHotbarAssignments();
+  if (!saved || typeof saved !== 'object') return fresh;
+  for (const key of Object.keys(fresh)) {
+    if (key in saved) fresh[key] = saved[key];
+  }
+  return fresh;
+}
+
 function buildInitialState() {
   const saved = loadFromStorage();
   if (saved) return saved;
@@ -33,14 +62,16 @@ function buildInitialState() {
     // inicial fixo, sem coleta própria ainda (ver ITEMS_PROGRESS.md) — dá
     // exatamente pra uma fabricação de cada item novo (arco usa corda;
     // machado, vara reforçada e lança usam ferro-bruto, por isso 3 em
-    // vez de 1).
-    inventory: createInventory({ 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
+    // vez de 1). `sword: 1`: a espada virou item normal (antes era
+    // hardcoded fora do inventário) — jogador começa com uma.
+    inventory: createInventory({ sword: 1, 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
     berries: 0,
     progression: createProgression(),
     equipState,
     playerHealth: createHealth(PLAYER_MAX_HP),
     currentIslandId: DEFAULT_ISLAND_ID,
     discoveredIslands: getDefaultDiscoveredIslands(),
+    hotbarAssignments: createDefaultHotbarAssignments(),
   };
 }
 
@@ -93,13 +124,14 @@ function loadFromStorage() {
 
   const maxHp = saved.playerHealth?.max ?? PLAYER_MAX_HP;
   return {
-    inventory: createInventory(saved.inventory?.items ?? { 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
+    inventory: createInventory(saved.inventory?.items ?? { sword: 1, 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
     berries: typeof saved.berries === 'number' ? saved.berries : 0,
     progression: mergeProgression(saved.progression),
     equipState,
     playerHealth: { max: maxHp, current: Math.min(saved.playerHealth?.current ?? maxHp, maxHp) },
     currentIslandId: ISLANDS[saved.currentIslandId] ? saved.currentIslandId : DEFAULT_ISLAND_ID,
     discoveredIslands: mergeDiscoveredIslands(saved.discoveredIslands),
+    hotbarAssignments: mergeHotbarAssignments(saved.hotbarAssignments),
   };
 }
 
@@ -114,6 +146,7 @@ function serialize(s) {
     playerHealth: s.playerHealth,
     currentIslandId: s.currentIslandId,
     discoveredIslands: s.discoveredIslands,
+    hotbarAssignments: s.hotbarAssignments,
   });
 }
 

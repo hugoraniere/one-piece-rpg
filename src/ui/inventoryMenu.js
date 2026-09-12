@@ -14,37 +14,34 @@ function iconSvg(key) {
   return `<svg class="icon" aria-hidden="true"><use href="#i-${key}"></use></svg>`;
 }
 
-// Nome/ícone de exibição do que está na mão — arma OU ferramenta, é o mesmo
-// slot único (ver character/layers.js: equipState só guarda UM
+// Nome/ícone de exibição do que está na mão — arma OU ferramenta, é o
+// mesmo slot único (ver character/layers.js: equipState só guarda UM
 // equippedLayerId por vez, trocar de vara pra espada substitui, nunca
-// soma). Espada não vem de ITEM_DEFS (é equipada direto por Q, sem passar
-// pelo inventário — ver EQUIPMENT_ASSETS_TODO.md), então mantém tabela
-// própria em vez de tentar puxar de lá.
-const EQUIP_LABELS = {
-  sword: 'Cutlass de Ferro',
-  'vara-de-pescar': 'Vara de Pescar',
-  arco: 'Arco Curto',
-  machado: 'Machado de Lenhador',
-  'vara-reforcada': 'Vara Reforçada',
-  lanca: 'Lança de Caça',
-};
-const EQUIP_ICONS = {
-  sword: '/assets/icons/sword.png',
-  'vara-de-pescar': '/assets/icons/rod.png',
-  arco: '/assets/icons/arco.png',
-  machado: '/assets/icons/machado.png',
-  'vara-reforcada': '/assets/icons/vara-reforcada.png',
-  lanca: '/assets/icons/lanca.png',
-};
+// soma). Deriva de ITEM_DEFS por busca reversa (equipLayerId → item) em
+// vez de manter uma tabela própria — agora que a espada também é item de
+// inventário normal (ver ITEMS_PROGRESS.md), ITEM_DEFS já tem tudo que
+// precisa (name/iconPath), duplicar aqui só arriscaria os dois saírem de
+// sincronia quando um item novo aparecer.
+const ITEM_BY_EQUIP_LAYER = Object.fromEntries(
+  Object.entries(ITEM_DEFS)
+    .filter(([, def]) => def.equipLayerId)
+    .map(([itemId, def]) => [def.equipLayerId, itemId]),
+);
+function equippedItemDef(equipState) {
+  const itemId = ITEM_BY_EQUIP_LAYER[equipState.equippedLayerId];
+  return itemId ? ITEM_DEFS[itemId] : null;
+}
 function equippedLabel(equipState) {
-  return EQUIP_LABELS[equipState.equippedLayerId] ?? 'Vazio';
+  return equippedItemDef(equipState)?.name ?? 'Vazio';
 }
 function equippedIcon(equipState) {
-  return EQUIP_ICONS[equipState.equippedLayerId] ?? '/assets/icons/sword.png';
+  return equippedItemDef(equipState)?.iconPath ?? '/assets/icons/sword.png';
 }
 
 function renderItemsTab(ctx) {
   const { inventory, equipState } = ctx;
+  const hotbarEditMode = ctx.getHotbarEditMode();
+  const pendingHotbarAssignItemId = ctx.getPendingHotbarAssignItemId();
   const owned = Object.entries(inventory.items).filter(([, qty]) => qty > 0);
 
   const slots = Array.from({ length: TOTAL_SLOTS }, (_, i) => {
@@ -54,9 +51,14 @@ function renderItemsTab(ctx) {
     const def = ITEM_DEFS[itemId];
     if (!def) return `<div class="slot empty" data-cat="vazio"></div>`;
     const qtyHtml = qty > 1 ? `<span class="qty">x${qty}</span>` : '';
-    const equipped = def.equipLayerId && equipState.equippedLayerId === def.equipLayerId;
     const equipable = Boolean(def.equipLayerId);
-    return `<div class="slot${equipable ? ' equipable' : ''}${equipped ? ' equipped' : ''}" data-cat="${def.category}" data-item="${itemId}" title="${def.name}${equipable ? ' — clique pra equipar/desequipar' : ''}">${def.icon}${qtyHtml}</div>`;
+    const equipped = equipable && equipState.equippedLayerId === def.equipLayerId;
+    const selecting = equipable && hotbarEditMode && itemId === pendingHotbarAssignItemId;
+    // Título muda com o modo — "Organizar Hotbar" ligado quer dizer que o
+    // clique escolhe o item pra atribuir a um slot, não equipa direto (ver
+    // mountInventoryMenu abaixo).
+    const title = equipable ? (hotbarEditMode ? `${def.name} — clique pra escolher pra hotbar` : `${def.name} — clique pra equipar/desequipar`) : def.name;
+    return `<div class="slot${equipable ? ' equipable' : ''}${equipped ? ' equipped' : ''}${selecting ? ' selecting' : ''}" data-cat="${def.category}" data-item="${itemId}" title="${title}">${def.icon}${qtyHtml}</div>`;
   }).join('');
 
   return `
@@ -78,6 +80,18 @@ function renderItemsTab(ctx) {
             <div><div class="label">Acessório</div><div class="value">Vazio</div></div>
           </div>
         </div>
+        <button class="hotbar-edit-toggle${hotbarEditMode ? ' active' : ''}" id="inv-hotbar-edit-toggle">
+          ${hotbarEditMode ? 'Organizando Hotbar ✕' : 'Organizar Hotbar'}
+        </button>
+        ${
+          hotbarEditMode
+            ? `<p class="hotbar-edit-hint">${
+                pendingHotbarAssignItemId
+                  ? `Clique num slot da hotbar (o de baixo, no jogo) pra colocar ${ITEM_DEFS[pendingHotbarAssignItemId]?.name ?? 'o item'} lá.`
+                  : 'Clique num item equipável aqui, depois num slot da hotbar pra atribuir. Clique num slot já atribuído a esse item pra remover.'
+              }</p>`
+            : ''
+        }
       </div>
       <div class="inv-main">
         <div class="filters">
@@ -164,6 +178,15 @@ function mountInventoryMenu(panel, ctx) {
   panel.querySelectorAll('.slot.equipable').forEach((slot) => {
     slot.addEventListener('click', () => {
       const itemId = slot.dataset.item;
+      // Modo "Organizar Hotbar" ligado: o clique SELECIONA o item pra
+      // atribuir a um slot (o clique que de fato atribui é na hotbar de
+      // verdade, fora deste painel — ver onHotbarSlotClick em
+      // islandScene.js) — não equipa/desequipa direto.
+      if (ctx.getHotbarEditMode()) {
+        ctx.onSelectForHotbar(itemId);
+        mountInventoryMenu(panel, ctx);
+        return;
+      }
       ctx.onEquip(itemId);
       mountInventoryMenu(panel, ctx);
       // Só pisca se o clique EQUIPOU (não desequipar) — "acabei de equipar
@@ -171,6 +194,11 @@ function mountInventoryMenu(panel, ctx) {
       const newSlot = panel.querySelector(`.slot[data-item="${itemId}"]`);
       flashOnce(newSlot?.classList.contains('equipped') ? newSlot : null);
     });
+  });
+
+  panel.querySelector('#inv-hotbar-edit-toggle')?.addEventListener('click', () => {
+    ctx.onToggleHotbarEditMode();
+    mountInventoryMenu(panel, ctx);
   });
 
   panel.querySelectorAll('.craft-btn').forEach((btn) => {
@@ -197,8 +225,30 @@ function flashOnce(el) {
 }
 
 // `onEquip(itemId)` alterna equipar/desequipar (chamando de novo no mesmo
-// item já equipado desequipa); `onCraft(recipeId)` tenta fabricar. Os dois
-// vivem em villageScene.js — este módulo só monta HTML e delega.
-export function toggleInventoryMenu({ inventory, equipState, onEquip, onCraft }) {
-  toggleMenu('inventario', (panel) => mountInventoryMenu(panel, { inventory, equipState, onEquip, onCraft }));
+// item já equipado desequipa); `onCraft(recipeId)` tenta fabricar;
+// `onToggleHotbarEditMode()`/`onSelectForHotbar(itemId)` controlam o modo
+// "Organizar Hotbar" (ver comentário em renderItemsTab). Todos vivem em
+// islandScene.js — este módulo só monta HTML e delega.
+export function toggleInventoryMenu({
+  inventory,
+  equipState,
+  onEquip,
+  onCraft,
+  getHotbarEditMode,
+  getPendingHotbarAssignItemId,
+  onToggleHotbarEditMode,
+  onSelectForHotbar,
+}) {
+  toggleMenu('inventario', (panel) =>
+    mountInventoryMenu(panel, {
+      inventory,
+      equipState,
+      onEquip,
+      onCraft,
+      getHotbarEditMode,
+      getPendingHotbarAssignItemId,
+      onToggleHotbarEditMode,
+      onSelectForHotbar,
+    }),
+  );
 }

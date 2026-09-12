@@ -1,6 +1,7 @@
 import './hud.css';
 import { injectMoodleIcons } from './icons.js';
 import { hasItem } from '../sim/inventory.js';
+import { ITEM_DEFS } from '../sim/itemDefs.js';
 
 // HUD de exploração — sobreposto ao canvas via #hud-overlay (ver
 // index.html), não desenhado com Phaser. Mais fácil de estilar em HTML/CSS
@@ -20,66 +21,16 @@ const MOODLE_DEFS = [
   { key: 'ferido', severity: 'bad-2', label: 'Ferido — sangrando aos poucos' },
 ];
 
-// Hotbar — data-driven pra dar pra somar slot novo sem tocar em mais nada
-// (render, atalho de número, bind de clique, estado equipado/travado — tudo
-// deriva desta lista). `equipLayerId` liga o slot ao equipState de verdade
-// (character/layers.js); `locksUntilOwned: true` é a trava "ainda não
-// fabricou" (some quando o item entra no inventário, ver setHotbarState);
-// sem nenhum dos dois o slot é permanentemente reservado (trava pra sempre,
-// mesmo trato que a habilidade já tinha — "não existe ainda", não "falta
-// fabricar").
-const HOTBAR_SLOTS = [
-  { id: 'sword', shortcut: '1', icon: '/assets/icons/sword.png', title: 'Cutlass de Ferro', equipLayerId: 'sword' },
-  {
-    id: 'rod',
-    shortcut: '2',
-    icon: '/assets/icons/rod.png',
-    title: 'Vara de Pescar',
-    equipLayerId: 'vara-de-pescar',
-    itemId: 'vara-de-pescar',
-    locksUntilOwned: true,
-  },
-  {
-    id: 'arco',
-    shortcut: '3',
-    icon: '/assets/icons/arco.png',
-    title: 'Arco Curto',
-    equipLayerId: 'arco',
-    itemId: 'arco',
-    locksUntilOwned: true,
-  },
-  {
-    id: 'machado',
-    shortcut: '4',
-    icon: '/assets/icons/machado.png',
-    title: 'Machado de Lenhador',
-    equipLayerId: 'machado',
-    itemId: 'machado',
-    locksUntilOwned: true,
-  },
-  {
-    id: 'vara-reforcada',
-    shortcut: '5',
-    icon: '/assets/icons/vara-reforcada.png',
-    title: 'Vara Reforçada',
-    equipLayerId: 'vara-reforcada',
-    itemId: 'vara-reforcada',
-    locksUntilOwned: true,
-  },
-  {
-    id: 'lanca',
-    shortcut: '6',
-    icon: '/assets/icons/lanca.png',
-    title: 'Lança de Caça',
-    equipLayerId: 'lanca',
-    itemId: 'lanca',
-    locksUntilOwned: true,
-  },
-  { id: 'slot7', shortcut: '7', iconSymbol: 'cadeado', title: 'Reservado' },
-  { id: 'slot8', shortcut: '8', iconSymbol: 'cadeado', title: 'Reservado' },
-  { id: 'slot9', shortcut: '9', iconSymbol: 'cadeado', title: 'Reservado' },
-  { id: 'slot0', shortcut: '0', iconSymbol: 'cadeado', title: 'Reservado' },
-];
+// Hotbar — 10 slots genéricos (teclas 1-9, 0), nenhum item fixo por slot.
+// Cada slot mostra o que o JOGADOR atribuiu ali (ver hotbarAssignments em
+// state/playerState.js, atribuído pelo modo "Organizar Hotbar" do
+// Inventário — ver inventoryMenu.js) — a trava é só "você tem o item no
+// inventário agora?" (ver setHotbarState), não mais um `equipLayerId`
+// fixo por posição. Puramente posicional: id/atalho de teclado, nada mais.
+const HOTBAR_SLOTS = Array.from({ length: 10 }, (_, i) => ({
+  id: `slot${i + 1}`,
+  shortcut: i === 9 ? '0' : String(i + 1),
+}));
 
 // Mesma ideia da hotbar: qualquer botão clicável que também tem atalho de
 // teclado mostra o indicador — não só a hotbar. `id` bate com o
@@ -151,10 +102,8 @@ export function initHud() {
     </div>
     <div class="hotbar" id="hud-hotbar">
       ${HOTBAR_SLOTS.map((slot) => `
-        <div class="hotbar-slot${slot.locksUntilOwned || !slot.equipLayerId ? ' locked' : ''}" id="hud-hotbar-${slot.id}" title="${slot.title} (${slot.shortcut})">
-          ${slot.icon
-            ? `<img class="icon pixel-icon" src="${slot.icon}" alt="${slot.title}">`
-            : `<svg class="icon" aria-hidden="true"><use href="#i-${slot.iconSymbol}"></use></svg>`}
+        <div class="hotbar-slot empty" id="hud-hotbar-${slot.id}" title="Slot vazio (${slot.shortcut})">
+          <div class="hotbar-slot-icon"></div>
           ${shortcutBadge(slot.shortcut)}
         </div>
       `).join('')}
@@ -233,30 +182,39 @@ export function bindMenuButtons({ onPersonagem, onInventario, onMapa }) {
   });
 }
 
-// `equipped` é o mesmo equipState.equippedLayerId de character/layers.js
-// ('sword' | 'vara-de-pescar' | 'arco' | 'machado' | null) — hud.js só
-// espelha, não decide. `inventory` trava o slot (visual + clique) até o
-// item existir de verdade no inventário (ver refreshHotbar em
-// islandScene.js), checado por `slot.itemId` — genérico pra qualquer slot
-// com `equipLayerId`/`itemId`/`locksUntilOwned`: somar um novo item
-// equipável é só mais uma entrada em HOTBAR_SLOTS, sem mexer aqui. Antes
-// disso o trava era um `hasRod` boolean único, hardcoded só pra vara —
-// quebraria (todos os slots travados compartilhando o mesmo boolean) assim
-// que um segundo item com `locksUntilOwned` fosse somado.
-export function setHotbarState({ equipped, inventory }) {
+// `equipped` é o mesmo equipState.equippedLayerId de character/layers.js —
+// hud.js só espelha, não decide. `assignments` é hotbarAssignments de
+// state/playerState.js (`{ <id do slot>: itemId | null }`, atribuído pelo
+// jogador — ver inventoryMenu.js) — cada slot busca seu PRÓPRIO item nessa
+// tabela e resolve ícone/nome via ITEM_DEFS, ao contrário de antes (item
+// fixo por posição em HOTBAR_SLOTS). `inventory` trava o slot (visual +
+// clique) quando o item atribuído não existe mais de verdade no
+// inventário (perdido/gasto) — o slot continua "lembrando" o que estava
+// lá, só não deixa equipar até o jogador ter outra unidade ou reatribuir.
+export function setHotbarState({ equipped, inventory, assignments }) {
   HOTBAR_SLOTS.forEach((slot) => {
     const el = hotbarEls[slot.id];
-    if (slot.equipLayerId) el.classList.toggle('equipped', equipped === slot.equipLayerId);
-    if (slot.locksUntilOwned) el.classList.toggle('locked', !hasItem(inventory, slot.itemId));
+    const itemId = assignments?.[slot.id] ?? null;
+    const def = itemId ? ITEM_DEFS[itemId] : null;
+    const owned = Boolean(def) && hasItem(inventory, itemId);
+
+    const iconEl = el.querySelector('.hotbar-slot-icon');
+    iconEl.innerHTML = def?.iconPath ? `<img class="icon pixel-icon" src="${def.iconPath}" alt="${def.name}">` : '';
+
+    el.classList.toggle('empty', !def);
+    el.classList.toggle('locked', Boolean(def) && !owned);
+    el.classList.toggle('equipped', Boolean(def) && owned && equipped === def.equipLayerId);
+    el.title = def ? `${def.name} (${slot.shortcut})` : `Slot vazio (${slot.shortcut})`;
   });
 }
 
-// `handlers` é `{ <id do slot>: () => void }` — mesmos ids de HOTBAR_SLOTS,
-// chamado tanto pelo clique quanto pelo atalho de número (ver
-// bindHotbarShortcuts, que reusa os MESMOS handlers pelo teclado 1-4).
-export function bindHotbar(handlers) {
+// Clique de QUALQUER slot chama o MESMO handler — o que ele faz (equipar,
+// atribuir, remover) depende do modo em que o jogo está no momento
+// (ver onHotbarSlotClick em islandScene.js), não mais de qual item está
+// hardcoded naquele slot. Atalho de número reusa o mesmo handler.
+export function bindHotbar(onSlotClick) {
   HOTBAR_SLOTS.forEach((slot) => {
-    hotbarEls[slot.id].addEventListener('click', () => handlers[slot.id]?.());
+    hotbarEls[slot.id].addEventListener('click', () => onSlotClick(slot.id));
   });
 }
 
