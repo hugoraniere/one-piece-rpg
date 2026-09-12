@@ -2,6 +2,11 @@
 // cena, personagem, mundo e editor.
 
 export const PLAYER_SPEED = 160; // pixels por segundo
+// Corrida (segurar Shift) — 1.625x a velocidade normal, mesma proporção
+// aproximada usada no RUN_FRAME_MS abaixo (pernas mais rápidas na MESMA
+// proporção do deslocamento, senão a corrida "patina" que nem o bug da
+// caminhada que a gente acabou de corrigir).
+export const RUN_SPEED = 260;
 // Escala de exibição — ajuste aqui se o tamanho não bater. Recalculada pro
 // teste de pixel art (canvas 32x32, conteúdo real ~26px de altura — ver
 // character/races.js): 113px de altura em tela / ~26.5px de conteúdo ≈ 4.26,
@@ -27,6 +32,11 @@ export const CAMERA_ZOOM = 0.5;
 // 2 passos por segundo, cadência natural de caminhada — mantendo
 // PLAYER_SPEED intocado (ajustar o visual da perna, não a jogabilidade).
 export const WALK_FRAME_MS = 125;
+// Ciclo de corrida — mesma lógica do walk acima: cadência de perna
+// proporcional à velocidade real (RUN_SPEED/PLAYER_SPEED = 1.625), senão
+// a corrida "patina" igual o bug que a caminhada tinha. 125/1.625 ≈ 77,
+// arredondado.
+export const RUN_FRAME_MS = 77;
 export const IDLE_FRAME_MS = 650; // troca de frame do idle (bem mais devagar — é só uma respiração sutil)
 export const ATTACK_FRAME_MS = 90; // troca de frame do ataque — mais rápido, dá sensação de impacto
 // Quanto tempo o modo 'attack' fica ativo antes de voltar pra idle/walk —

@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ATTACK_DURATION_MS, CAMERA_ZOOM, PLAYER_SPEED, SHADOW_OFFSET_Y } from '../config.js';
+import { ATTACK_DURATION_MS, CAMERA_ZOOM, PLAYER_SPEED, RUN_SPEED, SHADOW_OFFSET_Y } from '../config.js';
 import { createEnemy, damageEnemy, updateEnemy } from '../world/enemy.js';
 import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, updateCharacterVisual } from '../character/character.js';
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
@@ -438,7 +438,13 @@ export default class IslandScene extends Phaser.Scene {
       vy *= norm;
     }
 
-    this.player.body.setVelocity(vx * PLAYER_SPEED, vy * PLAYER_SPEED);
+    // Corrida — segurar Shift (this.cursors.shift já vem de graça do
+    // createCursorKeys(), sem precisar registrar tecla nova). Só importa
+    // enquanto o jogador estiver de fato andando pra algum lado; segurar
+    // Shift parado não faz nada (nem tem por quê — ver isMoving abaixo).
+    const isRunning = this.cursors.shift.isDown && (vx !== 0 || vy !== 0);
+    const speed = isRunning ? RUN_SPEED : PLAYER_SPEED;
+    this.player.body.setVelocity(vx * speed, vy * speed);
     this.shadow.setPosition(this.player.x, this.player.y + SHADOW_OFFSET_Y);
 
     // Y-sorting: quem estiver mais "embaixo" na tela desenha por cima.
@@ -459,8 +465,9 @@ export default class IslandScene extends Phaser.Scene {
       }
     }
 
-    updateCharacterVisual(this.player, this.animState, delta, isMoving ? 'walk' : 'idle', this.facing);
-    updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, isMoving ? 'walk' : 'idle', this.facing);
+    const visualMode = isRunning ? 'run' : isMoving ? 'walk' : 'idle';
+    updateCharacterVisual(this.player, this.animState, delta, visualMode, this.facing);
+    updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, visualMode, this.facing);
   }
 }
 

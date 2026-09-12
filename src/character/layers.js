@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { ATTACK_FRAME_MS, IDLE_FRAME_MS, WALK_FRAME_MS } from '../config.js';
+import { ATTACK_FRAME_MS, IDLE_FRAME_MS, RUN_FRAME_MS, WALK_FRAME_MS } from '../config.js';
 import { advanceFrame, resolveModeFrames } from './frameCycle.js';
 
 // Uma "camada" de equipamento (por enquanto só a arma) é uma segunda imagem
@@ -213,6 +213,8 @@ export function createLayerState() {
     equippedLayerId: null,
     walkTimer: 0,
     walkFrameIndex: 0,
+    runTimer: 0,
+    runFrameIndex: 0,
     idleTimer: 0,
     idleFrameIndex: 0,
     attackTimer: 0,
@@ -224,6 +226,8 @@ export function equipLayer(state, layerId) {
   state.equippedLayerId = layerId;
   state.walkTimer = 0;
   state.walkFrameIndex = 0;
+  state.runTimer = 0;
+  state.runFrameIndex = 0;
   state.idleTimer = 0;
   state.idleFrameIndex = 0;
   state.attackTimer = 0;
@@ -234,10 +238,10 @@ export function unequipLayer(state) {
   state.equippedLayerId = null;
 }
 
-const FRAME_MS_BY_MODE = { idle: IDLE_FRAME_MS, walk: WALK_FRAME_MS, attack: ATTACK_FRAME_MS };
-const TIMER_KEY_BY_MODE = { idle: 'idleTimer', walk: 'walkTimer', attack: 'attackTimer' };
-const INDEX_KEY_BY_MODE = { idle: 'idleFrameIndex', walk: 'walkFrameIndex', attack: 'attackFrameIndex' };
-const ALL_MODES = ['idle', 'walk', 'attack'];
+const FRAME_MS_BY_MODE = { idle: IDLE_FRAME_MS, walk: WALK_FRAME_MS, run: RUN_FRAME_MS, attack: ATTACK_FRAME_MS };
+const TIMER_KEY_BY_MODE = { idle: 'idleTimer', walk: 'walkTimer', run: 'runTimer', attack: 'attackTimer' };
+const INDEX_KEY_BY_MODE = { idle: 'idleFrameIndex', walk: 'walkFrameIndex', run: 'runFrameIndex', attack: 'attackFrameIndex' };
+const ALL_MODES = ['idle', 'walk', 'run', 'attack'];
 
 // Atualiza textura/frame da camada e sincroniza sua posição/escala/
 // profundidade com o sprite do corpo — é essa sincronia que faz a camada

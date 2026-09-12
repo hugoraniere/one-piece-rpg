@@ -21,12 +21,16 @@ export function advanceFrame(state, timerKey, indexKey, frames, frameDurationMs,
   return frames[state[indexKey] % frames.length];
 }
 
-// Dado o conjunto de frames de uma direção (idle/walk/attack + seus flips
-// opcionais) e o modo atual, resolve qual array de frames usar e se deve
-// espelhar. Compartilhado entre character.js e layers.js pra não duplicar
-// essa mesma decisão nos dois lugares — se `attack` não existir ainda numa
-// raça/camada, cai pro idle (placeholder até a arte de ataque chegar).
+// Dado o conjunto de frames de uma direção (idle/walk/run/attack + seus
+// flips opcionais) e o modo atual, resolve qual array de frames usar e se
+// deve espelhar. Compartilhado entre character.js e layers.js pra não
+// duplicar essa mesma decisão nos dois lugares — se `attack` não existir
+// ainda numa raça/camada, cai pro idle (placeholder até a arte de ataque
+// chegar); do mesmo jeito, se `run` não existir (caso das camadas de
+// equipamento — a arma não precisa de uma pose de "correndo" própria,
+// só acompanha o corpo), cai pro walk.
 export function resolveModeFrames(frameSet, mode) {
+  if (mode === 'run') return { frames: frameSet.run ?? frameSet.walk, flip: frameSet.runFlip ?? !!frameSet.walkFlip };
   if (mode === 'walk') return { frames: frameSet.walk, flip: !!frameSet.walkFlip };
   if (mode === 'attack') return { frames: frameSet.attack ?? frameSet.idle, flip: frameSet.attackFlip ?? !!frameSet.idleFlip };
   return { frames: frameSet.idle, flip: !!frameSet.idleFlip };

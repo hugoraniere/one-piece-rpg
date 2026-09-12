@@ -19,8 +19,12 @@ Fundo verde já removido (`tools/remove_chroma_key.py`), redimensionado pra 200x
 
 ## Faltando — movimento
 
-- Segundo frame de caminhada de perfil (ver pendência acima)
-- Corrida (se for diferente de andar — pode não precisar pro MVP)
+- Segundo frame de caminhada de perfil (ver pendência acima — nota: essa
+  seção inteira já está desatualizada, a caminhada de verdade hoje é o
+  ciclo de 8 frames por direção gerado via API PixelLab, ver
+  character/races.js)
+- ~~Corrida~~ — feita (8 frames por direção, Shift pra ativar, mesmo
+  pipeline da caminhada/ataque/idle)
 - Direções diagonais (a maioria dos RPGs top-down ignora isso e reaproveita as 4 direções principais — só gerar se você quiser algo mais suave)
 
 ## Faltando — combate (esse personagem é espadachim)

@@ -16,8 +16,9 @@
 // nos dois casos, então o personagem não muda de tamanho trocando de pose.
 //
 // As 4 direções cardeais agora têm idle com respiração sutil (4 frames),
-// ciclo de caminhada (8 frames) E golpe de espada (4 frames) de verdade —
-// tudo gerado via API da PixelLab (POST /v2/animate-character, mode v3)
+// caminhada (8 frames), corrida (8 frames, ver Shift em islandScene.js) E
+// golpe de espada (4 frames) de verdade — tudo gerado via API da PixelLab
+// (POST /v2/animate-character, mode v3)
 // reaproveitando o MESMO character_id do resto da arte, pra manter a
 // consistência visual com o sul feito à mão no editor. O modelo desenhou
 // a espada de verdade na mão nos frames de ataque (surpresa boa) — por
@@ -37,6 +38,7 @@ function poseAssets(prefix, dir, count) {
 
 const IDLE_FRAME_COUNT = 4;
 const WALK_FRAME_COUNT = 8;
+const RUN_FRAME_COUNT = 8;
 const ATTACK_FRAME_COUNT = 4;
 
 export const RACES = {
@@ -50,6 +52,10 @@ export const RACES = {
       ...poseAssets('walk', 'north', WALK_FRAME_COUNT),
       ...poseAssets('walk', 'east', WALK_FRAME_COUNT),
       ...poseAssets('walk', 'west', WALK_FRAME_COUNT),
+      ...poseAssets('run', 'south', RUN_FRAME_COUNT),
+      ...poseAssets('run', 'north', RUN_FRAME_COUNT),
+      ...poseAssets('run', 'east', RUN_FRAME_COUNT),
+      ...poseAssets('run', 'west', RUN_FRAME_COUNT),
       ...poseAssets('attack', 'south', ATTACK_FRAME_COUNT),
       ...poseAssets('attack', 'north', ATTACK_FRAME_COUNT),
       ...poseAssets('attack', 'east', ATTACK_FRAME_COUNT),
@@ -59,11 +65,13 @@ export const RACES = {
       down: {
         idle: poseFrames('idle', 'south', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'south', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'south', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'south', ATTACK_FRAME_COUNT),
       },
       up: {
         idle: poseFrames('idle', 'north', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'north', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'north', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'north', ATTACK_FRAME_COUNT),
       },
       // Sem espelhar mais nada — o export trouxe leste E oeste de verdade
@@ -72,11 +80,13 @@ export const RACES = {
       left: {
         idle: poseFrames('idle', 'west', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'west', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'west', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'west', ATTACK_FRAME_COUNT),
       },
       right: {
         idle: poseFrames('idle', 'east', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'east', WALK_FRAME_COUNT),
+        run: poseFrames('run', 'east', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'east', ATTACK_FRAME_COUNT),
       },
     },
