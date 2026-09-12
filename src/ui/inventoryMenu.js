@@ -20,12 +20,19 @@ function iconSvg(key) {
 // soma). Espada não vem de ITEM_DEFS (é equipada direto por Q, sem passar
 // pelo inventário — ver EQUIPMENT_ASSETS_TODO.md), então mantém tabela
 // própria em vez de tentar puxar de lá.
-const EQUIP_LABELS = { sword: 'Cutlass de Ferro', 'vara-de-pescar': 'Vara de Pescar', arco: 'Arco Curto', machado: 'Machado de Lenhador' };
+const EQUIP_LABELS = {
+  sword: 'Cutlass de Ferro',
+  'vara-de-pescar': 'Vara de Pescar',
+  arco: 'Arco Curto',
+  machado: 'Machado de Lenhador',
+  'vara-reforcada': 'Vara Reforçada',
+};
 const EQUIP_ICONS = {
   sword: '/assets/icons/sword.png',
   'vara-de-pescar': '/assets/icons/rod.png',
   arco: '/assets/icons/arco.png',
   machado: '/assets/icons/machado.png',
+  'vara-reforcada': '/assets/icons/vara-reforcada.png',
 };
 function equippedLabel(equipState) {
   return EQUIP_LABELS[equipState.equippedLayerId] ?? 'Vazio';

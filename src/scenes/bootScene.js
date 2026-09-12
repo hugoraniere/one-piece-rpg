@@ -3,6 +3,7 @@ import { generateShadowTexture } from '../character/character.js';
 import {
   generatePlaceholderAxeTextures,
   generatePlaceholderBowTextures,
+  generatePlaceholderReinforcedRodTextures,
   generatePlaceholderRodTextures,
   generatePlaceholderWeaponTextures,
 } from '../character/layers.js';
@@ -24,6 +25,7 @@ export default class BootScene extends Phaser.Scene {
     generateShadowTexture(this);
     generatePlaceholderWeaponTextures(this);
     generatePlaceholderRodTextures(this);
+    generatePlaceholderReinforcedRodTextures(this);
     generatePlaceholderBowTextures(this);
     generatePlaceholderAxeTextures(this);
     generatePlaceholderEnemyTexture(this);

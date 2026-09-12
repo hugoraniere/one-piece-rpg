@@ -77,6 +77,15 @@ export const LAYER_DEFS = {
     right: { idle: ['weapon-axe-side'], idleFlip: false, walk: ['weapon-axe-side'], walkFlip: false },
     left: { idle: ['weapon-axe-side'], idleFlip: true, walk: ['weapon-axe-side'], walkFlip: true },
   },
+  // Vara Reforçada — segundo tier de vara (ver equipmentDefs.js#biteBonus),
+  // mesma estrutura da vara-de-pescar acima, texturas próprias (visual
+  // diferenciado por uma faixa metálica de reforço).
+  'vara-reforcada': {
+    down: { idle: ['rod-reforcada-front'], walk: ['rod-reforcada-front'] },
+    up: { idle: ['rod-reforcada-back'], walk: ['rod-reforcada-back'] },
+    right: { idle: ['rod-reforcada-side'], idleFlip: false, walk: ['rod-reforcada-side'], walkFlip: false },
+    left: { idle: ['rod-reforcada-side'], idleFlip: true, walk: ['rod-reforcada-side'], walkFlip: true },
+  },
 };
 
 // Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md
@@ -149,7 +158,17 @@ export function generatePlaceholderAxeTextures(scene) {
   drawPlaceholderAxe(scene, 'weapon-axe-side', 18, 19, 15);
 }
 
-function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
+// PLACEHOLDER — mesmos anchors/ângulos da vara de pescar comum
+// (drawPlaceholderRod), só que com `reinforced: true` pra somar a faixa
+// metálica de reforço no meio da vareta — diferencia visualmente o tier 2
+// sem redesenhar a vara inteira.
+export function generatePlaceholderReinforcedRodTextures(scene) {
+  drawPlaceholderRod(scene, 'rod-reforcada-front', 19, 19, -8, true);
+  drawPlaceholderRod(scene, 'rod-reforcada-back', 12, 18, -8, true);
+  drawPlaceholderRod(scene, 'rod-reforcada-side', 18, 19, -4, true);
+}
+
+function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg, reinforced = false) {
   const size = PLACEHOLDER_CANVAS_SIZE;
   const canvas = document.createElement('canvas');
   canvas.width = size;
@@ -204,6 +223,20 @@ function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg) {
   ctx.moveTo(0, 9);
   ctx.lineTo(-2.2, 13);
   ctx.stroke();
+
+  // Faixa metálica de reforço no meio da vareta — único diferencial visual
+  // do tier 2 (vara-reforcada, ver equipmentDefs.js#biteBonus), pra não
+  // precisar de um desenho totalmente novo só pra "a mesma vara, melhor".
+  if (reinforced) {
+    ctx.strokeStyle = '#9aa0ab';
+    ctx.lineWidth = 1.3;
+    ctx.beginPath();
+    ctx.moveTo(-0.9, 4.5);
+    ctx.lineTo(0.9, 4.3);
+    ctx.stroke();
+    ctx.fillStyle = '#ced2da';
+    ctx.fillRect(-0.3, 4.1, 0.6, 0.8); // brilho na faixa
+  }
 
   ctx.restore();
 

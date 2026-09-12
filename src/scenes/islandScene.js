@@ -202,36 +202,30 @@ export default class IslandScene extends Phaser.Scene {
     // Hotbar — troca rápida do que está na mão sem abrir o Inventário,
     // clique OU tecla de número (1-4, layout/atalho de cada slot em
     // HOTBAR_SLOTS, ui/hud.js). O slot da espada reusa o mesmo toggle da
-    // tecla Q; os outros três (vara, arco, machado) avisam com um toast se
-    // ainda não foram fabricados, em vez de deixar clicar num slot
-    // "travado" sem feedback nenhum. Mesmo padrão repetido pros três — dá
-    // pra generalizar numa função só quando um quarto item equipável
-    // aparecer (YAGNI até lá).
-    const onHotbarRod = () => {
+    // tecla Q; os outros avisam com um toast se ainda não foram fabricados,
+    // em vez de deixar clicar num slot "travado" sem feedback nenhum.
+    // Generalizado numa fábrica de handler (antes era uma cópia quase
+    // idêntica por item — virou repetitivo demais assim que o quarto
+    // apareceu, vara reforçada).
+    const makeEquipHotbarHandler = (itemId, iconKey, itemLabelText) => () => {
       if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      if (!hasItem(this.state.inventory, 'vara-de-pescar')) {
-        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'pesca', 'Você ainda não tem uma vara de pescar — fabrique uma no Inventário.');
+      if (!hasItem(this.state.inventory, itemId)) {
+        showBlockedThrottled(this, 'lastHotbarBlockHintAt', iconKey, `Você ainda não tem ${itemLabelText} — fabrique em Inventário.`);
         return;
       }
-      handleEquip(this, 'vara-de-pescar');
+      handleEquip(this, itemId);
     };
-    const onHotbarArco = () => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      if (!hasItem(this.state.inventory, 'arco')) {
-        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'espada', 'Você ainda não tem um arco — fabrique um no Inventário.');
-        return;
-      }
-      handleEquip(this, 'arco');
+    const onHotbarRod = makeEquipHotbarHandler('vara-de-pescar', 'pesca', 'uma vara de pescar');
+    const onHotbarArco = makeEquipHotbarHandler('arco', 'espada', 'um arco');
+    const onHotbarMachado = makeEquipHotbarHandler('machado', 'sobrevivencia', 'um machado');
+    const onHotbarVaraReforcada = makeEquipHotbarHandler('vara-reforcada', 'pesca', 'uma vara reforçada');
+    const hotbarHandlers = {
+      sword: toggleSwordEquip,
+      rod: onHotbarRod,
+      arco: onHotbarArco,
+      machado: onHotbarMachado,
+      'vara-reforcada': onHotbarVaraReforcada,
     };
-    const onHotbarMachado = () => {
-      if (isEditorModeActive() || isMenuOpen() || isFishingActive()) return;
-      if (!hasItem(this.state.inventory, 'machado')) {
-        showBlockedThrottled(this, 'lastHotbarBlockHintAt', 'sobrevivencia', 'Você ainda não tem um machado — fabrique um no Inventário.');
-        return;
-      }
-      handleEquip(this, 'machado');
-    };
-    const hotbarHandlers = { sword: toggleSwordEquip, rod: onHotbarRod, arco: onHotbarArco, machado: onHotbarMachado };
     bindHotbar(hotbarHandlers);
     // Mesmos handlers do clique, só que pela tecla de número — nomes de
     // evento do Phaser pra dígitos são por extenso (KeyCodes.ONE = 49, ver
@@ -726,7 +720,11 @@ function refreshHotbar(scene) {
 
 function tryStartFishing(scene, targetPoint) {
   const player = scene.player;
-  if (scene.state.equipState.equippedLayerId !== 'vara-de-pescar') {
+  // Generalizado pra qualquer vara (ver equipmentDefs.js#canFish) — machado
+  // também é 'tool', então checar só `kind` deixaria pescar com ele por
+  // engano; `canFish` é o discriminador específico.
+  const rodDef = getEquipmentDef(scene.state.equipState.equippedLayerId);
+  if (!rodDef?.canFish) {
     return; // Se não tem vara equipada, não dá pra pescar — silencioso
   }
   if (!isNearWater(scene, player.x, player.y)) {
@@ -755,7 +753,7 @@ function tryStartFishing(scene, targetPoint) {
   const baitId = getBestBait(scene.state.inventory);
   playCast(scene, scene.weaponSprite);
   startFishingAttempt({
-    biteChance: getBiteChance(baitId),
+    biteChance: getBiteChance(baitId, scene.state.equipState.equippedLayerId),
     reactionMs: getReactionWindowMs(castQuality),
     maxWaitTicks: MAX_WAIT_TICKS,
     onBite: () => playBiteJitter(scene, scene.weaponSprite),

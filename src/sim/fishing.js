@@ -9,6 +9,7 @@
 //      arremesso perfeito não pesca sozinho; só facilita.
 import { ITEM_DEFS } from './itemDefs.js';
 import { getQuantity } from './inventory.js';
+import { getEquipmentDef } from './equipmentDefs.js';
 
 export const BAIT_BITE_CHANCE = {
   none: 0.08,
@@ -39,8 +40,14 @@ export function getBestBait(inventory) {
   return best;
 }
 
-export function getBiteChance(baitId) {
-  return BAIT_BITE_CHANCE[baitId ?? 'none'] ?? BAIT_BITE_CHANCE.none;
+// `equipLayerId` é a vara equipada (ver equipmentDefs.js#biteBonus) — soma
+// por cima da chance da isca, nunca passa de 100%. Sem vara reconhecida
+// (equipLayerId indefinido ou sem entrada em EQUIPMENT_DEFS), bônus é 0 —
+// mesma chance de hoje.
+export function getBiteChance(baitId, equipLayerId) {
+  const base = BAIT_BITE_CHANCE[baitId ?? 'none'] ?? BAIT_BITE_CHANCE.none;
+  const rodBonus = getEquipmentDef(equipLayerId)?.biteBonus ?? 0;
+  return Math.min(1, base + rodBonus);
 }
 
 export function getReactionWindowMs(castQuality) {

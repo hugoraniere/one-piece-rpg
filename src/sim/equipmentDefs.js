@@ -9,8 +9,15 @@
 // MELEE_RANGE quando definido (arco tem alcance maior). `skillKey` é a
 // perícia treinada a cada acerto (ver menuData.js).
 //
-// `kind: 'tool'` — participa de handleGather() perto de árvore.
-// `gatherMultiplier` multiplica a quantidade de graveto coletado.
+// `kind: 'tool'` — participa de handleGather() perto de árvore
+// (`gatherMultiplier`) e/ou de tryStartFishing() (`canFish`/`biteBonus`).
+// `canFish` marca ferramenta de pesca de verdade — sem isso, machado (que
+// também é 'tool') deixaria pescar por engano se tryStartFishing só
+// checasse `kind === 'tool'`. `biteBonus` soma direto na chance de mordida
+// de sim/fishing.js#getBiteChance, por cima do que a isca já dá — uma vara
+// melhor não muda a fórmula da isca, só melhora o "equipamento" por trás
+// dela (mesma separação de responsabilidade que já existia entre isca e
+// qualidade do arremesso, ver comentário no topo de fishing.js).
 export const EQUIPMENT_DEFS = {
   sword: {
     kind: 'weapon',
@@ -26,6 +33,16 @@ export const EQUIPMENT_DEFS = {
   machado: {
     kind: 'tool',
     gatherMultiplier: 2, // dobra o graveto por coleta perto de árvore
+  },
+  'vara-de-pescar': {
+    kind: 'tool',
+    canFish: true,
+    biteBonus: 0, // baseline — explícito (não implícito) pra deixar claro que é o "tier 1"
+  },
+  'vara-reforcada': {
+    kind: 'tool',
+    canFish: true,
+    biteBonus: 0.1, // +10 pontos percentuais de chance de mordida, por cima da isca
   },
 };
 

@@ -43,7 +43,7 @@ espada (commit `250acfb`).
 | Vara de Pescar | ✅ já existia | 2 | Pesca |
 | Arco Curto | ✅ pronto e testado | 3 | Dano à distância (4 + Força, alcance 160 vs 90 da espada), treina Arremesso |
 | Machado de Lenhador | ✅ pronto e testado | 4 | Dobra graveto coletado perto de árvore (tool, não ataca) |
-| Vara de Pescar (upgrade/tiers) | ⏳ não iniciado | — | Bônus de chance de mordida |
+| Vara Reforçada (tier 2) | ✅ pronto e testado | 5 | +10 pontos percentuais de chance de mordida (soma com a isca) |
 
 ## Log
 
@@ -64,7 +64,21 @@ espada (commit `250acfb`).
 
 O golpe de ataque do arco reaproveita a pose de IDLE da camada (sem frame de "puxar a corda") porque os frames de CORPO do golpe (`races.js`, PixelLab) foram desenhados especificamente pra um swing de espada — não existe animação de corpo pra arco ainda. Visualmente o personagem faz o swing de espada (frames do corpo) enquanto a camada do arco fica parada do lado. Corrigir isso exige gerar frames de corpo específicos via PixelLab (bloqueado, ver topo deste arquivo).
 
+## Vara Reforçada (tier 2 de pesca) — detalhes
+
+- `EQUIPMENT_DEFS['vara-de-pescar']`/`['vara-reforcada']` novos: `canFish: true` discrimina "essa ferramenta pesca" de "essa ferramenta só coleta" (machado é `kind: 'tool'` também, mas sem `canFish` — sem isso `tryStartFishing()` deixaria pescar com o machado equipado)
+- `getBiteChance(baitId, equipLayerId)` em `sim/fishing.js` ganhou o segundo parâmetro — soma `biteBonus` por cima da chance da isca, `Math.min(1, ...)` trava em 100%. Chamada sem `equipLayerId` (ou com item sem `biteBonus`) continua com o comportamento de antes — testado: `getBiteChance('minhoca')` sem segundo argumento = 0.4, igual sempre foi
+- `tryStartFishing()` generalizado de `equippedLayerId !== 'vara-de-pescar'` pra `!getEquipmentDef(...)?.canFish` — mesma generalização já aplicada em tryAttack/handleGather
+- Visual: reaproveita o desenho da vara comum (`drawPlaceholderRod`) com um parâmetro `reinforced` novo que soma uma faixa metálica — não duplica a função inteira só pra "a mesma vara, com um detalhe a mais"
+- Receita consome `ferro-bruto` (por isso o seed inicial subiu de 1 pra 2 — 1 pro machado, 1 pra essa) — `linha-de-nylon` (seed 2) e a vara comum (pré-requisito conceitual, mas NÃO um input da receita — são independentes) dividem o mesmo suprimento inicial sem faltar
+- Testado: matemática de `getBiteChance` confirmada por chamada direta (0.08→0.18 sem isca, 0.4→0.5 com minhoca), `canFish` confirmado por inspeção do objeto (machado não tem a propriedade), fabricação via `craft()` consumiu os materiais certos, equipar troca a textura pra `rod-reforcada-front` corretamente, hotbar slot 5 reflete posse/equipagem
+
+## Nota sobre o processo de teste desta sessão
+
+Por duas vezes, uma chamada JS no console (`window.__game.scene.scenes[1].state`) veio `undefined` por ~1 frame logo depois de mutar `equipState.equippedLayerId` diretamente ou trocar de aba do menu — não é um bug do jogo, é só a cena passando por um instante de re-render/HMR do Vite nesta sessão de browser de longa duração. Esperar ~1s e tentar de novo sempre resolveu; o inventário/progressão nunca se perdeu nesses momentos.
+
 ## Próximos itens (não iniciados nesta sessão)
 
-- Vara de pescar: tiers/upgrade com bônus de chance de mordida
-- Talvez uma segunda arma corpo-a-corpo (lança?) reaproveitando o padrão de `EQUIPMENT_DEFS`/`LAYER_DEFS` já estabelecido — adicionar um item novo agora é: 1 entrada em `ITEM_DEFS`, 1 em `LAYER_DEFS` (+ placeholder canvas), 1 em `EQUIPMENT_DEFS`, 1 em `RECIPES`, 1 em `HOTBAR_SLOTS` (se for pra hotbar) — o padrão está reutilizável
+- Talvez uma segunda arma corpo-a-corpo (lança?) reaproveitando o padrão já estabelecido — adicionar um item novo agora é: 1 entrada em `ITEM_DEFS`, 1 em `LAYER_DEFS` (+ placeholder canvas), 1 em `EQUIPMENT_DEFS`, 1 em `RECIPES`, 1 em `HOTBAR_SLOTS` (se for pra hotbar) — o padrão está reutilizável e agora tem 4 exemplos de referência (arco, machado, vara-reforçada, mais a espada original)
+- Considerar dar à `machado` também algum papel em combate (unequip → 'luta' desarmado já é `real: true` em menuData.js mas `tryAttack()` não permite ataque sem arma nenhuma — inconsistência PRÉ-EXISTENTE, não introduzida nesta sessão, mas vale nota pra quando alguém for mexer em combate desarmado)
+- Regressão geral: nenhuma rodada de teste completo (fabricar TODOS os itens numa run só, testar cada slot 1-5) foi feita depois da vara reforçada — vale uma passada final antes de considerar a sessão "pronta pra revisão"

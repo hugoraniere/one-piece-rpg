@@ -16,6 +16,12 @@ export const ITEM_DEFS = {
     category: 'ferramentas',
     equipLayerId: 'vara-de-pescar',
   },
+  'vara-reforcada': {
+    name: 'Vara Reforçada',
+    icon: '🎏',
+    category: 'ferramentas',
+    equipLayerId: 'vara-reforcada',
+  },
   arco: {
     name: 'Arco Curto',
     icon: '🏹',
