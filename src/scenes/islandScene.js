@@ -9,7 +9,7 @@ import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js'
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
-import { findNearestGroundItem, removeGroundItem, spawnGroundItem } from '../world/groundItems.js';
+import { collectGroundItem, findNearestGroundItem, spawnGroundItem, updateGroundItemHighlights } from '../world/groundItems.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
 import { getEquipmentDef } from '../sim/equipmentDefs.js';
 import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
@@ -420,6 +420,10 @@ export default class IslandScene extends Phaser.Scene {
     // Também sempre em dia — o respawn do boneco de treino não deveria travar
     // só porque o jogador abriu um menu (ver world/enemy.js).
     updateEnemy(this.enemy, delta);
+    // Liga/desliga o destaque dourado + nome dos itens no chão conforme o
+    // jogador entra/sai do alcance de apanhar (ver world/groundItems.js) —
+    // mesma ideia sempre-em-dia de cima, funciona mesmo parado num menu.
+    updateGroundItemHighlights(this);
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
@@ -604,6 +608,13 @@ function tryAttack(scene) {
 
   const damage = Math.round(MELEE_DAMAGE + weaponDef.damage + getForcaDamageBonus(scene.state.progression));
   damageEnemy(scene, enemy, damage);
+  logEvent('COMBAT', `Atacou ${enemy.enemyDef.name}`, { damage: `-${damage}` });
+
+  // Se inimigo morreu, registrar vitória
+  if (enemy.health <= 0) {
+    logEvent('COMBAT', `Derrotou ${enemy.enemyDef.name}`);
+  }
+
   scene.attackAnimTimer = ATTACK_DURATION_MS;
   trainAndNotify(scene, weaponDef.skillKey);
   trainAttributeAndNotify(scene, 'forca');
@@ -640,6 +651,7 @@ function handleSell(scene) {
   scene.state.berries += total;
   setBerries(scene.state.berries);
   spawnMoneyText(scene, scene.player.x, scene.player.y - 60, total);
+  logEvent('ITEM', `Vendeu ${count} item(ns)`, { berries: `+${total}` });
   const skillResult = trainAndNotify(scene, 'comercio');
   if (skillResult.leveledUp) spawnLevelUpText(scene, scene.player.x, scene.player.y - 76, 'Comércio');
 }
@@ -656,7 +668,9 @@ function handleGather(scene) {
   if (nearbyGroundItem) {
     addItem(scene.state.inventory, nearbyGroundItem.itemId, nearbyGroundItem.qty);
     spawnItemText(scene, scene.player.x, scene.player.y - 60, itemLabel(nearbyGroundItem.itemId, nearbyGroundItem.qty));
-    removeGroundItem(scene, nearbyGroundItem);
+    // Animado (pop + voa até o jogador encolhendo/sumindo), não some na
+    // hora — ver comentário de collectGroundItem em world/groundItems.js.
+    collectGroundItem(scene, nearbyGroundItem);
     return;
   }
 
@@ -696,7 +710,9 @@ function handleGather(scene) {
     const toolDef = getEquipmentDef(scene.state.equipState.equippedLayerId);
     const gatherQty = toolDef?.kind === 'tool' && toolDef.gatherMultiplier ? toolDef.gatherMultiplier : 1;
     addItem(inventory, 'graveto', gatherQty);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel('graveto', gatherQty));
+    const gavetoLabel = itemLabel('graveto', gatherQty);
+    spawnItemText(scene, player.x, player.y - 60, gavetoLabel);
+    logEvent('ITEM', `${gavetoLabel} coletado`);
     // Forrageamento (graveto/isca) treina Sobrevivência — ver menuData.js,
     // que até aqui dizia "sem forrageamento ainda". Separado de Caça
     // (minhoca, logo abaixo): forragear é achar o que já está largado por
@@ -708,7 +724,9 @@ function handleGather(scene) {
 
   if (isNearWater(scene, player.x, player.y)) {
     addItem(inventory, 'isca-improvisada', 1);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel('isca-improvisada', 1));
+    const iscaLabel = itemLabel('isca-improvisada', 1);
+    spawnItemText(scene, player.x, player.y - 60, iscaLabel);
+    logEvent('ITEM', `${iscaLabel} coletado`);
     const skillResult = trainAndNotify(scene, 'sobrevivencia');
     if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Sobrevivência');
     return;
@@ -716,10 +734,13 @@ function handleGather(scene) {
 
   if (Math.random() < MINHOCA_SUCCESS_CHANCE) {
     addItem(inventory, 'minhoca', 1);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel('minhoca', 1));
+    const minhojaLabel = itemLabel('minhoca', 1);
+    spawnItemText(scene, player.x, player.y - 60, minhojaLabel);
+    logEvent('ITEM', `${minhojaLabel} coletado`);
     const skillResult = trainAndNotify(scene, 'caca');
     if (skillResult.leveledUp) spawnLevelUpText(scene, player.x, player.y - 76, 'Caça');
   } else {
+    logEvent('ITEM', 'Falha ao caçar');
     spawnMissText(scene, player.x, player.y - 60, 'Não achou nada pra caçar.');
   }
 }
@@ -873,7 +894,9 @@ function handleFishingResult(scene, outcome, baitId) {
     const catchId = isJunk ? 'lixo-marinho' : fishing.fishItemId;
 
     addItem(scene.state.inventory, catchId, 1);
-    spawnItemText(scene, player.x, player.y - 60, itemLabel(catchId, 1));
+    const catchLabel = itemLabel(catchId, 1);
+    spawnItemText(scene, player.x, player.y - 60, catchLabel);
+    logEvent('ITEM', `Pescou ${catchLabel.toLowerCase()}`);
 
     // Berries direto na captura ainda é ponte temporária, igual a linha de
     // nylon de graça no create() — agora já existe comércio de verdade
@@ -892,9 +915,10 @@ function handleFishingResult(scene, outcome, baitId) {
   }
 
   const message = {
-    escapou: 'O peixe escapou...',
-    'nada-mordeu': 'Nada mordeu a isca.',
-    'cedo-demais': 'Você puxou cedo demais.',
+    escapou: 'Peixe escapou',
+    'nada-mordeu': 'Nada mordeu',
+    'cedo-demais': 'Puxou cedo',
   }[outcome];
+  logEvent('ITEM', message ?? 'Pesca falhou');
   spawnMissText(scene, player.x, player.y - 60, message ?? 'Nada aconteceu.');
 }
