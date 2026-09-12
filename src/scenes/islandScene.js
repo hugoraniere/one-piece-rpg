@@ -3,6 +3,7 @@ import { ATTACK_DURATION_MS, CAMERA_ZOOM, PLAYER_SPEED, RUN_SPEED, SHADOW_OFFSET
 import { createEnemy, damageEnemy, updateEnemy } from '../world/enemy.js';
 import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, updateCharacterVisual } from '../character/character.js';
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
+import { initCharacterManager } from '../character/characterManager.js';
 import { isEditorModeActive, panEditorCamera, resetEditorState, setupEditor } from '../editor/editorMode.js';
 import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js';
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
@@ -136,6 +137,10 @@ export default class IslandScene extends Phaser.Scene {
     this.shadow = shadow;
     setMinimapPos(this.player.x / this.islandConfig.worldWidth, this.player.y / this.islandConfig.worldHeight);
     this.animState = createAnimationState();
+
+    // ✨ CharacterManager — escalável outfit/layers sistema
+    this.characterManager = initCharacterManager({ player, shadow }, this);
+
     setHp(this.state.playerHealth.current, this.state.playerHealth.max);
     setBerries(this.state.berries);
 
