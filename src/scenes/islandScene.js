@@ -9,7 +9,7 @@ import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPo
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
-import { getCharacterLevel, getCharacterLevelProgress, getCharacterRank } from '../sim/characterLevel.js';
+import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
 import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, craft } from '../sim/crafting.js';
@@ -21,7 +21,7 @@ import {
   getBiteChance,
   getReactionWindowMs,
 } from '../sim/fishing.js';
-import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setCharacterLevel, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
+import { bindHotbar, bindMenuButtons, getHotbarSlotIdByShortcut, initHud, setBerries, setHotbarState, setHp, setMinimapPos } from '../ui/hud.js';
 import { isMenuOpen } from '../ui/menuManager.js';
 import { toggleCharacterMenu } from '../ui/characterMenu.js';
 import { toggleInventoryMenu } from '../ui/inventoryMenu.js';
@@ -138,7 +138,6 @@ export default class IslandScene extends Phaser.Scene {
     this.animState = createAnimationState();
     setHp(this.state.playerHealth.current, this.state.playerHealth.max);
     setBerries(this.state.berries);
-    setCharacterLevel(getCharacterLevel(this.state.progression), getCharacterLevelProgress(this.state.progression));
 
     // Camada de equipamento (arma/ferramenta) — ver EQUIPMENT_ASSETS_TODO.md
     // pro plano de trocar os placeholders pela arte de verdade. As texturas
@@ -513,10 +512,13 @@ function trainAttributeAndNotify(scene, key) {
 // Nível de PERSONAGEM (agregado de todas as perícias/atributos, ver
 // sim/characterLevel.js) — chamado de dentro de trainAndNotify/
 // trainAttributeAndNotify pra todo ponto que já treina algo participar
-// automaticamente, sem precisar mexer em cada um dos 7 call sites.
+// automaticamente, sem precisar mexer em cada um dos 7 call sites. Sem
+// chip fixo no HUD (removido — ficava grande demais e nem precisava estar
+// sempre visível, ver revisão de UX); o texto flutuante de nível já basta
+// como feedback no momento, e a Ficha de Personagem mostra o número/
+// patente completos sob demanda.
 function reportCharacterLevel(scene, levelBefore) {
   const level = getCharacterLevel(scene.state.progression);
-  setCharacterLevel(level, getCharacterLevelProgress(scene.state.progression));
   if (level > levelBefore) {
     const rank = getCharacterRank(level);
     spawnLevelUpText(scene, scene.player.x, scene.player.y - 100, `Nível ${level} — ${rank.name}`);

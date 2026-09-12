@@ -57,15 +57,11 @@ let hpFillEl;
 let hpNumEl;
 let berriesFrameEl;
 let berriesEl;
-let levelFrameEl;
-let levelFillEl;
-let levelLabelEl;
 let moodleTrayEl;
 let minimapDotEl;
 let hotbarEls = {};
 let lastHp = null;
 let lastBerries = null;
-let lastLevel = null;
 
 export function initHud() {
   injectMoodleIcons();
@@ -85,10 +81,6 @@ export function initHud() {
         <span class="hp-num" id="hud-hp-num"></span>
       </div>
       <div class="berries"><span class="coin"></span><span id="hud-berries">0</span></div>
-      <div class="level-frame">
-        <span class="level-label" id="hud-level-label">Nv. 1</span>
-        <div class="level-bar"><div class="level-fill" id="hud-level-fill"></div></div>
-      </div>
     </div>
     <div class="moodle-tray" id="hud-moodle-tray"></div>
     <div class="minimap-wrap">
@@ -127,9 +119,6 @@ export function initHud() {
   hpNumEl = overlay.querySelector('#hud-hp-num');
   berriesFrameEl = overlay.querySelector('.berries');
   berriesEl = overlay.querySelector('#hud-berries');
-  levelFrameEl = overlay.querySelector('.level-frame');
-  levelFillEl = overlay.querySelector('#hud-level-fill');
-  levelLabelEl = overlay.querySelector('#hud-level-label');
   moodleTrayEl = overlay.querySelector('#hud-moodle-tray');
   minimapDotEl = overlay.querySelector('#hud-minimap-dot');
   hotbarEls = {};
@@ -138,7 +127,6 @@ export function initHud() {
   });
   lastHp = null;
   lastBerries = null;
-  lastLevel = null;
 
   MOODLE_DEFS.forEach(({ key, severity, label }) => {
     const el = document.createElement('div');
@@ -171,17 +159,6 @@ export function setBerries(amount) {
   berriesEl.textContent = amount;
   if (lastBerries !== null && amount !== lastBerries) pulse(berriesFrameEl);
   lastBerries = amount;
-}
-
-// `level`/`progressPercent` vêm de sim/characterLevel.js — hud.js só
-// espelha, igual o resto do chip do topo esquerdo. Pulsa (mesma animação
-// dourada de "subiu de nível" que já existe) só quando o NÍVEL muda, não
-// a cada ação que só avança um pouco a barra.
-export function setCharacterLevel(level, progressPercent) {
-  levelLabelEl.textContent = `Nv. ${level}`;
-  levelFillEl.style.width = `${progressPercent}%`;
-  if (lastLevel !== null && level !== lastLevel) pulse(levelFrameEl);
-  lastLevel = level;
 }
 
 export function setMoodle(key, active) {
