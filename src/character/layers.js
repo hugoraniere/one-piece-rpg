@@ -86,6 +86,27 @@ export const LAYER_DEFS = {
     right: { idle: ['rod-reforcada-side'], idleFlip: false, walk: ['rod-reforcada-side'], walkFlip: false },
     left: { idle: ['rod-reforcada-side'], idleFlip: true, walk: ['rod-reforcada-side'], walkFlip: true },
   },
+  // Lança — arma (ver equipmentDefs.js), mesma limitação de placeholder do
+  // arco: o golpe reaproveita a pose de idle (sem frame de corpo dedicado
+  // pra estocada de lança, só existe pra espada via PixelLab).
+  lanca: {
+    down: { idle: ['weapon-lanca-front'], walk: ['weapon-lanca-front'], attack: ['weapon-lanca-front'] },
+    up: { idle: ['weapon-lanca-back'], walk: ['weapon-lanca-back'], attack: ['weapon-lanca-back'] },
+    right: {
+      idle: ['weapon-lanca-side'],
+      idleFlip: false,
+      walk: ['weapon-lanca-side'],
+      walkFlip: false,
+      attack: ['weapon-lanca-side'],
+    },
+    left: {
+      idle: ['weapon-lanca-side'],
+      idleFlip: true,
+      walk: ['weapon-lanca-side'],
+      walkFlip: true,
+      attack: ['weapon-lanca-side'],
+    },
+  },
 };
 
 // Mesmo tamanho dos frames reais do personagem (ver CHARACTER_ASSETS_TODO.md
@@ -166,6 +187,15 @@ export function generatePlaceholderReinforcedRodTextures(scene) {
   drawPlaceholderRod(scene, 'rod-reforcada-front', 19, 19, -8, true);
   drawPlaceholderRod(scene, 'rod-reforcada-back', 12, 18, -8, true);
   drawPlaceholderRod(scene, 'rod-reforcada-side', 18, 19, -4, true);
+}
+
+// PLACEHOLDER — empunhada ereta ao lado do corpo (mesmo espírito do arco:
+// uma lança vai na mão, não pendurada na cintura como a espada), cabo
+// longo de madeira com ponta metálica triangular pra cima.
+export function generatePlaceholderLancaTextures(scene) {
+  drawPlaceholderLanca(scene, 'weapon-lanca-front', 19, 19);
+  drawPlaceholderLanca(scene, 'weapon-lanca-back', 12, 18);
+  drawPlaceholderLanca(scene, 'weapon-lanca-side', 18, 19);
 }
 
 function drawPlaceholderRod(scene, key, gripX, gripY, angleDeg, reinforced = false) {
@@ -361,6 +391,46 @@ function drawPlaceholderSword(scene, key, hiltX, hiltY, angleDeg) {
   ctx.fillRect(0, 1, 1, 5);
   ctx.restore();
 
+  scene.textures.addCanvas(key, canvas);
+}
+
+function drawPlaceholderLanca(scene, key, gripX, gripY) {
+  const size = PLACEHOLDER_CANVAS_SIZE;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d');
+
+  ctx.save();
+  ctx.translate(gripX, gripY);
+
+  // Cabo longo de madeira, reto, vertical — vai da altura do quadril até
+  // acima da cabeça (uma lança é mais comprida que a vara/arco).
+  ctx.fillStyle = '#6b4423';
+  ctx.fillRect(-1, -14, 2, 20);
+  ctx.strokeStyle = '#000';
+  ctx.lineWidth = 0.5;
+  ctx.strokeRect(-1, -14, 2, 20);
+
+  // Ponta metálica triangular no topo
+  ctx.fillStyle = '#c4c8d1';
+  ctx.beginPath();
+  ctx.moveTo(0, -20);
+  ctx.lineTo(2.5, -13);
+  ctx.lineTo(-2.5, -13);
+  ctx.closePath();
+  ctx.fill();
+  ctx.strokeStyle = '#787e8a';
+  ctx.lineWidth = 0.5;
+  ctx.stroke();
+  ctx.fillStyle = '#eef1f5'; // friso de luz na ponta
+  ctx.fillRect(-0.5, -19, 1, 5);
+
+  // Faixa de couro amarrando a ponta ao cabo (detalhe de acabamento)
+  ctx.fillStyle = '#3b2415';
+  ctx.fillRect(-1.5, -13, 3, 1.5);
+
+  ctx.restore();
   scene.textures.addCanvas(key, canvas);
 }
 

@@ -26,6 +26,7 @@ const EQUIP_LABELS = {
   arco: 'Arco Curto',
   machado: 'Machado de Lenhador',
   'vara-reforcada': 'Vara Reforçada',
+  lanca: 'Lança de Caça',
 };
 const EQUIP_ICONS = {
   sword: '/assets/icons/sword.png',
@@ -33,6 +34,7 @@ const EQUIP_ICONS = {
   arco: '/assets/icons/arco.png',
   machado: '/assets/icons/machado.png',
   'vara-reforcada': '/assets/icons/vara-reforcada.png',
+  lanca: '/assets/icons/lanca.png',
 };
 function equippedLabel(equipState) {
   return EQUIP_LABELS[equipState.equippedLayerId] ?? 'Vazio';

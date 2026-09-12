@@ -35,69 +35,141 @@ Achei e corrigi uma regressão no início desta sessão: a tecla Q tinha sido
 ligada ao CharacterManager novo por engano, quebrando o equipar visual da
 espada (commit `250acfb`).
 
-## Itens planejados
+## Itens
 
 | Item | Status | Slot hotbar | Atributo principal |
 |---|---|---|---|
 | Espada (Cutlass de Ferro) | ✅ já existia | 1 (Q) | Dano corpo-a-corpo (5 + Força) |
-| Vara de Pescar | ✅ já existia | 2 | Pesca |
+| Vara de Pescar | ✅ já existia | 2 | Pesca (baseline) |
 | Arco Curto | ✅ pronto e testado | 3 | Dano à distância (4 + Força, alcance 160 vs 90 da espada), treina Arremesso |
 | Machado de Lenhador | ✅ pronto e testado | 4 | Dobra graveto coletado perto de árvore (tool, não ataca) |
 | Vara Reforçada (tier 2) | ✅ pronto e testado | 5 | +10 pontos percentuais de chance de mordida (soma com a isca) |
+| Lança de Caça | ✅ pronto e testado | 6 | Dano 6 (+1 sobre a espada), alcance 110 (entre espada e arco), treina Lanças/hastes |
 
-## Log
+## Sistema de atributos (fundação, reutilizável)
 
-- [x] Corrigida regressão do Q (CharacterManager → sistema real de equipState) — commit `250acfb`
-- [x] `src/sim/equipmentDefs.js` novo — tabela de atributos por equipLayerId (kind weapon/tool, damage, range, skillKey, gatherMultiplier)
-- [x] Generalizado `tryAttack()` pra ler de equipmentDefs — espada testada sem regressão (dano 5, treina 'espada')
-- [x] Generalizado o toast de "sem alvo" no clique pra qualquer arma (antes só checava 'sword')
-- [x] Generalizado `handleGather()` pra bônus de machado (testado: 1→2 graveto por coleta)
-- [x] Generalizada hotbar (`setHotbarState`/`HOTBAR_SLOTS`) pra checar posse por item via `itemId` — antes um único `hasRod` boolean quebraria com 2+ slots travados
-- [x] Item Arco: ITEM_DEFS + LAYER_DEFS (4 direções, placeholder canvas) + receita (graveto x2 + corda x1) + ícone (`assets/icons/arco.png`) + slot hotbar 3
-- [x] Item Machado: ITEM_DEFS + LAYER_DEFS (4 direções, placeholder canvas, sem 'attack' — é tool) + receita (graveto x1 + ferro-bruto x1) + ícone (`assets/icons/machado.png`) + slot hotbar 4
-- [x] Novos materiais `corda`/`ferro-bruto` seedados no inventário inicial (mesmo padrão de `linha-de-nylon`) — sem gather próprio ainda
-- [x] `equippedLabel()`/ícone do slot "Mão" no inventoryMenu.js generalizados (antes hardcoded só sword/vara)
-- [x] Perícia "Arremesso" virou `real: true` em menuData.js
-- [x] Testado no browser: fabricar os dois itens pela UI real, equipar pelo clique na hotbar, textura visual troca corretamente (`weapon-bow-front`/`weapon-axe-front`), dano do arco (4) menor que espada (5) mas sem regressão na espada, bônus de coleta do machado (2x) confirmado, skill correta treinada em cada caso (arremesso vs espada)
+`src/sim/equipmentDefs.js` — tabela central de "o que cada item FAZ quando
+equipado", por `equipLayerId`:
+- `kind: 'weapon'` → participa de `tryAttack()`: `damage` (soma ao dano
+  base), `range` (sobrescreve o alcance padrão), `skillKey` (perícia
+  treinada a cada acerto)
+- `kind: 'tool'` → `gatherMultiplier` (bônus de coleta perto de árvore) e/ou
+  `canFish`+`biteBonus` (participa de `tryStartFishing()`/`getBiteChance()`)
 
-## Limitação conhecida (não é bug)
+Adicionar um item NOVO agora segue um padrão fixo (6 exemplos de referência
+já existem): 1 entrada em `ITEM_DEFS` (catálogo/inventário), 1 em
+`LAYER_DEFS` + placeholder canvas em `layers.js` (visual), 1 em
+`EQUIPMENT_DEFS` (atributos), 1 em `RECIPES` (crafting.js), 1 em
+`HOTBAR_SLOTS` (hud.js, se for pra hotbar) + handler em `islandScene.js`
+(via `makeEquipHotbarHandler`), 1 par em `EQUIP_LABELS`/`EQUIP_ICONS`
+(inventoryMenu.js). Nenhum desses pontos precisou de generalização nova
+pra lança — a fundação criada pro arco/machado/vara reforçada já aguentou.
 
-O golpe de ataque do arco reaproveita a pose de IDLE da camada (sem frame de "puxar a corda") porque os frames de CORPO do golpe (`races.js`, PixelLab) foram desenhados especificamente pra um swing de espada — não existe animação de corpo pra arco ainda. Visualmente o personagem faz o swing de espada (frames do corpo) enquanto a camada do arco fica parada do lado. Corrigir isso exige gerar frames de corpo específicos via PixelLab (bloqueado, ver topo deste arquivo).
+## Generalizações feitas (eram hardcoded pra 'sword'/'vara-de-pescar')
 
-## Vara Reforçada (tier 2 de pesca) — detalhes
+- `tryAttack()`: lê `equipmentDefs` em vez de checar `=== 'sword'` — dano/
+  alcance/perícia vêm da tabela, sword mantém os valores originais (damage
+  0, MELEE_RANGE, 'espada') como referência/baseline
+- Toast de "sem alvo" no clique: qualquer `kind: 'weapon'`, não só espada
+- `handleGather()`: bônus de coleta lido de `equipmentDefs` (`gatherMultiplier`)
+- `tryStartFishing()`: `canFish` em vez de `=== 'vara-de-pescar'` hardcoded
+- `getBiteChance(baitId, equipLayerId)`: segundo parâmetro novo, soma
+  `biteBonus` por cima da isca — chamada sem ele mantém o comportamento
+  de sempre
+- Hotbar (`setHotbarState`/`HOTBAR_SLOTS`): trava de posse por `itemId`
+  por slot, não um `hasRod` boolean único (esse quebraria com 2+ slots
+  travados — bug que existiria se eu não tivesse generalizado antes do
+  segundo item novo)
+- `makeEquipHotbarHandler()` em islandScene.js: fábrica de handler
+  "equipa se tiver, avisa se não tiver" — evita copiar o mesmo bloco a
+  cada item novo (já eram 3 cópias quase idênticas antes de virar fábrica)
+- `equippedLabel()`/ícone do slot "Mão" (inventoryMenu.js): tabela
+  `EQUIP_LABELS`/`EQUIP_ICONS` em vez de ifs hardcoded
+- Perícias "Arremesso" e "Lanças/hastes" viraram `real: true` em
+  menuData.js (antes diziam "sem arma no jogo ainda")
 
-- `EQUIPMENT_DEFS['vara-de-pescar']`/`['vara-reforcada']` novos: `canFish: true` discrimina "essa ferramenta pesca" de "essa ferramenta só coleta" (machado é `kind: 'tool'` também, mas sem `canFish` — sem isso `tryStartFishing()` deixaria pescar com o machado equipado)
-- `getBiteChance(baitId, equipLayerId)` em `sim/fishing.js` ganhou o segundo parâmetro — soma `biteBonus` por cima da chance da isca, `Math.min(1, ...)` trava em 100%. Chamada sem `equipLayerId` (ou com item sem `biteBonus`) continua com o comportamento de antes — testado: `getBiteChance('minhoca')` sem segundo argumento = 0.4, igual sempre foi
-- `tryStartFishing()` generalizado de `equippedLayerId !== 'vara-de-pescar'` pra `!getEquipmentDef(...)?.canFish` — mesma generalização já aplicada em tryAttack/handleGather
-- Visual: reaproveita o desenho da vara comum (`drawPlaceholderRod`) com um parâmetro `reinforced` novo que soma uma faixa metálica — não duplica a função inteira só pra "a mesma vara, com um detalhe a mais"
-- Receita consome `ferro-bruto` (por isso o seed inicial subiu de 1 pra 2 — 1 pro machado, 1 pra essa) — `linha-de-nylon` (seed 2) e a vara comum (pré-requisito conceitual, mas NÃO um input da receita — são independentes) dividem o mesmo suprimento inicial sem faltar
-- Testado: matemática de `getBiteChance` confirmada por chamada direta (0.08→0.18 sem isca, 0.4→0.5 com minhoca), `canFish` confirmado por inspeção do objeto (machado não tem a propriedade), fabricação via `craft()` consumiu os materiais certos, equipar troca a textura pra `rod-reforcada-front` corretamente, hotbar slot 5 reflete posse/equipagem
+## Materiais novos e suprimento inicial
 
-## Nota sobre o processo de teste desta sessão
+`corda`/`ferro-bruto` seedados no inventário inicial (mesmo padrão de
+`linha-de-nylon`, que já existia) — sem gather próprio ainda, é suprimento
+fixo só pra dar pra fabricar cada item uma vez:
+- `corda`: 1 (usado só pelo arco)
+- `ferro-bruto`: 3 (machado, vara reforçada e lança usam 1 cada)
+- `linha-de-nylon`: 2 (vara comum e vara reforçada usam 1 cada — já existia)
 
-Por duas vezes, uma chamada JS no console (`window.__game.scene.scenes[1].state`) veio `undefined` por ~1 frame logo depois de mutar `equipState.equippedLayerId` diretamente ou trocar de aba do menu — não é um bug do jogo, é só a cena passando por um instante de re-render/HMR do Vite nesta sessão de browser de longa duração. Esperar ~1s e tentar de novo sempre resolveu; o inventário/progressão nunca se perdeu nesses momentos.
+`graveto` é o único material compartilhado entre TODAS as receitas, mas
+tem gather infinito (tecla G perto de árvore), então nunca é um limitador
+real.
 
-## Próximos itens (não iniciados nesta sessão)
+## Limitação visual conhecida (não é bug)
 
-- Talvez uma segunda arma corpo-a-corpo (lança?) reaproveitando o padrão já estabelecido — adicionar um item novo agora é: 1 entrada em `ITEM_DEFS`, 1 em `LAYER_DEFS` (+ placeholder canvas), 1 em `EQUIPMENT_DEFS`, 1 em `RECIPES`, 1 em `HOTBAR_SLOTS` (se for pra hotbar) — o padrão está reutilizável e agora tem 4 exemplos de referência (arco, machado, vara-reforçada, mais a espada original)
-- Considerar dar à `machado` também algum papel em combate (unequip → 'luta' desarmado já é `real: true` em menuData.js mas `tryAttack()` não permite ataque sem arma nenhuma — inconsistência PRÉ-EXISTENTE, não introduzida nesta sessão, mas vale nota pra quando alguém for mexer em combate desarmado)
-## Regressão completa (todos os itens juntos, do zero)
+O golpe de ataque de arco/lança reaproveita a pose de IDLE da camada (sem
+frame de "puxar a corda"/"estocar") porque os frames de CORPO do golpe
+(`races.js`, PixelLab) foram desenhados especificamente pra um swing de
+espada — não existe animação de corpo pra outras armas ainda. Visualmente
+o personagem faz o swing de espada (frames do corpo) enquanto a camada da
+arma equipada fica parada do lado. Corrigir isso exige gerar frames de
+corpo específicos via PixelLab (bloqueado, ver topo deste arquivo).
 
-Feita depois da vara reforçada: save resetado, os 4 itens fabricados na
-mesma run (sem conflito de material — `graveto` é o único compartilhado e
-tem gather infinito perto de árvore), cada equipLayerId testado:
+## Regressão completa (todos os 5 itens novos+existentes juntos, do zero)
 
-- Fabricação simultânea dos 4: todos `true`, inventário final consistente
-  (materiais raros zerados exatamente como esperado, nada sobrou nem faltou)
-- Dano: espada 5, arco 4 — mesmos valores de sempre, sem regressão
+Feita duas vezes (depois da vara reforçada, e de novo depois da lança):
+save resetado, todos os itens fabricados na mesma run (sem conflito de
+material), cada `equipLayerId` testado via chamada direta às funções
+reais do jogo (não só inspeção de dado):
+
+- Fabricação simultânea de vara-de-pescar/arco/machado/vara-reforçada/lança:
+  todos `true`, inventário final consistente (materiais raros zerados
+  exatamente como esperado, nada sobrou nem faltou)
+- Dano: espada 5, arco 4, lança 6 — cada um bate com `EQUIPMENT_DEFS`,
+  sem regressão entre eles
 - `machado.canFish` é `false` (não tem a propriedade) — não pesca, correto
-- Chance de mordida: vara comum 0.4, reforçada 0.5 (minhoca) — bônus
-  aplicado corretamente
-- Coleta perto de árvore: machado 2 graveto, espada (sem ferramenta) 1
-  graveto — multiplicador aplicado só quando deveria
+- Chance de mordida: vara comum 0.4, reforçada 0.5 (com minhoca) — bônus
+  aplicado corretamente, chamada sem vara equipada mantém 0.4 de sempre
+- Coleta perto de árvore: machado 2 graveto, sem ferramenta 1 graveto —
+  multiplicador aplicado só quando deveria
+- Textura visual troca corretamente pra cada equipLayerId (`weapon-bow-
+  front`, `weapon-axe-front`, `rod-reforcada-front`, `weapon-lanca-front`)
+- Hotbar reflete posse/equipagem corretamente nos 6 slots ativos (clique
+  real na UI, não só mutação direta de estado)
 - Nenhum erro no console em nenhum momento
 
-Sessão de itens equipáveis considerada **pronta pra revisão** — os 4 itens
-novos (arco, machado, vara reforçada) mais a base (espada, vara comum)
-funcionam de forma consistente e sem regressão entre si. Pendência real é
-só a arte de verdade via PixelLab (bloqueada, ver topo do arquivo).
+## Nota sobre o processo de teste desta sessão (não são bugs do jogo)
+
+- Por algumas vezes, uma chamada JS no console veio `undefined` por ~1
+  frame logo depois de mutar `equipState.equippedLayerId` diretamente ou
+  trocar de aba do menu — é a cena passando por um instante de re-render/
+  HMR do Vite nesta sessão de browser de longa duração. Esperar ~1s e
+  tentar de novo sempre resolveu; o inventário/progressão nunca se perdeu.
+- `await import('/src/ui/hud.js')` no console do browser cria uma
+  instância SEPARADA do módulo (com seu próprio `hotbarEls = {}` vazio,
+  nunca populado por `initHud()`) — chamar `setHotbarState` nela dá
+  `TypeError: Cannot read properties of undefined (reading 'classList')`.
+  Não é um bug do jogo: o HUD real (dentro da instância que o jogo já
+  roda) sempre funcionou corretamente quando testado via clique real na
+  UI ou via `window.__game.scene.scenes[1]`.
+
+## Estado final
+
+Sessão de itens equipáveis considerada **pronta pra revisão**. Seis itens
+equipáveis (espada, vara comum, arco, machado, vara reforçada, lança)
+funcionam de forma consistente e sem regressão entre si, cada um com
+atributos de gameplay reais (não só visual) e testado ponta a ponta
+(fabricar → equipar → usar → efeito correto). A fundação (`equipmentDefs.js`
++ generalizações) está reutilizável pra qualquer item futuro sem precisar
+tocar na lógica central de novo.
+
+Pendência real pra virar produto acabado: arte de verdade via PixelLab
+(bloqueada nesta sessão, precisa de API key numa sessão interativa) — os
+placeholders atuais são funcionais mas visualmente simples de propósito.
+
+## Ideias não iniciadas (próxima sessão, se fizer sentido)
+
+- Dar ao `machado` (ou a "sem arma nenhuma") algum papel em combate —
+  'luta' desarmado já é `real: true` em menuData.js mas `tryAttack()` não
+  permite ataque sem `kind: 'weapon'` equipado. Inconsistência
+  PRÉ-EXISTENTE (não introduzida nesta sessão), vale nota pra quando
+  alguém for mexer em combate desarmado.
+- Gather próprio pra `corda`/`ferro-bruto` (hoje é suprimento fixo de
+  boot) — só vira necessário se o jogo crescer pra precisar de mais de
+  uma unidade de cada item por partida.

@@ -219,12 +219,14 @@ export default class IslandScene extends Phaser.Scene {
     const onHotbarArco = makeEquipHotbarHandler('arco', 'espada', 'um arco');
     const onHotbarMachado = makeEquipHotbarHandler('machado', 'sobrevivencia', 'um machado');
     const onHotbarVaraReforcada = makeEquipHotbarHandler('vara-reforcada', 'pesca', 'uma vara reforçada');
+    const onHotbarLanca = makeEquipHotbarHandler('lanca', 'espada', 'uma lança');
     const hotbarHandlers = {
       sword: toggleSwordEquip,
       rod: onHotbarRod,
       arco: onHotbarArco,
       machado: onHotbarMachado,
       'vara-reforcada': onHotbarVaraReforcada,
+      lanca: onHotbarLanca,
     };
     bindHotbar(hotbarHandlers);
     // Mesmos handlers do clique, só que pela tecla de número — nomes de

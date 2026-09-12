@@ -3,6 +3,7 @@ import { generateShadowTexture } from '../character/character.js';
 import {
   generatePlaceholderAxeTextures,
   generatePlaceholderBowTextures,
+  generatePlaceholderLancaTextures,
   generatePlaceholderReinforcedRodTextures,
   generatePlaceholderRodTextures,
   generatePlaceholderWeaponTextures,
@@ -28,6 +29,7 @@ export default class BootScene extends Phaser.Scene {
     generatePlaceholderReinforcedRodTextures(this);
     generatePlaceholderBowTextures(this);
     generatePlaceholderAxeTextures(this);
+    generatePlaceholderLancaTextures(this);
     generatePlaceholderEnemyTexture(this);
     this.scene.start('island', { islandId: getPlayerState().currentIslandId });
   }

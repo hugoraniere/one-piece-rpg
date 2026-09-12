@@ -31,10 +31,10 @@ function buildInitialState() {
   return {
     // corda/ferro-bruto seguem o mesmo padrão da linha-de-nylon: suprimento
     // inicial fixo, sem coleta própria ainda (ver ITEMS_PROGRESS.md) — dá
-    // exatamente pra uma fabricação de cada item novo (arco, machado,
-    // vara reforçada — esta última soma mais 1 ferro-bruto ao machado,
-    // por isso 2 em vez de 1).
-    inventory: createInventory({ 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 2 }),
+    // exatamente pra uma fabricação de cada item novo (arco usa corda;
+    // machado, vara reforçada e lança usam ferro-bruto, por isso 3 em
+    // vez de 1).
+    inventory: createInventory({ 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
     berries: 0,
     progression: createProgression(),
     equipState,
@@ -93,7 +93,7 @@ function loadFromStorage() {
 
   const maxHp = saved.playerHealth?.max ?? PLAYER_MAX_HP;
   return {
-    inventory: createInventory(saved.inventory?.items ?? { 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 2 }),
+    inventory: createInventory(saved.inventory?.items ?? { 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
     berries: typeof saved.berries === 'number' ? saved.berries : 0,
     progression: mergeProgression(saved.progression),
     equipState,

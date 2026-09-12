@@ -28,6 +28,12 @@ export const ITEM_DEFS = {
     category: 'armas',
     equipLayerId: 'arco',
   },
+  lanca: {
+    name: 'Lança de Caça',
+    icon: '🔱',
+    category: 'armas',
+    equipLayerId: 'lanca',
+  },
   machado: {
     name: 'Machado de Lenhador',
     icon: '🪓',

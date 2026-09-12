@@ -30,6 +30,12 @@ export const EQUIPMENT_DEFS = {
     range: 160, // ...alcance bem maior (MELEE_RANGE é 90) — compensação de arma à distância sem sistema de projétil de verdade ainda
     skillKey: 'arremesso',
   },
+  lanca: {
+    kind: 'weapon',
+    damage: 1, // mais dano que a espada — compensa o alcance menor que o arco
+    range: 110, // meio-termo entre MELEE_RANGE (90, espada) e o arco (160) — alcance de haste, sem ser à distância de verdade
+    skillKey: 'lancas',
+  },
   machado: {
     kind: 'tool',
     gatherMultiplier: 2, // dobra o graveto por coleta perto de árvore

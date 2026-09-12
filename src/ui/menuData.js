@@ -65,7 +65,7 @@ export const COMBAT_SKILLS = [
   { key: 'espada', icon: 'espada', name: 'Espadas', real: true, trainedBy: 'Sobe acertando inimigos com a espada equipada.' },
   { key: 'armas-fogo', icon: 'armas-fogo', name: 'Armas de fogo', real: false, trainedBy: 'Sem arma de fogo no jogo ainda.' },
   { key: 'luta', icon: 'luta', name: 'Luta (desarmado)', real: true, trainedBy: 'Sobe acertando inimigos sem nenhuma arma equipada.' },
-  { key: 'lancas', icon: 'lancas', name: 'Lanças/hastes', real: false, trainedBy: 'Sem lança/haste no jogo ainda.' },
+  { key: 'lancas', icon: 'lancas', name: 'Lanças/hastes', real: true, trainedBy: 'Sobe acertando inimigos com a lança equipada.' },
   { key: 'arremesso', icon: 'arremesso', name: 'Arremesso', real: true, trainedBy: 'Sobe acertando inimigos com o arco equipado.' },
 ];
 

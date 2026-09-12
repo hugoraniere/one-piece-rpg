@@ -37,6 +37,14 @@ export const RECIPES = [
     ],
     output: { itemId: 'vara-reforcada', qty: 1 },
   },
+  {
+    id: 'lanca',
+    inputs: [
+      { itemId: 'graveto', qty: 2 },
+      { itemId: 'ferro-bruto', qty: 1 },
+    ],
+    output: { itemId: 'lanca', qty: 1 },
+  },
 ];
 
 export function canCraft(inventory, recipe) {
