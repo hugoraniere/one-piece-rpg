@@ -2,10 +2,10 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "one-piece-rpg",
+      "name": "one-piece-rpg-scalable",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev"],
-      "port": 8642,
+      "port": 8643,
       "autoPort": true
     }
   ]
