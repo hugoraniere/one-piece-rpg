@@ -36,6 +36,10 @@ export default class CursorScene extends Phaser.Scene {
     // mouse de verdade (ver isCursorMouseActive em world/cursor.js), pra um
     // toque em tela sensível nunca ver um cursor nascer do nada.
     this.image = this.add.image(-99, -99, 'cursor-normal').setOrigin(0, 0).setVisible(false).setDepth(1000);
+    // Posição desenhada de verdade — ver rawPointerMove logo abaixo pra
+    // saber por que não é só this.input.activePointer.
+    this.drawX = -99;
+    this.drawY = -99;
 
     this.input.on('pointermove', (pointer) => noteCursorPointer(pointer));
     this.input.on('pointerdown', (pointer) => {
@@ -49,6 +53,35 @@ export default class CursorScene extends Phaser.Scene {
     // o cursor fica "apertado" pra sempre.
     this.input.on('pointerup', () => setCursorPressed(false));
     this.input.on('pointerupoutside', () => setCursorPressed(false));
+
+    // O `this.input` do Phaser só recebe evento quando o ponteiro está POR
+    // CIMA DO CANVAS — um mousemove real do sistema operacional em cima de
+    // um painel de DOM (menu, HUD, baú — ui/*.css, todos com cursor:none
+    // desde que o cursor nativo foi escondido em tudo) nunca chega no
+    // canvas, porque o navegador entrega o evento pro elemento de DOM que
+    // está por cima, não pros irmãos embaixo dele (confirmado testando:
+    // um mousemove disparado direto no document não move
+    // this.input.activePointer nem um pixel). Sem isto, o cursor
+    // desenhado CONGELARIA no último ponto sobre o canvas assim que o
+    // mouse entrasse em qualquer menu — e como o nativo também está
+    // escondido lá, o jogador ficaria sem cursor NENHUM enquanto navega
+    // telas de UI. `window.addEventListener` pega o evento não importa
+    // que elemento esteja por baixo do dedo/mouse.
+    this.rawPointerMove = (event) => {
+      this.drawX = event.clientX;
+      this.drawY = event.clientY;
+      // 'mousemove' não tem pointerType (undefined) — só 'touch' de verdade
+      // conta como toque; qualquer outra coisa é tratada como mouse.
+      noteCursorPointer({ wasTouch: event.pointerType === 'touch' });
+    };
+    // Ambos: navegador real dispara os dois pra mouse de verdade (redundante
+    // mas inofensivo), e cobre o que só dispara um dos dois.
+    window.addEventListener('pointermove', this.rawPointerMove);
+    window.addEventListener('mousemove', this.rawPointerMove);
+    this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => {
+      window.removeEventListener('pointermove', this.rawPointerMove);
+      window.removeEventListener('mousemove', this.rawPointerMove);
+    });
   }
 
   // Único retorno visual de clique que existe no chão, onde não há botão
@@ -93,8 +126,11 @@ export default class CursorScene extends Phaser.Scene {
 
     const state = getCursorState();
     const hotspot = CURSOR_HOTSPOTS[state] ?? CURSOR_HOTSPOTS.normal;
-    const pointer = this.input.activePointer;
     const lift = state === 'sobre' ? HOVER_LIFT_PX : 0;
+    // this.drawX/Y (ver rawPointerMove em create()) em vez de
+    // this.input.activePointer — o canvas cobre o viewport 1:1 (mesma
+    // premissa de ui/nearbyLootPanel.js), então client X/Y de QUALQUER
+    // mousemove da janela já é pixel de canvas direto, sem descontar nada.
     // Posição arredondada ao pixel — coerente com pixelArt:true/roundPixels
     // do jogo (main.js): é o que faz o cursor ler como parte do jogo, não
     // como coisa do sistema operacional boiando por cima.
@@ -102,6 +138,6 @@ export default class CursorScene extends Phaser.Scene {
       .setVisible(true)
       .setTexture(`cursor-${state}`)
       .setAlpha(isCursorDimmed() ? 0.45 : 1)
-      .setPosition(Math.round(pointer.x) - hotspot.x, Math.round(pointer.y) - hotspot.y - lift);
+      .setPosition(Math.round(this.drawX) - hotspot.x, Math.round(this.drawY) - hotspot.y - lift);
   }
 }
