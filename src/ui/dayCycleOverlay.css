@@ -1,0 +1,16 @@
+/* Tingimento de céu do ciclo de dia (ver sim/dayCycle.js) — DOM, não objeto
+   de Phaser, de propósito: um Rectangle preso à câmera de IslandScene
+   herdaria o CAMERA_ZOOM (0.5, ver config.js) e cobriria só um quarto da
+   tela, no meio dela — o MESMO problema que o cursor customizado teve e que
+   foi resolvido com uma cena própria de zoom 1 (ver scenes/cursorScene.js).
+   Aqui a cor não precisa de pixel art nenhuma, então DOM evita o problema de
+   vez, no mesmo espírito do resto do HUD deste jogo (hud.css,
+   nearbyLootPanel.css). */
+.day-cycle-overlay {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  /* Acima do canvas (z-index implícito), abaixo do HUD de verdade (hud.css,
+     z-index 20) — o overlay tinge o MUNDO, nunca a vida/hotbar/moeda. */
+  z-index: 10;
+}

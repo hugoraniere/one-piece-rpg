@@ -94,6 +94,11 @@ function buildInitialState() {
     discoveredIslands: getDefaultDiscoveredIslands(),
     hotbarAssignments: createDefaultHotbarAssignments(),
     chestInventory: createInventory(createFullChestStock()),
+    // Ciclo de dia (ver sim/dayCycle.js) — minuto do dia simulado, 0 a 1439.
+    // Começa de manhã (minuto 360, ver PERIODS lá) em vez de 0 (madrugada),
+    // pra quem começa um save novo não abrir o jogo já no período mais
+    // escuro.
+    clockMinutes: 360,
   };
 }
 
@@ -155,6 +160,7 @@ function loadFromStorage() {
     discoveredIslands: mergeDiscoveredIslands(saved.discoveredIslands),
     hotbarAssignments: mergeHotbarAssignments(saved.hotbarAssignments),
     chestInventory: mergeChestInventory(saved.chestInventory),
+    clockMinutes: typeof saved.clockMinutes === 'number' ? saved.clockMinutes : 360,
   };
 }
 
@@ -171,6 +177,7 @@ function serialize(s) {
     discoveredIslands: s.discoveredIslands,
     hotbarAssignments: s.hotbarAssignments,
     chestInventory: s.chestInventory,
+    clockMinutes: s.clockMinutes,
   });
 }
 
