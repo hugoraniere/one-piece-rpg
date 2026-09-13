@@ -9,6 +9,7 @@ import {
   generatePlaceholderWeaponTextures,
 } from '../character/layers.js';
 import { generatePlaceholderEnemyTexture } from '../world/enemy.js';
+import { generateCursorTextures } from '../world/cursorTextures.js';
 import { getPlayerState } from '../state/playerState.js';
 
 // Roda uma vez só, ao ligar o jogo — não a cada troca de ilha (isso é
@@ -31,6 +32,12 @@ export default class BootScene extends Phaser.Scene {
     generatePlaceholderAxeTextures(this);
     generatePlaceholderLancaTextures(this);
     generatePlaceholderEnemyTexture(this);
+    generateCursorTextures(this);
+    // CursorScene roda em paralelo com a ilha (launch, não start — não pode
+    // parar quando a ilha reinicia via scene.restart ao trocar de mapa,
+    // senão o cursor sumiria a cada viagem). Lançada antes do start pra já
+    // estar ativa no primeiro frame da ilha.
+    this.scene.launch('cursor');
     this.scene.start('island', { islandId: getPlayerState().currentIslandId });
   }
 }
