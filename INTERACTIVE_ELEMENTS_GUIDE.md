@@ -189,7 +189,7 @@ barco/barraca (medidos em <1.5%) nunca precisaram de entrada.
 
 | Objeto  | Spawn config      | Range | Sprite pro destaque              | Trim de textura |
 |---------|-------------------|-------|-----------------------------------|------------------|
-| Baú     | `chestSpawn`      | 90    | `scene.chestSprite` (estado próprio) | closed 0.22, open 0.09 |
+| Baú     | `chestSpawn`      | 110   | `scene.chestSprite` (estado próprio) | closed 0.22, open 0.09 |
 | Barco   | `boatSpawn`       | 100   | `findPropSpriteAt` (coincide com o prop) | nenhum (< 1.5%) |
 | Mercado | `marketSpawn`     | 110   | `null` (fallback) — Portomares tem 2 barracas, spawn é o meio | n/a |
 

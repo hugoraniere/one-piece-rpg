@@ -50,7 +50,7 @@ import { FADE_MS, travelToIsland } from '../ui/sailingTransition.js';
 
 const BOAT_INTERACT_RANGE = 100; // pixels — perto o bastante do barco pra "G" abrir o mapa em vez de coletar
 const MARKET_INTERACT_RANGE = 110; // pixels — perto o bastante das barracas pra "G" vender em vez de coletar
-const CHEST_INTERACT_RANGE = 90; // pixels — perto o bastante do baú pra "G" abrir o menu dele em vez de coletar
+const CHEST_INTERACT_RANGE = 110; // pixels — perto o bastante do baú pra "G"/clique abrir o menu dele em vez de coletar (era 90, depois 140 — os dois extremos vieram de feedback direto: 90 exigia chegar perto demais, 140 deixava o alcance grande demais)
 
 // Escala do sprite do baú (ver createChestSprite) — calibrada igual o resto
 // dos props (ver comentário de defaultScale em propRegistry.js), só que
