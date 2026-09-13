@@ -111,9 +111,11 @@ function mountCharacterMenu(panel, progression) {
     panel.querySelectorAll('.char-page').forEach((p) => p.classList.toggle('active', p.dataset.page === btn.dataset.tab));
   });
 
-  panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    hideMenu();
-  });
+  // hideMenu() é o dono de verdade do backdrop (menuManager.js) — o
+  // elemento não tem ID nenhum, então buscar por getElementById('menu-
+  // backdrop-personagem') nunca achava nada e o clique não fazia nada
+  // (achado pelo usuário: "cliquei em fechar alguns modais e não fechou").
+  panel.querySelector('.menu-close')?.addEventListener('click', () => hideMenu());
 }
 
 export function toggleCharacterMenu(progression) {

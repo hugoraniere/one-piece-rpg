@@ -86,9 +86,11 @@ function mountChestMenu(panel, ctx) {
   addDragListeners(invCol, (itemId) => ctx.onMoveToChest(itemId));
   addDragListeners(chestCol, (itemId) => ctx.onMoveToInventory(itemId));
 
-  panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    hideMenu();
-  });
+  // hideMenu() é o dono de verdade do backdrop (menuManager.js) — o
+  // elemento não tem ID nenhum, então buscar por getElementById('menu-
+  // backdrop-bau') nunca achava nada e o clique não fazia nada (achado
+  // pelo usuário: "cliquei em fechar alguns modais e não fechou").
+  panel.querySelector('.menu-close')?.addEventListener('click', () => hideMenu());
 }
 
 // `onMoveToChest(itemId)`/`onMoveToInventory(itemId)` movem 1 unidade por
