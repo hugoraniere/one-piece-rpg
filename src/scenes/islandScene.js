@@ -973,8 +973,8 @@ const HIGHLIGHT_FALLBACK_WIDTH = 90;
 // colado nela. Só entram texturas com sobra grande o bastante pra
 // perceber (>3%) — barco/barraca medem <1.5%, não precisam de entrada.
 const HIGHLIGHT_VISUAL_BOTTOM_TRIM = {
-  'village-chest-closed': 0.16,
-  'village-chest-open': 0.05,
+  'village-chest-closed': 0.22,
+  'village-chest-open': 0.09,
 };
 
 // Lista de interagíveis pro destaque (ver updateInteractiveHighlight) —
