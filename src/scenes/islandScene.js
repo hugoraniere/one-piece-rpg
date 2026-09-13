@@ -5,7 +5,7 @@ import { createAnimationState, createPlayerCharacter, preloadCharacterAssets, up
 import { createLayerSprite, unequipLayer, updateLayerVisual, equipLayer } from '../character/layers.js';
 import { initCharacterManager } from '../character/characterManager.js';
 import { isEditorModeActive, panEditorCamera, resetEditorState, setupEditor } from '../editor/editorMode.js';
-import { buildVillageProps, resetEditorObjects } from '../world/propRegistry.js';
+import { buildVillageProps, editorObjects, resetEditorObjects } from '../world/propRegistry.js';
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
@@ -61,6 +61,23 @@ const CHEST_INTERACT_RANGE = 90; // pixels — perto o bastante do baú pra "G" 
 // não mais altura) — sem isso, trocar de estado dava um "pulo" de tamanho.
 const CHEST_SCALE_CLOSED = 0.14;
 const CHEST_SCALE_OPEN = 0.16;
+
+// Destaque de elementos interativos — a IDEIA veio do Reino de Aurora
+// (~/Desktop/reino-de-aurora-jogo/src/cenas/Mundo.ts#atualizarDestaque):
+// realçar sozinho o interagível mais perto dentro do alcance de ação,
+// pra sempre ficar óbvio o que dá pra usar sem precisar tentar. A TÉCNICA
+// de lá (8 cópias do próprio sprite, tingidas de sólido via setTintFill,
+// deslocadas 1px em cada direção pra formar um contorno) não funciona
+// aqui: setTintFill/setTint são recursos do renderer WEBGL, e este jogo
+// roda no renderer CANVAS (`type: Phaser.CANVAS`, ver main.js) — testado
+// direto no browser, confirmado que tint não tem NENHUM efeito nesse modo.
+// Adaptação: um brilho elíptico atrás do alvo (mesma peça/técnica da
+// sombra em world/groundItems.js — Ellipse.fillColor é preenchimento
+// sólido de verdade, não depende de tint de textura, funciona igual nos
+// dois renderers) pulsando enquanto o jogador está no alcance, dimensionado
+// pra caber embaixo de cada alvo (baú/barco/barraca têm tamanhos bem
+// diferentes entre si).
+const HIGHLIGHT_COLOR = 0xf2802b;
 const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
 const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
 
@@ -368,6 +385,9 @@ export default class IslandScene extends Phaser.Scene {
     buildVillageProps(this, this.player, this.islandConfig.props);
     this.chestSprite = createChestSprite(this);
     this.chestIsOpen = false;
+    // Brilho escondido, pronto pra se reposicionar/redimensionar sobre o
+    // interagível do momento (ver updateInteractiveHighlight).
+    this.highlightGlow = createHighlightGlow(this);
     buildPierDock(this);
     buildWaterCollision(this, this.player);
     setupEditor(this, this.player);
@@ -477,6 +497,7 @@ export default class IslandScene extends Phaser.Scene {
       // some junto — não faz sentido apanhar item enquanto o mundo tá
       // parado (ui/nearbyLootPanel.js).
       hideNearbyLootPanel();
+      hideInteractiveHighlight(this);
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -487,6 +508,7 @@ export default class IslandScene extends Phaser.Scene {
       // Parado olhando a água enquanto a barra de reação roda — ver o
       // pointerdown único que decide arremessar/fisgar conforme a fase.
       hideNearbyLootPanel();
+      hideInteractiveHighlight(this);
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -495,6 +517,7 @@ export default class IslandScene extends Phaser.Scene {
 
     if (isEditorModeActive()) {
       hideNearbyLootPanel();
+      hideInteractiveHighlight(this);
       this.player.body.setVelocity(0, 0);
       updateCharacterVisual(this.player, this.animState, delta, 'idle', this.facing);
       updateLayerVisual(this.weaponSprite, this.state.equipState, this.player, delta, 'idle', this.facing);
@@ -507,6 +530,11 @@ export default class IslandScene extends Phaser.Scene {
     // esconderam ela e voltaram). Clique num item da lista chama o mesmo
     // pickUpGroundItem que a tecla G usa.
     updateNearbyLootPanel(this, findNearbyGroundItems(this, this.player.x, this.player.y), (entry) => pickUpGroundItem(this, entry));
+    // Contorno laranja no interagível mais perto (baú/barco/barraca) — ver
+    // updateInteractiveHighlight. Mesmo lugar do fluxo que a caixa de itens
+    // próximos: só no jogo normal, os três "congela o mundo" acima já
+    // esconderam e voltaram.
+    updateInteractiveHighlight(this);
 
     if (this.attackAnimTimer > 0) {
       // Parado durante o golpe (ver tryAttack) — mesma ideia de "congela o
@@ -900,6 +928,127 @@ function handleMoveToInventory(scene, itemId) {
   removeItem(scene.state.chestInventory, itemId, 1);
   addItem(scene.state.inventory, itemId, 1);
   refreshHotbar(scene);
+}
+
+// Acha o prop DECORATIVO plantado nesta coordenada (ver
+// buildVillageProps/editorObjects em propRegistry.js) — usado por
+// getHighlightTargets pra achar o sprite de verdade do barco/barraca sem
+// precisar guardar mais uma referência solta na cena: eles já são só mais
+// um prop entre dezenas, então a mesma coordenada de boatSpawn/marketSpawn
+// (que handleGather já usa pra medir distância) encontra o sprite certo.
+function findPropSpriteAt(x, y) {
+  return editorObjects.find((img) => img.x === x && img.y === y);
+}
+
+// Tamanho do brilho quando NÃO existe um sprite exato pra copiar (ver
+// comentário de `sprite: null` logo abaixo) — próximo do footprint de uma
+// barraca de mercado, o caso que motivou isto.
+const HIGHLIGHT_FALLBACK_WIDTH = 90;
+
+// Lista de interagíveis pro destaque (ver updateInteractiveHighlight) —
+// cada entrada é um ponto que handleGather já trata como "G faz algo aqui
+// perto" (baú/barco/mercado), junto do ALCANCE que já existe pra ele. Só
+// entram os que a ilha atual realmente tem.
+function getHighlightTargets(scene) {
+  const targets = [];
+  if (scene.chestSprite) {
+    const { chestSprite } = scene;
+    targets.push({ x: chestSprite.x, y: chestSprite.y, sprite: chestSprite, range: CHEST_INTERACT_RANGE });
+  }
+  const boatSpawn = scene.islandConfig.boatSpawn;
+  if (boatSpawn) {
+    // sprite null é OK — updateInteractiveHighlight cai num tamanho
+    // padrão pro brilho quando isso acontece (ver HIGHLIGHT_FALLBACK_WIDTH).
+    targets.push({ x: boatSpawn.x, y: boatSpawn.y, sprite: findPropSpriteAt(boatSpawn.x, boatSpawn.y), range: BOAT_INTERACT_RANGE });
+  }
+  const marketSpawn = scene.islandConfig.marketSpawn;
+  if (marketSpawn) {
+    // Em Portomares o marketSpawn é o PONTO ENTRE duas barracas (ver
+    // marketSpawn/props em islands/portomares.js), não coincide com o
+    // sprite de nenhuma delas — sprite fica null aqui de propósito, o
+    // brilho nasce sem uma forma pra copiar e usa o tamanho padrão.
+    targets.push({ x: marketSpawn.x, y: marketSpawn.y, sprite: findPropSpriteAt(marketSpawn.x, marketSpawn.y), range: MARKET_INTERACT_RANGE });
+  }
+  return targets;
+}
+
+// Elipse achatada atrás do alvo — mesma peça/técnica da sombra dos itens no
+// chão (ver spawnGroundItem em world/groundItems.js), só maior e na cor de
+// destaque em vez de preto translúcido. Nasce escondida, com um pulso
+// contínuo (mesmo espírito do pulseTween de groundItems.js: alpha/escala
+// oscilando) já rodando — updateInteractiveHighlight só liga/desliga
+// visibilidade e reposiciona/redimensiona, nunca recria o tween.
+function createHighlightGlow(scene) {
+  const glow = scene.add.ellipse(0, 0, 10, 10, HIGHLIGHT_COLOR, 0.55);
+  // Traço grosso e praticamente opaco — achado em teste na praça de
+  // Portomares: terra/areia é da MESMA família de cor do laranja de
+  // destaque (ao contrário da grama, onde o preenchimento sozinho já lia
+  // bem), então o preenchimento translúcido quase sumia ali. O contorno
+  // sólido é o que garante leitura em QUALQUER chão por baixo, não só nos
+  // que contrastam por sorte.
+  glow.setStrokeStyle(3, HIGHLIGHT_COLOR, 1);
+  glow.setVisible(false);
+  // Pulso por ESCALA, não por alpha — fillAlpha/strokeAlpha ficam sempre
+  // no valor desenhado acima (a versão anterior animava `alpha` do
+  // GameObject, que MULTIPLICA em cima do fillAlpha/strokeAlpha já
+  // fixos: como o range do tween mal se afastava de 1, o pulso quase não
+  // aparecia, e ainda arriscava esvaziar o contraste que o traço sólido
+  // acabou de resolver). Mesmo espírito do pulseTween de
+  // groundItems.js — respirar de tamanho, nunca de opacidade.
+  scene.tweens.add({
+    targets: glow,
+    scaleX: 1.12,
+    scaleY: 1.12,
+    duration: 550,
+    yoyo: true,
+    repeat: -1,
+    ease: 'Sine.inOut',
+  });
+  return glow;
+}
+
+// Chamada todo frame (fluxo normal, ver update()) — acha o interagível mais
+// PERTO dentro do alcance DELE (cada um pode ter um alcance diferente, ao
+// contrário do Reino de Aurora, que usa um ALCANCE_ACAO único pra tudo) e
+// posiciona o brilho embaixo dele, do tamanho certo pra aquele alvo
+// específico (baú/barco/barraca não têm o mesmo tamanho); sem nenhum por
+// perto, esconde.
+function updateInteractiveHighlight(scene) {
+  let best = null;
+  let bestDist = Infinity;
+  for (const target of getHighlightTargets(scene)) {
+    const dist = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, target.x, target.y);
+    if (dist <= target.range && dist < bestDist) {
+      bestDist = dist;
+      best = target;
+    }
+  }
+  if (!best) {
+    hideInteractiveHighlight(scene);
+    return;
+  }
+  const sprite = best.sprite;
+  const width = sprite ? sprite.displayWidth * 0.95 : HIGHLIGHT_FALLBACK_WIDTH;
+  const height = width * 0.4;
+  const y = sprite ? sprite.y : best.y;
+  scene.highlightGlow
+    .setPosition(sprite ? sprite.x : best.x, y - height * 0.2)
+    .setSize(width, height)
+    // Depth fixo alto, não relativo ao alvo (era `alvo.depth - 1`, "atrás"
+    // dele) — achado em teste no mercado de Portomares: com duas barracas
+    // + caixotes/cestos por perto, várias peças da cena têm Y (logo,
+    // depth) maior que o do próprio marketSpawn e cobriam o brilho por
+    // cima, mesmo ele "tecnicamente" estando no lugar certo. Baú/barco
+    // (área mais vazia ao redor) nunca expunham esse problema. Mais alto
+    // que qualquer Y de mundo plausível, mais baixo que a animação de
+    // apanhar item (99999, ver collectGroundItem) — mistura pouco com um
+    // item sendo coletado bem ali, mas nunca some atrás de cenário.
+    .setDepth(90000)
+    .setVisible(true);
+}
+
+function hideInteractiveHighlight(scene) {
+  scene.highlightGlow?.setVisible(false);
 }
 
 // Sprite do baú no MUNDO — fora do pipeline genérico de props decorativos
