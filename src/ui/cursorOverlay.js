@@ -27,6 +27,9 @@ let rawY = -99;
 // (HUD, menu, tooltip) — ver render() logo abaixo pra saber por que isto
 // importa tanto quanto a posição.
 let isOverCanvas = false;
+// Se o elemento de DOM debaixo do ponteiro é um CONTROLE de verdade (botão,
+// slot) e não só o fundo vazio do menu/HUD — ver render().
+let isOverInteractiveUI = false;
 
 function ensureDom() {
   if (imgEl) return;
@@ -55,6 +58,21 @@ export function initCursorOverlay() {
     // CANVAS (mundo do jogo, cursor contextual vale) ou sobre um painel de
     // DOM (HUD, menu, tooltip — cursor contextual NÃO vale, ver render()).
     isOverCanvas = event.target?.tagName === 'CANVAS';
+    // `.hud-overlay`/`.nearby-loot-panel`/etc. têm `pointer-events: none`
+    // na RAIZ (ui/hud.css) — cada controle real opta de volta com
+    // `pointer-events: auto` individualmente, então o vão ENTRE ícones já
+    // deixa o evento vazar pro canvas por baixo sozinho (isOverCanvas vira
+    // true ali, e o cursor de contexto do mundo já faz sentido: dá pra ver
+    // o jogo por trás). A ÚNICA exceção é `.menu-backdrop` (menu.css) — o
+    // pano de fundo do modal PRECISA capturar clique em toda a área (fechar
+    // clicando fora), então não pode ser pointer-events:none, e vira alvo
+    // direto quando o mouse está sobre o fundo vazio dele, não sobre um
+    // botão. Por isso é o único caso que precisa de exclusão explícita: se
+    // o alvo é o BACKDROP em si (não um filho dele, como um botão ou
+    // slot), trata como vazio, não interativo.
+    isOverInteractiveUI = !isOverCanvas
+      && event.target
+      && !event.target.classList?.contains('menu-backdrop');
     // 'mousemove' não tem pointerType (undefined) — só 'touch' de verdade
     // conta como toque; qualquer outra coisa é tratada como mouse. Escuta
     // na WINDOW, não no canvas: um painel de DOM por cima do canvas nunca
@@ -99,9 +117,16 @@ function render() {
   // deixava o X de "bloqueado" preso na tela por cima da UI. `pressado`
   // (o achatado de clique) é a única exceção: faz sentido em qualquer
   // clique, mundo ou botão de UI, então esse continua valendo sempre.
+  //
+  // Sobre um CONTROLE de DOM (botão, slot — ver isOverInteractiveUI), vale
+  // o mesmo "sobre" dourado que o mundo já usa pra baú/interativo — achado
+  // pelo usuário: "Personagem (C)" com tooltip aberto e a seta continuava
+  // branca, sem reagir. Fundo vazio de menu continua seta normal.
   const worldState = getCursorState();
   const pressedState = worldState === 'clique';
-  const state = isOverCanvas || pressedState ? worldState : 'normal';
+  const state = isOverCanvas || pressedState
+    ? worldState
+    : isOverInteractiveUI ? 'sobre' : 'normal';
   const dimmed = isOverCanvas && isCursorDimmed();
 
   const src = CURSOR_DATA_URLS[`cursor-${state}`];
