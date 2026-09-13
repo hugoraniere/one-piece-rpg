@@ -1,4 +1,4 @@
-import { toggleMenu } from './menuManager.js';
+import { hideMenu, toggleMenu } from './menuManager.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, canCraft } from '../sim/crafting.js';
 import { getQuantity } from '../sim/inventory.js';
@@ -231,9 +231,11 @@ function mountInventoryMenu(panel, ctx) {
     });
   });
 
-  panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    document.getElementById('menu-backdrop-inventario')?.classList.remove('show');
-  });
+  // hideMenu() é o dono de verdade do backdrop (menuManager.js) — o
+  // elemento não tem ID nenhum, então buscar por getElementById('menu-
+  // backdrop-inventario') nunca achava nada e o clique não fazia nada
+  // (achado pelo usuário: "cliquei em fechar alguns modais e não fechou").
+  panel.querySelector('.menu-close')?.addEventListener('click', () => hideMenu());
 }
 
 // Confirmação de "isso acabou de acontecer" sem precisar de um toast por

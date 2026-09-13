@@ -1,5 +1,5 @@
 import './chestMenu.css';
-import { toggleMenu } from './menuManager.js';
+import { hideMenu, toggleMenu } from './menuManager.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 
 // Baú — guarda/retira item livremente, sem filtro de categoria nem limite de
@@ -86,9 +86,11 @@ function mountChestMenu(panel, ctx) {
   addDragListeners(invCol, (itemId) => ctx.onMoveToChest(itemId));
   addDragListeners(chestCol, (itemId) => ctx.onMoveToInventory(itemId));
 
-  panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    document.getElementById('menu-backdrop-bau')?.classList.remove('show');
-  });
+  // hideMenu() é o dono de verdade do backdrop (menuManager.js) — o
+  // elemento não tem ID nenhum, então buscar por getElementById('menu-
+  // backdrop-bau') nunca achava nada e o clique não fazia nada (achado
+  // pelo usuário: "cliquei em fechar alguns modais e não fechou").
+  panel.querySelector('.menu-close')?.addEventListener('click', () => hideMenu());
 }
 
 // `onMoveToChest(itemId)`/`onMoveToInventory(itemId)` movem 1 unidade por

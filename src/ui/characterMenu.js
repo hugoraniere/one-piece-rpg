@@ -1,4 +1,4 @@
-import { toggleMenu } from './menuManager.js';
+import { hideMenu, toggleMenu } from './menuManager.js';
 import { ATTRIBUTES, COMBAT_SKILLS, OFICIO_SKILLS } from './menuData.js';
 import { ACTIONS_PER_LEVEL, SKILL_MAX_LEVEL, getProgressPercent } from '../sim/progression.js';
 import { getCharacterLevel, getCharacterLevelProgress, getCharacterRank } from '../sim/characterLevel.js';
@@ -111,9 +111,11 @@ function mountCharacterMenu(panel, progression) {
     panel.querySelectorAll('.char-page').forEach((p) => p.classList.toggle('active', p.dataset.page === btn.dataset.tab));
   });
 
-  panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    document.getElementById('menu-backdrop-personagem')?.classList.remove('show');
-  });
+  // hideMenu() é o dono de verdade do backdrop (menuManager.js) — o
+  // elemento não tem ID nenhum, então buscar por getElementById('menu-
+  // backdrop-personagem') nunca achava nada e o clique não fazia nada
+  // (achado pelo usuário: "cliquei em fechar alguns modais e não fechou").
+  panel.querySelector('.menu-close')?.addEventListener('click', () => hideMenu());
 }
 
 export function toggleCharacterMenu(progression) {
