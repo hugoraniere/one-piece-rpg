@@ -709,16 +709,15 @@
   image-rendering: pixelated;
 }
 
-/* Névoa de "não descoberto" — NÃO é um overlay escuro/translúcido (isso
-   lia como sombra em cima do mapa). É pergaminho liso e opaco, sem tinta
-   nem manchas, na MESMA cor base do papel — a área revelada mostra o
-   pergaminho detalhado (parchment_bg.png, com manchas/hachura); a área
-   ainda não visitada é só o papel em branco por baixo, como se o
-   cartógrafo ainda não tivesse desenhado aquele pedaço da carta. */
-.map-fog {
+/* Halo de água — o background de verdade vem inline (ver buildOceanHalos
+   em mapMenu.js): uma lista de radial-gradient, uma por ilha JÁ
+   DESCOBERTA. Estilo Civilization — a área revelada acompanha o que o
+   jogador visitou, não uma névoa decorativa numa posição fixa. Fora dos
+   círculos não tem nada pintado aqui, então o pergaminho (parchment_bg.png
+   no .menu-panel.map-mode) aparece por baixo normalmente. */
+.map-ocean {
   position: absolute;
   inset: 0;
-  background: radial-gradient(circle at 45% 45%, transparent 0, transparent 150px, #e8d9b0 260px);
 }
 
 /* Rotas de navegação — linha tracejada tipo tinta entre a ilha atual e cada
@@ -752,7 +751,7 @@
 .map-unknown-island {
   position: absolute;
   width: 44px;
-  filter: grayscale(0.4) brightness(0.75);
+  filter: grayscale(1) brightness(0.75);
   opacity: 0.6;
 }
 /* Silhueta desconhecida que tem uma ilha de verdade por trás (ver
@@ -761,12 +760,13 @@
    dá pra perceber "isso aqui reage", sem entregar o que é antes de zarpar. */
 .map-unknown-travelable {
   cursor: pointer;
-  filter: grayscale(0.15) brightness(0.9);
+  filter: grayscale(1) brightness(0.95);
   opacity: 0.85;
-  transition: transform 0.15s ease, opacity 0.15s ease;
+  transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
 }
 .map-unknown-travelable:hover {
   opacity: 1;
+  filter: grayscale(0.5) brightness(1.05);
   transform: scale(1.1);
 }
 
@@ -807,7 +807,14 @@
   font-size: 11px;
   font-weight: 600;
   color: #2b1b12;
-  text-shadow: 0 1px 0 rgba(255, 248, 227, 0.6);
+  /* Halo claro nas 4 direções, não só embaixo — o nome fica tanto em cima
+     do pergaminho claro quanto do halo de água azul (.map-ocean), então
+     precisa de contorno de verdade pra continuar legível nos dois. */
+  text-shadow:
+    -1px 0 rgba(245, 235, 208, 0.9),
+    1px 0 rgba(245, 235, 208, 0.9),
+    0 -1px rgba(245, 235, 208, 0.9),
+    0 1px rgba(245, 235, 208, 0.9);
   white-space: nowrap;
 }
 /* Ilha já descoberta, mas não é onde o jogador está agora — clicável pra
@@ -820,11 +827,12 @@
   cursor: pointer;
 }
 .map-island-travelable .map-island-art {
+  filter: grayscale(1);
   transition: transform 0.15s ease, filter 0.15s ease;
 }
 .map-island-travelable:hover .map-island-art {
   transform: scale(1.08);
-  filter: brightness(1.12) drop-shadow(0 0 6px rgba(230, 198, 110, 0.7));
+  filter: grayscale(0.35) brightness(1.1) drop-shadow(0 0 6px rgba(230, 198, 110, 0.7));
 }
 .map-caption {
   display: flex;
