@@ -1,5 +1,5 @@
 import './chestMenu.css';
-import { toggleMenu } from './menuManager.js';
+import { hideMenu, toggleMenu } from './menuManager.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 
 // Baú — guarda/retira item livremente, sem filtro de categoria nem limite de
@@ -87,7 +87,7 @@ function mountChestMenu(panel, ctx) {
   addDragListeners(chestCol, (itemId) => ctx.onMoveToInventory(itemId));
 
   panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    document.getElementById('menu-backdrop-bau')?.classList.remove('show');
+    hideMenu();
   });
 }
 

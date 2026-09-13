@@ -156,4 +156,40 @@ export const ITEM_DEFS = {
     iconPath: '/assets/icons/lixo-marinho.png',
     description: 'Objeto descartado encontrado na pesca',
   },
+  // Itens novos (leva de arte "Pack de assets 0") — só catálogo/ícone por
+  // enquanto: sem equipLayerId (não existe arte de camada pro personagem
+  // pra escudo/capacete ainda, ver character/layers.js) e sem mecânica de
+  // uso (poção não cura, escudo/capacete não dão defesa — não existe
+  // sistema de defesa/consumo no jogo ainda). Aparecem no baú/inventário e
+  // são vendíveis; sellPrice é placeholder, sem balanceamento real.
+  escudo: {
+    name: 'Escudo de Madeira',
+    icon: '🛡️',
+    category: 'armas',
+    iconPath: '/assets/icons/escudo.png',
+    description: 'Escudo reforçado com metal — ainda sem efeito ao equipar',
+  },
+  'pocao-vida': {
+    name: 'Poção de Vida',
+    icon: '🧪',
+    category: 'comida',
+    sellPrice: 10,
+    iconPath: '/assets/icons/pocao-vida.png',
+    description: 'Frasco de líquido vermelho — ainda sem efeito ao usar',
+  },
+  capacete: {
+    name: 'Capacete de Ferro',
+    icon: '🪖',
+    category: 'armas',
+    iconPath: '/assets/icons/capacete.png',
+    description: 'Proteção de cabeça — ainda sem efeito ao equipar',
+  },
+  'bolsa-moedas': {
+    name: 'Bolsa de Moedas',
+    icon: '💰',
+    category: 'materiais',
+    sellPrice: 15,
+    iconPath: '/assets/icons/bolsa-moedas.png',
+    description: 'Saco de moedas encontrado por aí — vale Berries se vendido',
+  },
 };

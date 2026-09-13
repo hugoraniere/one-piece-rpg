@@ -1,4 +1,4 @@
-import { toggleMenu } from './menuManager.js';
+import { hideMenu, toggleMenu } from './menuManager.js';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
 import { RECIPES, canCraft } from '../sim/crafting.js';
 import { getQuantity } from '../sim/inventory.js';
@@ -232,7 +232,7 @@ function mountInventoryMenu(panel, ctx) {
   });
 
   panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    document.getElementById('menu-backdrop-inventario')?.classList.remove('show');
+    hideMenu();
   });
 }
 

@@ -1,4 +1,4 @@
-import { toggleMenu } from './menuManager.js';
+import { hideMenu, toggleMenu } from './menuManager.js';
 import { ATTRIBUTES, COMBAT_SKILLS, OFICIO_SKILLS } from './menuData.js';
 import { ACTIONS_PER_LEVEL, SKILL_MAX_LEVEL, getProgressPercent } from '../sim/progression.js';
 import { getCharacterLevel, getCharacterLevelProgress, getCharacterRank } from '../sim/characterLevel.js';
@@ -112,7 +112,7 @@ function mountCharacterMenu(panel, progression) {
   });
 
   panel.querySelector('.menu-close')?.addEventListener('click', () => {
-    document.getElementById('menu-backdrop-personagem')?.classList.remove('show');
+    hideMenu();
   });
 }
 
