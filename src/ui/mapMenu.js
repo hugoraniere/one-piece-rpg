@@ -1,6 +1,19 @@
 import { hideMenu, toggleMenu } from './menuManager.js';
 import { ISLANDS } from '../world/islands/index.js';
 
+// Arte pixel art de cada ilha (ver tools/gen_map_assets.py) — uma
+// ilustração própria por ilha, refletindo o tema dela (porto, vila,
+// floresta, pântano), não mais um blob de CSS genérico. Ilha sem entrada
+// aqui (não deveria acontecer, mas por segurança) cai no genérico.
+const ISLAND_ART = {
+  'vila-do-mastro-partido': 'island-vila-do-mastro-partido.png',
+  portomares: 'island-portomares.png',
+  'floresta-sussurro': 'island-floresta-sussurro.png',
+  'pantano-ronco': 'island-pantano-ronco.png',
+};
+const UNKNOWN_ART = 'island-unknown.png';
+const MAP_ART_DIR = '/assets/map';
+
 // Mapa de viagem de verdade — antes disto era quase-total placeholder (só
 // linguagem visual: pergaminho, névoa, silhuetas nunca clicáveis, ver
 // histórico do arquivo). Agora mostra as ilhas REALMENTE descobertas
@@ -14,16 +27,20 @@ import { ISLANDS } from '../world/islands/index.js';
 // visitadas — mesma ideia visual de antes ("sabe que tem mais mundo lá
 // fora"), só que agora o número de silhuetas encolhe conforme o jogador
 // descobre lugares de verdade.
+// Tops ficam <=60% pra sobrar espaço pro label (abaixo da arte) antes da
+// faixa da legenda (.map-caption, fixa no rodapé do painel) — um slot mais
+// baixo que isso faz o texto entrar embaixo da legenda (já aconteceu com
+// Floresta Sussurro no slot 2 antes desse ajuste).
 const KNOWN_SLOTS = [
-  { top: '45%', left: '45%' },
-  { top: '16%', left: '78%' },
-  { top: '76%', left: '20%' },
-  { top: '58%', left: '68%' },
+  { top: '42%', left: '45%' },
+  { top: '14%', left: '78%' },
+  { top: '58%', left: '16%' },
+  { top: '54%', left: '68%' },
 ];
 const UNKNOWN_SLOTS = [
-  { top: '12%', left: '13%' },
-  { top: '80%', left: '85%' },
-  { top: '48%', left: '92%' },
+  { top: '10%', left: '13%' },
+  { top: '68%', left: '85%' },
+  { top: '46%', left: '92%' },
 ];
 
 // Contexto da ilha atual — setado toda vez que o mapa abre (ver
@@ -64,6 +81,25 @@ function renderCaption(panel) {
   });
 }
 
+function pct(value) {
+  return parseFloat(value);
+}
+
+// Linhas de rota tracejadas, tipo tinta, ligando a ilha atual (sempre slot
+// 0) a cada outra ilha já descoberta no mapa — reforça a leitura de "carta
+// de navegação" em vez de ícones soltos no vazio. `viewBox="0 0 100 100"`
+// deixa a matemática em % direta (cada slot já é dado em %).
+function buildRoutesHtml(knownCount) {
+  if (knownCount < 2) return '';
+  const origin = KNOWN_SLOTS[0];
+  const lines = [];
+  for (let i = 1; i < knownCount; i++) {
+    const dest = KNOWN_SLOTS[i] ?? KNOWN_SLOTS[KNOWN_SLOTS.length - 1];
+    lines.push(`<line x1="${pct(origin.left)}" y1="${pct(origin.top)}" x2="${pct(dest.left)}" y2="${pct(dest.top)}" />`);
+  }
+  return `<svg class="map-routes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">${lines.join('')}</svg>`;
+}
+
 function buildMapHtml() {
   const others = context.discoveredIslands.filter((id) => id !== context.currentIslandId);
   const knownIds = [context.currentIslandId, ...others];
@@ -73,10 +109,11 @@ function buildMapHtml() {
       const island = ISLANDS[id];
       const pos = KNOWN_SLOTS[i] ?? KNOWN_SLOTS[KNOWN_SLOTS.length - 1];
       const isCurrent = id === context.currentIslandId;
+      const art = ISLAND_ART[id] ?? UNKNOWN_ART;
       return `
         <div class="map-island${isCurrent ? '' : ' map-island-travelable'}" data-island-id="${id}" style="top:${pos.top};left:${pos.left}">
-          <div class="map-island-shape"></div>
-          ${isCurrent ? '<svg class="map-ship" aria-hidden="true"><use href="#i-navio"></use></svg>' : ''}
+          <img class="map-island-art" src="${MAP_ART_DIR}/${art}" alt="" />
+          ${isCurrent ? `<img class="map-ship" src="${MAP_ART_DIR}/ship.png" alt="" />` : ''}
           <span class="map-island-label">${island.name}</span>
         </div>`;
     })
@@ -95,29 +132,23 @@ function buildMapHtml() {
       const targetId = undiscoveredIds[i];
       const travelable = targetId ? ' map-unknown-travelable' : '';
       const dataAttr = targetId ? ` data-island-id="${targetId}"` : '';
-      return `<div class="map-unknown-island${travelable}"${dataAttr} style="top:${pos.top};left:${pos.left}"></div>`;
+      return `<img class="map-unknown-island${travelable}"${dataAttr} src="${MAP_ART_DIR}/${UNKNOWN_ART}" alt="" style="top:${pos.top};left:${pos.left}" />`;
     })
     .join('');
 
   return `
     <div class="map-header">
       <span class="menu-title">Mapa</span>
-      <span class="menu-hint">Esc ou M fecha</span>
+      <div class="map-header-right">
+        <span class="menu-hint">Esc ou M fecha</span>
+        <button type="button" class="map-close" data-action="close" aria-label="Fechar mapa">×</button>
+      </div>
     </div>
-    <div class="map-chart-lines"></div>
     <div class="map-fog"></div>
+    ${buildRoutesHtml(knownIds.length)}
     ${islandsHtml}
     ${unknownHtml}
-    <svg class="map-compass" viewBox="0 0 40 40" aria-hidden="true">
-      <g fill="none" stroke="currentColor" stroke-width="1.2">
-        <circle cx="20" cy="20" r="17" opacity="0.5" />
-        <path d="M20 4 L23 18 L20 20 L17 18 Z" fill="currentColor" stroke="none" />
-        <path d="M20 36 L23 22 L20 20 L17 22 Z" fill="currentColor" stroke="none" opacity="0.6" />
-        <path d="M4 20 L18 17 L20 20 L18 23 Z" fill="currentColor" stroke="none" opacity="0.6" />
-        <path d="M36 20 L22 17 L20 20 L22 23 Z" fill="currentColor" stroke="none" opacity="0.6" />
-      </g>
-      <text x="20" y="12" font-size="5" fill="currentColor" text-anchor="middle">N</text>
-    </svg>
+    <img class="map-compass" src="${MAP_ART_DIR}/compass.png" alt="" />
     <div class="map-caption" id="map-caption"></div>
   `;
 }
@@ -127,6 +158,8 @@ function mountMapMenu(panel) {
   pendingDestinationId = null;
   panel.innerHTML = buildMapHtml();
   renderCaption(panel);
+
+  panel.querySelector('.map-close').addEventListener('click', () => hideMenu());
 
   panel.querySelectorAll('.map-island-travelable, .map-unknown-travelable').forEach((el) => {
     el.addEventListener('click', () => {
