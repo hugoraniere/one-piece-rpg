@@ -174,6 +174,11 @@ export function updateGroundItemHighlights(scene) {
 // Chamada todo frame (ver update() em islandScene.js), igual
 // updateGroundItemHighlights — barato mesmo com muitos itens no chão,
 // mesma conta de distância que o resto do arquivo já faz.
+//
+// Devolve true quando reclamou o cursor (item sob o ponteiro) — quem chama
+// (islandScene.js) só deixa o cursor "andar"/"bloqueado" do clique-pra-andar
+// assumir quando isto devolve false, senão a mãozinha perderia pro cursor
+// de chão vazio embaixo dela.
 export function updateGroundItemCursor(scene) {
   const pointer = scene.input.activePointer;
   const world = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
@@ -187,12 +192,10 @@ export function updateGroundItemCursor(scene) {
     }
   }
   scene.hoveredGroundItem = nearest;
-  if (!nearest) {
-    setCursorState('normal');
-    return;
-  }
+  if (!nearest) return false;
   const inRange = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, nearest.x, nearest.y) <= PICKUP_RANGE;
   setCursorState('pegar', { dimmed: !inRange });
+  return true;
 }
 
 // Remoção instantânea, sem animação — usada por collectGroundItem no

@@ -7,6 +7,7 @@ import { initCharacterManager } from '../character/characterManager.js';
 import { isEditorModeActive, panEditorCamera, resetEditorState, setupEditor } from '../editor/editorMode.js';
 import { buildVillageProps, editorObjects, resetEditorObjects } from '../world/propRegistry.js';
 import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPoint, preloadTerrainPaletteAssets } from '../world/ground.js';
+import { setCursorState } from '../world/cursor.js';
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import {
@@ -19,6 +20,8 @@ import {
   updateGroundItemHighlights,
 } from '../world/groundItems.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
+import { advanceClock, currentSkyColor } from '../sim/dayCycle.js';
+import { updateDayCycleOverlay } from '../ui/dayCycleOverlay.js';
 import { getEquipmentDef } from '../sim/equipmentDefs.js';
 import { getCharacterLevel, getCharacterRank } from '../sim/characterLevel.js';
 import { addItem, getQuantity, hasItem, removeItem } from '../sim/inventory.js';
@@ -82,6 +85,12 @@ const CHEST_SCALE_OPEN = 0.16;
 const HIGHLIGHT_COLOR = 0xf2802b;
 const MELEE_RANGE = 90; // pixels — mesma ordem de grandeza de GATHER_TREE_RANGE
 const MELEE_DAMAGE = 5; // valor fixo por enquanto — sem sistema de dano de verdade ainda (combate real é projeto futuro à parte)
+
+// Clique-pra-andar (ver pointerdown e o bloco de movimento em update()) —
+// sem A*, o heroi anda em linha reta até o ponto clicado.
+const WALK_TARGET_ARRIVE_DIST = 4; // pixels — perto o bastante de chegar, evita tremer tentando encostar no pixel exato
+const WALK_STUCK_CHECK_MS = 300; // intervalo entre conferências de "avançou desde a última vez?"
+const WALK_STUCK_MIN_PROGRESS_PX = 10; // bem abaixo do que PLAYER_SPEED cobre num intervalo desses andando livre — só acusa travamento de verdade
 
 const FISH_REWARD = 8; // Berries por peixe fisgado — valor de referência, fácil de reequilibrar
 
@@ -156,6 +165,14 @@ export default class IslandScene extends Phaser.Scene {
 
     // Estado que é OK (e correto) resetar a cada troca de ilha/restart.
     this.facing = 'down'; // 'up' | 'down' | 'left' | 'right'
+    // Clique-pra-andar (ver pointerdown abaixo e o bloco de movimento em
+    // update()) — ponto de mundo pra onde o heroi está indo em linha reta.
+    // null quando parado/andando só de teclado. Sem A*: se o clique cair do
+    // outro lado de alguma coisa sólida (árvore, água, prop), o heroi esbarra
+    // e desiste sozinho (ver walkStuckMs) em vez de empurrar pra sempre.
+    this.walkTarget = null;
+    this.walkStuckCheckAt = 0;
+    this.walkStuckCheckPos = null;
     this.treePositions = [];
     // Itens largados no chão (ver world/groundItems.js) — sem persistência
     // entre troca de ilha/reload de propósito (ver comentário no módulo):
@@ -164,7 +181,6 @@ export default class IslandScene extends Phaser.Scene {
     this.lastGatherAt = -Infinity;
     this.lastGatherBlockHintAt = -Infinity;
     this.lastFishBlockHintAt = -Infinity;
-    this.lastAttackBlockHintAt = -Infinity;
     this.lastHotbarBlockHintAt = -Infinity;
     this.lastSellBlockHintAt = -Infinity;
     this.lastChestBlockHintAt = -Infinity;
@@ -347,13 +363,18 @@ export default class IslandScene extends Phaser.Scene {
         if (getFishingPhase() === 'mordida') releaseFishingAttempt();
         return;
       }
+      // Recalcula o hover NA HORA do clique, não confia só no valor do
+      // último update() (ver updateGroundItemCursor em world/groundItems.js):
+      // entre o ponteiro chegar num lugar novo e o próximo frame rodar existe
+      // uma folga de até um frame, e um clique mirado bem em cima do item não
+      // pode perder o alvo só por causa dessa folga.
+      updateGroundItemCursor(this);
       // O cursor virou uma mãozinha sobre este item bem porque ele está ao
-      // alcance (ver updateGroundItemCursor em world/groundItems.js,
-      // chamado todo frame) — clicar nele apanha direto, mesma ação que a
-      // tecla G e a caixa de itens próximos já fazem, só que mirada. Se o
-      // ponteiro está sobre um item fora de alcance, o cursor mostra a mão
-      // apagada e o clique aqui NÃO apanha — cai pro resto da função (ataque
-      // ou pesca), porque a cena não prometeu nada sobre esse item.
+      // alcance — clicar nele apanha direto, mesma ação que a tecla G e a
+      // caixa de itens próximos já fazem, só que mirada. Se o ponteiro está
+      // sobre um item fora de alcance, o cursor mostra a mão apagada e o
+      // clique aqui NÃO apanha — cai pro resto da função (ataque, pesca ou
+      // andar), porque a cena não prometeu nada sobre esse item.
       if (this.hoveredGroundItem) {
         const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.hoveredGroundItem.x, this.hoveredGroundItem.y);
         if (dist <= PICKUP_RANGE) {
@@ -365,19 +386,48 @@ export default class IslandScene extends Phaser.Scene {
       // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
       if (tryAttack(this)) return;
       // Arma equipada mas SEM alvo (longe demais, ou nem existe boneco por
-      // perto) — não é uma tentativa de pesca, então não pode cair no
-      // tryStartFishing só porque não é 'vara-de-pescar': isso mostrava
-      // "Você precisa de uma vara equipada" pra quem tinha uma ARMA na mão,
-      // uma mensagem sobre o item errado (achado em revisão de bug pelo
-      // usuário). Mesmo padrão de aviso com cooldown já usado pra pesca/
-      // coleta, só que pro contexto de ataque. Generalizado pra qualquer
-      // arma (não só espada) via equipmentDefs — arco cai aqui também.
-      const equippedWeaponDef = getEquipmentDef(this.state.equipState.equippedLayerId);
-      if (equippedWeaponDef?.kind === 'weapon') {
-        showBlockedThrottled(this, 'lastAttackBlockHintAt', 'espada', 'Ninguém por perto pra atacar.');
+      // perto): antes do clique-pra-andar existir, isso mostrava "Ninguém
+      // por perto pra atacar" porque não havia mais nada útil a fazer com o
+      // clique. Agora tem — cai pro "ande até aqui" (mesmo destino de
+      // sempre, ver comentário abaixo), e uma vez perto o suficiente, o
+      // PRÓXIMO clique já vira golpe de verdade via tryAttack acima.
+      const equippedDef = getEquipmentDef(this.state.equipState.equippedLayerId);
+      // Vara equipada reclama o clique inteiro (mira/acerta água/erra —
+      // tryStartFishing já decide tudo isso sozinho, incluindo os próprios
+      // avisos). Só cai pro "ande até aqui" quando NADA mais quis o clique —
+      // sem vara, tryStartFishing não fazia nada com ele mesmo antes.
+      if (equippedDef?.canFish) {
+        tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
         return;
       }
-      tryStartFishing(this, { x: pointer.worldX, y: pointer.worldY });
+      // Clique-pra-andar: sem pathfinding, é linha reta até o ponto — o
+      // heroi esbarra e desiste sozinho se algo sólido atravessar o caminho
+      // (ver walkStuckMs no update()). Reinicia o relógio de "travou" a cada
+      // clique novo, senão um alvo antigo herdaria o tempo já acumulado.
+      this.walkTarget = { x: pointer.worldX, y: pointer.worldY };
+      this.walkStuckCheckAt = 0;
+      this.walkStuckCheckPos = null;
+    });
+
+    // Hover genérico "sobre" (mão dourada, ver world/cursor.js) pra QUALQUER
+    // objeto que chame setInteractive() na cena — hoje só o baú
+    // (createChestSprite), mas serve de graça pra qualquer interativo
+    // futuro, sem precisar marcar cada um na mão. Prioridade mais alta que
+    // o cursor "andar"/"bloqueado" do clique-pra-andar (ver
+    // this.hoveringInteractive gatekeeping updateWalkCursor em update()),
+    // igual a mãozinha de item do chão já faz.
+    //
+    // NENHUM objeto interativo desta cena deve usar `useHandCursor: true`
+    // (ver createChestSprite) — o cursor nativo do Phaser e o nosso
+    // desenhado apareceriam os DOIS ao mesmo tempo, sobrepostos (achado
+    // testando o baú depois dele ganhar clique direto no sprite).
+    this.hoveringInteractive = false;
+    this.input.on('gameobjectover', () => {
+      this.hoveringInteractive = true;
+      setCursorState('sobre');
+    });
+    this.input.on('gameobjectout', () => {
+      this.hoveringInteractive = false;
     });
 
     const { worldWidth, worldHeight } = this.islandConfig;
@@ -509,7 +559,20 @@ export default class IslandScene extends Phaser.Scene {
     // Cursor contextual "pegar"/"pegar apagado" (ver world/groundItems.js e
     // world/cursor.js) — mesma ideia sempre-em-dia de cima: o cursor deve
     // continuar reagindo ao que está embaixo dele mesmo com um menu aberto.
-    updateGroundItemCursor(this);
+    // Sem item sob o ponteiro, e sem estar sobre outro interativo da cena
+    // (baú, ver this.hoveringInteractive em create()), sobra pro cursor
+    // "andar"/"bloqueado" do clique-pra-andar (ver updateWalkCursor) —
+    // prioridade sempre mãozinha de item > mãozinha genérica > andar/bloqueado,
+    // nunca dois ao mesmo tempo.
+    if (!updateGroundItemCursor(this) && !this.hoveringInteractive) updateWalkCursor(this);
+    // Ciclo de dia (ver sim/dayCycle.js) — mesma ideia sempre-em-dia de
+    // cima: o relógio do mundo não devia parar só porque um menu abriu.
+    // Overlay é DOM (ui/dayCycleOverlay.js), não objeto de Phaser: um
+    // Rectangle preso à câmera herdaria o CAMERA_ZOOM (0.5) e cobriria só um
+    // quarto da tela — mesmo problema que o cursor customizado teve.
+    advanceClock(delta);
+    const { color, alpha } = currentSkyColor();
+    updateDayCycleOverlay(color, alpha);
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
@@ -578,11 +641,42 @@ export default class IslandScene extends Phaser.Scene {
     if (up) vy -= 1;
     if (down) vy += 1;
 
-    // Normaliza diagonal pra não andar mais rápido na diagonal
-    if (vx !== 0 && vy !== 0) {
-      const norm = Math.SQRT1_2;
-      vx *= norm;
-      vy *= norm;
+    if (vx !== 0 || vy !== 0) {
+      // Teclado sempre vence — "cancelar é sagrado": qualquer direção
+      // apertada corta o clique-pra-andar na hora, o jogador nunca fica
+      // "levado" pro lugar errado.
+      this.walkTarget = null;
+      // Normaliza diagonal pra não andar mais rápido na diagonal
+      if (vx !== 0 && vy !== 0) {
+        const norm = Math.SQRT1_2;
+        vx *= norm;
+        vy *= norm;
+      }
+    } else if (this.walkTarget) {
+      const target = this.walkTarget;
+      const dx = target.x - this.player.x;
+      const dy = target.y - this.player.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= WALK_TARGET_ARRIVE_DIST) {
+        this.walkTarget = null;
+      } else {
+        vx = dx / dist;
+        vy = dy / dist;
+        // Desiste sozinho se travar (árvore, água, prop) — sem A*, é linha
+        // reta até o ponto, então esbarrar é esperado. Confere a cada
+        // WALK_STUCK_CHECK_MS se o heroi avançou o mínimo esperado desde a
+        // última conferência; se não, larga o alvo em silêncio, igual o
+        // "desiste sozinho" do Reino de Aurora (docs/interface-do-mouse.md).
+        this.walkStuckCheckAt += delta;
+        if (this.walkStuckCheckAt >= WALK_STUCK_CHECK_MS) {
+          if (this.walkStuckCheckPos) {
+            const advanced = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.walkStuckCheckPos.x, this.walkStuckCheckPos.y);
+            if (advanced < WALK_STUCK_MIN_PROGRESS_PX) this.walkTarget = null;
+          }
+          this.walkStuckCheckAt = 0;
+          this.walkStuckCheckPos = { x: this.player.x, y: this.player.y };
+        }
+      }
     }
 
     // Corrida — segurar Shift (this.cursors.shift já vem de graça do
@@ -759,6 +853,23 @@ function handleSell(scene) {
   logEvent('ITEM', `Vendeu ${count} item(ns)`, { berries: `+${total}` });
   const skillResult = trainAndNotify(scene, 'comercio');
   if (skillResult.leveledUp) spawnLevelUpText(scene, scene.player.x, scene.player.y - 76, 'Comércio');
+}
+
+// Cursor do clique-pra-andar — "andar" (bota) sobre chão livre, "bloqueado"
+// (X) sobre água. Só roda quando updateGroundItemCursor (world/groundItems.js)
+// não reclamou o cursor pra si (ver a chamada em update()) — a mãozinha de um
+// item sempre ganha da bota/X do chão vazio embaixo dela.
+//
+// Aproximação de propósito: só considera água como "não dá pra pisar" —
+// árvores, o baú e outros props sólidos também bloqueiam de verdade (ver
+// buildWaterCollision/buildVillageProps), mas não têm uma checagem de ponto
+// tão barata quanto isWaterPoint. O clique continua funcionando certo nesses
+// casos (o heroi esbarra e desiste sozinho, ver WALK_STUCK_CHECK_MS) — só o
+// CURSOR não avisa antes. Refinar aqui se um dia isso incomodar de verdade.
+function updateWalkCursor(scene) {
+  const pointer = scene.input.activePointer;
+  const world = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+  setCursorState(isWaterPoint(scene, world.x, world.y) ? 'bloqueado' : 'andar');
 }
 
 // Compartilhado entre a tecla G (pega o mais perto, ver handleGather
@@ -1131,7 +1242,12 @@ function createChestSprite(scene) {
   // handler global de pointerdown da cena (ataque/pesca, ver create()) —
   // sem isso, clicar no baú também tentaria atacar ou arremessar a vara
   // na mesma tacada.
-  sprite.setInteractive({ useHandCursor: true });
+  //
+  // SEM `useHandCursor` de propósito — o cursor customizado (ver
+  // world/cursor.js, hover genérico "gameobjectover" em create()) já cobre
+  // isso com a mãozinha dourada; o cursor nativo do Phaser ficaria
+  // desenhado por cima do nosso, os dois ao mesmo tempo.
+  sprite.setInteractive();
   sprite.on('pointerdown', (pointer, localX, localY, event) => {
     event.stopPropagation();
     if (isEditorModeActive() || isFishingActive()) return;
