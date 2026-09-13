@@ -1048,22 +1048,27 @@ function updateInteractiveHighlight(scene) {
     return;
   }
   const sprite = best.sprite;
-  const width = sprite ? sprite.displayWidth * 0.95 : HIGHLIGHT_FALLBACK_WIDTH;
-  const height = width * 0.4;
+  // Menor e mais junto da base — achado em revisão: a versão anterior
+  // (95% da largura, deslocada pra cima) ficava um disco grande flutuando
+  // solto perto do objeto, não "embaixo" dele de verdade. Mais raso e
+  // centrado bem no pé (mesma coordenada que o próprio sprite usa de
+  // origem, ver setOrigin(0.5,1) em createChestSprite) fica mais parecido
+  // com uma sombra grudada, não um selo por cima.
+  const width = sprite ? sprite.displayWidth * 0.7 : HIGHLIGHT_FALLBACK_WIDTH * 0.7;
+  const height = width * 0.35;
+  const x = sprite ? sprite.x : best.x;
   const y = sprite ? sprite.y : best.y;
   scene.highlightGlow
-    .setPosition(sprite ? sprite.x : best.x, y - height * 0.2)
+    .setPosition(x, y)
     .setSize(width, height)
-    // Depth fixo alto, não relativo ao alvo (era `alvo.depth - 1`, "atrás"
-    // dele) — achado em teste no mercado de Portomares: com duas barracas
-    // + caixotes/cestos por perto, várias peças da cena têm Y (logo,
-    // depth) maior que o do próprio marketSpawn e cobriam o brilho por
-    // cima, mesmo ele "tecnicamente" estando no lugar certo. Baú/barco
-    // (área mais vazia ao redor) nunca expunham esse problema. Mais alto
-    // que qualquer Y de mundo plausível, mais baixo que a animação de
-    // apanhar item (99999, ver collectGroundItem) — mistura pouco com um
-    // item sendo coletado bem ali, mas nunca some atrás de cenário.
-    .setDepth(90000)
+    // Atrás do objeto (depth do alvo menos um pouco), não na frente — era
+    // fixo bem alto (90000) antes, resolvia o mercado de Portomares (ver
+    // git blame) mas cobria o baú/barco por cima, o que ficava pior que o
+    // problema original. Void em troca: no mercado (duas barracas +
+    // caixotes por perto) o brilho pode ficar parcialmente atrás de algum
+    // objeto mais "na frente" na cena — mesmo critério de profundidade que
+    // qualquer outra coisa no jogo, não um caso especial.
+    .setDepth((sprite ? sprite.depth : y) - 1)
     .setVisible(true);
 }
 
