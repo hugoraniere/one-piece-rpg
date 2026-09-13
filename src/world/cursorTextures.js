@@ -224,6 +224,14 @@ function paintRing(radius, thickness = 1) {
   return canvas;
 }
 
+// Data URL de cada quadro, por chave (ex. "cursor-normal") — usado pelo
+// cursor de DOM (ver ui/cursorOverlay.js) em vez da textura de Phaser,
+// porque o canvas do jogo NUNCA consegue desenhar por cima de um painel de
+// UI (HUD, menu, tooltip): são camadas de DOM separadas, com stacking
+// context próprio, e um <div> sempre vence um <canvas> embaixo dele não
+// importa o depth interno do Phaser. Populado por generateCursorTextures().
+export const CURSOR_DATA_URLS = {};
+
 function registerTexture(scene, key, gridCanvas) {
   const final = document.createElement('canvas');
   final.width = FINAL;
@@ -231,6 +239,7 @@ function registerTexture(scene, key, gridCanvas) {
   const ctx = final.getContext('2d');
   ctx.imageSmoothingEnabled = false; // ampliação em blocos, não borrada — mesmo espírito de pixelArt:true do config do jogo (ver main.js)
   ctx.drawImage(gridCanvas, 0, 0, CELL, CELL, 0, 0, FINAL, FINAL);
+  CURSOR_DATA_URLS[key] = final.toDataURL();
   if (scene.textures.exists(key)) scene.textures.remove(key);
   scene.textures.addCanvas(key, final);
 }
