@@ -23,6 +23,10 @@ const Z_INDEX = 99999; // acima de tudo que a UI usa hoje (checado: o mais alto 
 let imgEl;
 let rawX = -99;
 let rawY = -99;
+// Se o último mousemove pousou no CANVAS ou em cima de algum painel de DOM
+// (HUD, menu, tooltip) — ver render() logo abaixo pra saber por que isto
+// importa tanto quanto a posição.
+let isOverCanvas = false;
 
 function ensureDom() {
   if (imgEl) return;
@@ -45,6 +49,12 @@ export function initCursorOverlay() {
   const handleMove = (event) => {
     rawX = event.clientX;
     rawY = event.clientY;
+    // event.target é o elemento mais interno debaixo do ponteiro NA HORA do
+    // evento — isso não muda com bubbling, então dá pra saber daqui, sem
+    // custo de um elementFromPoint() a cada frame, se o mouse está sobre o
+    // CANVAS (mundo do jogo, cursor contextual vale) ou sobre um painel de
+    // DOM (HUD, menu, tooltip — cursor contextual NÃO vale, ver render()).
+    isOverCanvas = event.target?.tagName === 'CANVAS';
     // 'mousemove' não tem pointerType (undefined) — só 'touch' de verdade
     // conta como toque; qualquer outra coisa é tratada como mouse. Escuta
     // na WINDOW, não no canvas: um painel de DOM por cima do canvas nunca
@@ -80,7 +90,20 @@ function render() {
     imgEl.style.display = 'none';
     return;
   }
-  const state = getCursorState();
+  // getCursorState() é decidido pelo hover do MUNDO (updateGroundItemCursor/
+  // updateWalkCursor em islandScene.js), que só roda em cima do ponteiro do
+  // Phaser — e o Phaser só atualiza esse ponteiro com eventos que chegam no
+  // CANVAS. Fora dele (qualquer painel de DOM), esse estado fica CONGELADO
+  // no que quer que fosse a última vez que o mouse esteve sobre o jogo —
+  // achado pelo usuário: passar perto d'água e depois abrir um menu
+  // deixava o X de "bloqueado" preso na tela por cima da UI. `pressado`
+  // (o achatado de clique) é a única exceção: faz sentido em qualquer
+  // clique, mundo ou botão de UI, então esse continua valendo sempre.
+  const worldState = getCursorState();
+  const pressedState = worldState === 'clique';
+  const state = isOverCanvas || pressedState ? worldState : 'normal';
+  const dimmed = isOverCanvas && isCursorDimmed();
+
   const src = CURSOR_DATA_URLS[`cursor-${state}`];
   if (!src) return; // texturas ainda não geradas (antes do boot terminar)
   if (imgEl.src !== src) imgEl.src = src;
@@ -91,6 +114,6 @@ function render() {
   // Arredondado ao pixel — coerente com pixelArt:true/roundPixels do jogo
   // (main.js), é o que faz o cursor ler como parte do jogo.
   imgEl.style.display = 'block';
-  imgEl.style.opacity = isCursorDimmed() ? '0.45' : '1';
+  imgEl.style.opacity = dimmed ? '0.45' : '1';
   imgEl.style.transform = `translate(${Math.round(rawX) - hotspot.x}px, ${Math.round(rawY) - hotspot.y - lift}px)`;
 }
