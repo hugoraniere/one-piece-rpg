@@ -92,7 +92,7 @@ function buildCharacterHtml(progression) {
   return `
     <div class="menu-header">
       <span class="menu-title">Personagem</span>
-      <span class="menu-hint">Esc ou C fecha</span>
+      <span class="menu-hint"></span>
       <button class="menu-close" aria-label="Fechar personagem">✕</button>
     </div>
     ${renderLevelBanner(progression)}

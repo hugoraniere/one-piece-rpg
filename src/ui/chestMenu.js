@@ -33,7 +33,7 @@ function buildChestHtml(ctx) {
   return `
     <div class="menu-header">
       <span class="menu-title">Baú</span>
-      <span class="menu-hint">Esc fecha</span>
+      <span class="menu-hint"></span>
       <button class="menu-close" aria-label="Fechar baú">✕</button>
     </div>
     <div class="chest-layout">

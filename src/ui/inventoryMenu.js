@@ -157,7 +157,7 @@ function buildInventoryHtml(ctx) {
   return `
     <div class="menu-header">
       <span class="menu-title">Inventário</span>
-      <span class="menu-hint">Esc ou I fecha</span>
+      <span class="menu-hint"></span>
       <button class="menu-close" aria-label="Fechar inventário">✕</button>
     </div>
     <div class="char-tabs">${tabButtons}</div>
