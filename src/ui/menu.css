@@ -922,8 +922,13 @@
   align-items: center;
   justify-content: center;
   padding: 0;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, transform 0.2s ease, box-shadow 0.2s ease;
 }
 .menu-close:hover {
-  background: rgba(43, 27, 18, 0.26);
+  background: rgba(43, 27, 18, 0.35);
+  transform: scale(1.15);
+  box-shadow: 0 0 12px rgba(139, 116, 0, 0.3);
+}
+.menu-close:active {
+  transform: scale(1.05);
 }
