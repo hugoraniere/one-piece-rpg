@@ -21,7 +21,8 @@ function renderGrid(items, hint) {
     const def = ITEM_DEFS[itemId];
     if (!def) return `<div class="slot empty"></div>`;
     const qtyHtml = qty > 1 ? `<span class="qty">x${qty}</span>` : '';
-    return `<div class="slot chest-slot" data-item="${itemId}" title="${def.name} — ${hint}">${def.icon}${qtyHtml}</div>`;
+    const iconHtml = def.iconPath ? `<img src="${def.iconPath}" alt="${def.name}" class="item-icon">` : def.icon;
+    return `<div class="slot chest-slot" data-item="${itemId}" title="${def.name} — ${hint}">${iconHtml}${qtyHtml}</div>`;
   }).join('');
   return `<div class="inv-grid">${slots}</div>`;
 }

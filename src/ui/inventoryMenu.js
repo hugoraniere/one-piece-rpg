@@ -65,7 +65,8 @@ function renderItemsTab(ctx) {
     // seletor de quantidade de propósito, clique repetido é simples o
     // bastante pra descartar mais de uma.
     const dropBtn = `<button class="slot-drop-btn" data-drop-item="${itemId}" title="Descartar 1x ${def.name}">✕</button>`;
-    return `<div class="slot${equipable ? ' equipable' : ''}${equipped ? ' equipped' : ''}${selecting ? ' selecting' : ''}" data-cat="${def.category}" data-item="${itemId}" title="${title}">${def.icon}${qtyHtml}${dropBtn}</div>`;
+    const iconHtml = def.iconPath ? `<img src="${def.iconPath}" alt="${def.name}" class="item-icon">` : def.icon;
+    return `<div class="slot${equipable ? ' equipable' : ''}${equipped ? ' equipped' : ''}${selecting ? ' selecting' : ''}" data-cat="${def.category}" data-item="${itemId}" title="${title}">${iconHtml}${qtyHtml}${dropBtn}</div>`;
   }).join('');
 
   return `
@@ -126,7 +127,8 @@ function craftRow(recipe, inventory) {
       const def = ITEM_DEFS[input.itemId];
       const have = getQuantity(inventory, input.itemId);
       const enough = have >= input.qty;
-      return `<span class="craft-input${enough ? '' : ' missing'}">${def.icon} ${def.name} ${have}/${input.qty}</span>`;
+      const iconHtml = def.iconPath ? `<img src="${def.iconPath}" alt="${def.name}" class="item-icon">` : def.icon;
+      return `<span class="craft-input${enough ? '' : ' missing'}">${iconHtml} ${def.name} ${have}/${input.qty}</span>`;
     })
     .join('<span class="craft-plus">+</span>');
 
