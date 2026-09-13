@@ -409,6 +409,27 @@ export default class IslandScene extends Phaser.Scene {
       this.walkStuckCheckPos = null;
     });
 
+    // Hover genérico "sobre" (mão dourada, ver world/cursor.js) pra QUALQUER
+    // objeto que chame setInteractive() na cena — hoje só o baú
+    // (createChestSprite), mas serve de graça pra qualquer interativo
+    // futuro, sem precisar marcar cada um na mão. Prioridade mais alta que
+    // o cursor "andar"/"bloqueado" do clique-pra-andar (ver
+    // this.hoveringInteractive gatekeeping updateWalkCursor em update()),
+    // igual a mãozinha de item do chão já faz.
+    //
+    // NENHUM objeto interativo desta cena deve usar `useHandCursor: true`
+    // (ver createChestSprite) — o cursor nativo do Phaser e o nosso
+    // desenhado apareceriam os DOIS ao mesmo tempo, sobrepostos (achado
+    // testando o baú depois dele ganhar clique direto no sprite).
+    this.hoveringInteractive = false;
+    this.input.on('gameobjectover', () => {
+      this.hoveringInteractive = true;
+      setCursorState('sobre');
+    });
+    this.input.on('gameobjectout', () => {
+      this.hoveringInteractive = false;
+    });
+
     const { worldWidth, worldHeight } = this.islandConfig;
     this.physics.world.setBounds(0, 0, worldWidth, worldHeight);
 
@@ -538,10 +559,12 @@ export default class IslandScene extends Phaser.Scene {
     // Cursor contextual "pegar"/"pegar apagado" (ver world/groundItems.js e
     // world/cursor.js) — mesma ideia sempre-em-dia de cima: o cursor deve
     // continuar reagindo ao que está embaixo dele mesmo com um menu aberto.
-    // Sem item sob o ponteiro, sobra pro cursor "andar"/"bloqueado" do
-    // clique-pra-andar (ver updateWalkCursor) — a mãozinha do item sempre
-    // ganha, nunca os dois ao mesmo tempo.
-    if (!updateGroundItemCursor(this)) updateWalkCursor(this);
+    // Sem item sob o ponteiro, e sem estar sobre outro interativo da cena
+    // (baú, ver this.hoveringInteractive em create()), sobra pro cursor
+    // "andar"/"bloqueado" do clique-pra-andar (ver updateWalkCursor) —
+    // prioridade sempre mãozinha de item > mãozinha genérica > andar/bloqueado,
+    // nunca dois ao mesmo tempo.
+    if (!updateGroundItemCursor(this) && !this.hoveringInteractive) updateWalkCursor(this);
     // Ciclo de dia (ver sim/dayCycle.js) — mesma ideia sempre-em-dia de
     // cima: o relógio do mundo não devia parar só porque um menu abriu.
     // Overlay é DOM (ui/dayCycleOverlay.js), não objeto de Phaser: um
@@ -1219,7 +1242,12 @@ function createChestSprite(scene) {
   // handler global de pointerdown da cena (ataque/pesca, ver create()) —
   // sem isso, clicar no baú também tentaria atacar ou arremessar a vara
   // na mesma tacada.
-  sprite.setInteractive({ useHandCursor: true });
+  //
+  // SEM `useHandCursor` de propósito — o cursor customizado (ver
+  // world/cursor.js, hover genérico "gameobjectover" em create()) já cobre
+  // isso com a mãozinha dourada; o cursor nativo do Phaser ficaria
+  // desenhado por cima do nosso, os dois ao mesmo tempo.
+  sprite.setInteractive();
   sprite.on('pointerdown', (pointer, localX, localY, event) => {
     event.stopPropagation();
     if (isEditorModeActive() || isFishingActive()) return;
