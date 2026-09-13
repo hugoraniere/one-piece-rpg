@@ -8,7 +8,6 @@
   pointer-events: none; /* deixa clique/teclado passar pro canvas por baixo */
   z-index: 20;
   font-family: 'Archivo', sans-serif;
-  cursor: none;
 }
 
 #hud-overlay .icon {
