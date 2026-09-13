@@ -24,8 +24,15 @@
 // persistência entre troca de ilha ou reload (ver comentário no fim).
 import Phaser from 'phaser';
 import { ITEM_DEFS } from '../sim/itemDefs.js';
+import { setCursorState } from './cursor.js';
 
 export const PICKUP_RANGE = 60; // pixels — um pouco maior que antes: agora é o raio que faz a caixa de itens próximos aparecer, não só o alcance "encostado" do G
+
+// Raio, em pixel de MUNDO, que conta como "o ponteiro está em cima do
+// ícone" pro cursor contextual (ver updateGroundItemCursor abaixo e
+// world/cursor.js) — folgado o bastante pro ícone de ~50px de fonte
+// (ICON_FONT_PX) sem precisar acertar o pixel exato.
+const HOVER_RADIUS = 30;
 
 // Espalha um pouco a posição de dois descartes seguidos no mesmo lugar,
 // pra não nascerem exatamente empilhados (mesmo problema que
@@ -150,6 +157,42 @@ export function updateGroundItemHighlights(scene) {
       entry.icon.setScale(1);
     }
   }
+}
+
+// Cursor contextual (portado do Reino de Aurora, ver world/cursor.js) —
+// "pegar" (mão) quando o ponteiro está sobre um item alcançável, o MESMO
+// "pegar" só que apagado quando está sobre um item que existe mas está
+// longe demais pra apanhar agora. É a distinção "isso é pegável, chegue
+// perto" x "isso não é nada" que docs/interface-do-mouse.md daquele jogo
+// chama de estado "longe" — lá não é um desenho à parte, é o cursor de
+// contexto com alfa reduzido (ver isCursorDimmed em world/cursor.js).
+//
+// Guarda o item sob o ponteiro em scene.hoveredGroundItem: o clique (ver
+// pointerdown em scenes/islandScene.js) reage ao MESMO item que o cursor
+// está prometendo, em vez de recalcular o hover uma segunda vez.
+//
+// Chamada todo frame (ver update() em islandScene.js), igual
+// updateGroundItemHighlights — barato mesmo com muitos itens no chão,
+// mesma conta de distância que o resto do arquivo já faz.
+export function updateGroundItemCursor(scene) {
+  const pointer = scene.input.activePointer;
+  const world = scene.cameras.main.getWorldPoint(pointer.x, pointer.y);
+  let nearest = null;
+  let nearestDist = HOVER_RADIUS;
+  for (const entry of scene.groundItems) {
+    const dist = Phaser.Math.Distance.Between(world.x, world.y, entry.x, entry.y);
+    if (dist <= nearestDist) {
+      nearest = entry;
+      nearestDist = dist;
+    }
+  }
+  scene.hoveredGroundItem = nearest;
+  if (!nearest) {
+    setCursorState('normal');
+    return;
+  }
+  const inRange = Phaser.Math.Distance.Between(scene.player.x, scene.player.y, nearest.x, nearest.y) <= PICKUP_RANGE;
+  setCursorState('pegar', { dimmed: !inRange });
 }
 
 // Remoção instantânea, sem animação — usada por collectGroundItem no

@@ -10,10 +10,12 @@ import { buildGround, buildPierDock, buildWaterCollision, isNearWater, isWaterPo
 import { getIsland, DEFAULT_ISLAND_ID } from '../world/islands/index.js';
 import { spawnItemText, spawnLevelUpText, spawnMissText, spawnMoneyText } from '../world/floatingText.js';
 import {
+  PICKUP_RANGE,
   collectGroundItem,
   findNearbyGroundItems,
   findNearestGroundItem,
   spawnGroundItem,
+  updateGroundItemCursor,
   updateGroundItemHighlights,
 } from '../world/groundItems.js';
 import { getForcaDamageBonus, trainAttribute, trainSkill } from '../sim/progression.js';
@@ -327,6 +329,20 @@ export default class IslandScene extends Phaser.Scene {
         if (getFishingPhase() === 'mordida') releaseFishingAttempt();
         return;
       }
+      // O cursor virou uma mãozinha sobre este item bem porque ele está ao
+      // alcance (ver updateGroundItemCursor em world/groundItems.js,
+      // chamado todo frame) — clicar nele apanha direto, mesma ação que a
+      // tecla G e a caixa de itens próximos já fazem, só que mirada. Se o
+      // ponteiro está sobre um item fora de alcance, o cursor mostra a mão
+      // apagada e o clique aqui NÃO apanha — cai pro resto da função (ataque
+      // ou pesca), porque a cena não prometeu nada sobre esse item.
+      if (this.hoveredGroundItem) {
+        const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.hoveredGroundItem.x, this.hoveredGroundItem.y);
+        if (dist <= PICKUP_RANGE) {
+          pickUpGroundItem(this, this.hoveredGroundItem);
+          return;
+        }
+      }
       // Perto do boneco de treino com arma equipada? O clique vira golpe,
       // não arremesso — checa isso ANTES de tentar pescar (ver tryAttack).
       if (tryAttack(this)) return;
@@ -469,6 +485,10 @@ export default class IslandScene extends Phaser.Scene {
     // também fecha pelo Esc ou clicando fora do backdrop
     // (ui/menuManager.js), nenhum dos quais passa por islandScene.js.
     syncChestVisual(this);
+    // Cursor contextual "pegar"/"pegar apagado" (ver world/groundItems.js e
+    // world/cursor.js) — mesma ideia sempre-em-dia de cima: o cursor deve
+    // continuar reagindo ao que está embaixo dele mesmo com um menu aberto.
+    updateGroundItemCursor(this);
 
     if (isMenuOpen()) {
       // Personagem/Inventário abertos — mundo congela, sem nenhuma UI de
