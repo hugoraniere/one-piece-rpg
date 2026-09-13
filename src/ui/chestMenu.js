@@ -84,6 +84,19 @@ function mountChestMenu(panel, ctx) {
 
   addDragListeners(invCol, (itemId) => ctx.onMoveToChest(itemId));
   addDragListeners(chestCol, (itemId) => ctx.onMoveToInventory(itemId));
+
+  // Posicionar tooltips dinamicamente ao passar mouse
+  panel.querySelectorAll('.chest-slot:not(.empty)').forEach((slot) => {
+    const tooltip = slot.querySelector('.tooltip-box');
+    if (!tooltip) return;
+
+    slot.addEventListener('mouseenter', () => {
+      const rect = slot.getBoundingClientRect();
+      tooltip.style.left = (rect.left + rect.width / 2) + 'px';
+      tooltip.style.top = (rect.top - 8) + 'px';
+      tooltip.style.transform = 'translate(-50%, -100%)';
+    });
+  });
 }
 
 // `onMoveToChest(itemId)`/`onMoveToInventory(itemId)` movem 1 unidade por
