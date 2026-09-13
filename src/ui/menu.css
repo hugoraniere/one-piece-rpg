@@ -11,6 +11,7 @@
   justify-content: center;
   z-index: 50;
   font-family: 'Archivo', sans-serif;
+  cursor: none;
 }
 .menu-backdrop.show {
   display: flex;
@@ -98,7 +99,7 @@
   color: #5a4632;
   padding: 7px 4px;
   margin-right: 16px;
-  cursor: pointer;
+  cursor: none;
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
 }
@@ -480,7 +481,7 @@
   color: #5a4632;
   padding: 7px 10px;
   border-radius: 999px;
-  cursor: pointer;
+  cursor: none;
   width: 100%;
 }
 .hotbar-edit-toggle.active {
@@ -513,7 +514,7 @@
   color: #5a4632;
   padding: 6px 12px;
   border-radius: 999px;
-  cursor: pointer;
+  cursor: none;
 }
 .filter-pill.active {
   background: #3b2415;
@@ -573,7 +574,7 @@
   color: #f0e6cc;
   font-size: 9px;
   line-height: 14px;
-  cursor: pointer;
+  cursor: none;
   opacity: 0.35;
   transition: opacity 0.12s ease, background 0.12s ease;
 }
@@ -587,7 +588,7 @@
   opacity: 0.18;
 }
 .slot.equipable {
-  cursor: pointer;
+  cursor: none;
 }
 .slot.equipped {
   box-shadow: 0 0 0 2px #b8752e, inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.12);
@@ -673,7 +674,7 @@
   border: none;
   padding: 8px 14px;
   border-radius: 999px;
-  cursor: pointer;
+  cursor: none;
   flex-shrink: 0;
 }
 .craft-btn:disabled {
@@ -761,7 +762,7 @@
    e com cursor de mão, mas ainda sem nome/contraste de ilha conhecida:
    dá pra perceber "isso aqui reage", sem entregar o que é antes de zarpar. */
 .map-unknown-travelable {
-  cursor: pointer;
+  cursor: none;
   filter: grayscale(1) brightness(0.95);
   opacity: 0.85;
   transition: transform 0.15s ease, opacity 0.15s ease, filter 0.15s ease;
@@ -826,7 +827,7 @@
    (.map-ship) já deixa claro qual é a ilha atual sem precisar apagar a
    cor das outras. */
 .map-island-travelable {
-  cursor: pointer;
+  cursor: none;
 }
 .map-island-travelable .map-island-art {
   filter: grayscale(1);
@@ -849,7 +850,7 @@
   border: none;
   border-radius: 4px;
   padding: 4px 10px;
-  cursor: pointer;
+  cursor: none;
   background: #e6c66e;
   color: #241708;
 }
@@ -899,7 +900,7 @@
   border-radius: 50%;
   background: rgba(43, 27, 18, 0.14);
   color: #2b1b12;
-  cursor: pointer;
+  cursor: none;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -917,7 +918,7 @@
   border-radius: 50%;
   background: rgba(43, 27, 18, 0.14);
   color: #2b1b12;
-  cursor: pointer;
+  cursor: none;
   display: flex;
   align-items: center;
   justify-content: center;

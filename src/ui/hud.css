@@ -8,6 +8,7 @@
   pointer-events: none; /* deixa clique/teclado passar pro canvas por baixo */
   z-index: 20;
   font-family: 'Archivo', sans-serif;
+  cursor: none;
 }
 
 #hud-overlay .icon {
@@ -233,7 +234,7 @@
   align-items: center;
   justify-content: center;
   color: #3b2415;
-  cursor: pointer;
+  cursor: none;
   transition: transform 0.1s ease, box-shadow 0.15s ease;
 }
 .menu-btn:hover {
@@ -335,7 +336,7 @@
   align-items: center;
   justify-content: center;
   color: #3b2415;
-  cursor: pointer;
+  cursor: none;
   transition: box-shadow 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
   flex-shrink: 0;
 }

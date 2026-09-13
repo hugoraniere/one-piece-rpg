@@ -67,7 +67,7 @@
   border: 1px solid #caa23d;
   border-radius: 6px;
   padding: 7px 16px;
-  cursor: pointer;
+  cursor: none;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 .combat-endturn-btn:hover {

@@ -47,7 +47,7 @@
   gap: 7px;
   padding: 5px 9px;
   border-radius: 5px;
-  cursor: pointer;
+  cursor: none;
   white-space: nowrap;
 }
 .nearby-loot-item:hover {
