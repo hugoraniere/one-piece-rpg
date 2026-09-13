@@ -85,7 +85,7 @@ function buildInitialState() {
     // machado, vara reforçada e lança usam ferro-bruto, por isso 3 em
     // vez de 1). `sword: 1`: a espada virou item normal (antes era
     // hardcoded fora do inventário) — jogador começa com uma.
-    inventory: createInventory({ sword: 1, 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3 }),
+    inventory: createInventory({ sword: 1, 'linha-de-nylon': 2, corda: 1, 'ferro-bruto': 3, graveto: 3, peixe: 2, robalo: 1, truta: 1, minhoca: 2, 'isca-improvisada': 1, 'lixo-marinho': 1 }),
     berries: 0,
     progression: createProgression(),
     equipState,
