@@ -158,6 +158,7 @@ function buildInventoryHtml(ctx) {
     <div class="menu-header">
       <span class="menu-title">Inventário</span>
       <span class="menu-hint">Esc ou I fecha</span>
+      <button class="menu-close" aria-label="Fechar inventário">✕</button>
     </div>
     <div class="char-tabs">${tabButtons}</div>
     ${pages}
@@ -228,6 +229,10 @@ function mountInventoryMenu(panel, ctx) {
       const newRow = success ? panel.querySelector(`.craft-btn[data-recipe="${recipeId}"]`)?.closest('.craft-row') : null;
       flashOnce(newRow);
     });
+  });
+
+  panel.querySelector('.menu-close')?.addEventListener('click', () => {
+    document.getElementById('menu-backdrop-inventario')?.classList.remove('show');
   });
 }
 

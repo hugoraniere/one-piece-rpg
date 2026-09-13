@@ -907,3 +907,23 @@
 .map-close:hover {
   background: rgba(43, 27, 18, 0.26);
 }
+.menu-close {
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 50%;
+  background: rgba(43, 27, 18, 0.14);
+  color: #2b1b12;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: background 0.2s ease;
+}
+.menu-close:hover {
+  background: rgba(43, 27, 18, 0.26);
+}

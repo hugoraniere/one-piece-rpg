@@ -93,6 +93,7 @@ function buildCharacterHtml(progression) {
     <div class="menu-header">
       <span class="menu-title">Personagem</span>
       <span class="menu-hint">Esc ou C fecha</span>
+      <button class="menu-close" aria-label="Fechar personagem">✕</button>
     </div>
     ${renderLevelBanner(progression)}
     <div class="char-tabs">${tabButtons}</div>
@@ -108,6 +109,10 @@ function mountCharacterMenu(panel, progression) {
     if (!btn) return;
     panel.querySelectorAll('.char-tab').forEach((t) => t.classList.toggle('active', t === btn));
     panel.querySelectorAll('.char-page').forEach((p) => p.classList.toggle('active', p.dataset.page === btn.dataset.tab));
+  });
+
+  panel.querySelector('.menu-close')?.addEventListener('click', () => {
+    document.getElementById('menu-backdrop-personagem')?.classList.remove('show');
   });
 }
 

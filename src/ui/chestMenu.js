@@ -34,6 +34,7 @@ function buildChestHtml(ctx) {
     <div class="menu-header">
       <span class="menu-title">Baú</span>
       <span class="menu-hint">Esc fecha</span>
+      <button class="menu-close" aria-label="Fechar baú">✕</button>
     </div>
     <div class="chest-layout">
       <div class="chest-col">
@@ -85,6 +86,9 @@ function mountChestMenu(panel, ctx) {
   addDragListeners(invCol, (itemId) => ctx.onMoveToChest(itemId));
   addDragListeners(chestCol, (itemId) => ctx.onMoveToInventory(itemId));
 
+  panel.querySelector('.menu-close')?.addEventListener('click', () => {
+    document.getElementById('menu-backdrop-bau')?.classList.remove('show');
+  });
 }
 
 // `onMoveToChest(itemId)`/`onMoveToInventory(itemId)` movem 1 unidade por
