@@ -22,7 +22,8 @@ function renderGrid(items, hint) {
     if (!def) return `<div class="slot empty"></div>`;
     const qtyHtml = qty > 1 ? `<span class="qty">x${qty}</span>` : '';
     const iconHtml = def.iconPath ? `<img src="${def.iconPath}" alt="${def.name}" class="item-icon">` : def.icon;
-    return `<div class="slot chest-slot" data-item="${itemId}" title="${def.name} — ${hint}">${iconHtml}${qtyHtml}</div>`;
+    const tooltipText = def.description ? `${def.name}\n${def.description}` : def.name;
+    return `<div class="slot chest-slot" data-item="${itemId}" title="${tooltipText}">${iconHtml}${qtyHtml}</div>`;
   }).join('');
   return `<div class="inv-grid">${slots}</div>`;
 }
@@ -52,18 +53,36 @@ function mountChestMenu(panel, ctx) {
   panel.innerHTML = buildChestHtml(ctx);
 
   const [invCol, chestCol] = panel.querySelectorAll('.chest-col');
-  invCol.querySelectorAll('.chest-slot').forEach((slot) => {
-    slot.addEventListener('click', () => {
-      ctx.onMoveToChest(slot.dataset.item);
-      mountChestMenu(panel, ctx);
+  let draggedSlot = null;
+
+  const addDragListeners = (col, moveCallback) => {
+    col.querySelectorAll('.chest-slot').forEach((slot) => {
+      slot.addEventListener('mousedown', () => {
+        draggedSlot = slot;
+        slot.classList.add('dragging');
+      });
+
+      slot.addEventListener('click', () => {
+        moveCallback(slot.dataset.item);
+        mountChestMenu(panel, ctx);
+      });
+
+      slot.addEventListener('mouseleave', () => {
+        if (draggedSlot === slot) {
+          slot.classList.remove('dragging');
+          draggedSlot = null;
+        }
+      });
+
+      slot.addEventListener('mouseup', () => {
+        draggedSlot = null;
+        slot.classList.remove('dragging');
+      });
     });
-  });
-  chestCol.querySelectorAll('.chest-slot').forEach((slot) => {
-    slot.addEventListener('click', () => {
-      ctx.onMoveToInventory(slot.dataset.item);
-      mountChestMenu(panel, ctx);
-    });
-  });
+  };
+
+  addDragListeners(invCol, (itemId) => ctx.onMoveToChest(itemId));
+  addDragListeners(chestCol, (itemId) => ctx.onMoveToInventory(itemId));
 }
 
 // `onMoveToChest(itemId)`/`onMoveToInventory(itemId)` movem 1 unidade por
