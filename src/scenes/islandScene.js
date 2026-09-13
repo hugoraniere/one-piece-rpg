@@ -965,6 +965,18 @@ function findPropSpriteAt(x, y) {
 // barraca de mercado, o caso que motivou isto.
 const HIGHLIGHT_FALLBACK_WIDTH = 90;
 
+// Fração da altura de exibição que é margem transparente embaixo de CADA
+// textura — medido direto nos arquivos (contagem de pixel por canal alpha,
+// não é chute): sem isto, `sprite.y` (o pé "de origem", ver
+// setOrigin(0.5,1)) não bate com o pé VISÍVEL de verdade, e o brilho
+// (ver updateInteractiveHighlight) fica boiando longe da base em vez de
+// colado nela. Só entram texturas com sobra grande o bastante pra
+// perceber (>3%) — barco/barraca medem <1.5%, não precisam de entrada.
+const HIGHLIGHT_VISUAL_BOTTOM_TRIM = {
+  'village-chest-closed': 0.16,
+  'village-chest-open': 0.05,
+};
+
 // Lista de interagíveis pro destaque (ver updateInteractiveHighlight) —
 // cada entrada é um ponto que handleGather já trata como "G faz algo aqui
 // perto" (baú/barco/mercado), junto do ALCANCE que já existe pra ele. Só
@@ -1057,7 +1069,16 @@ function updateInteractiveHighlight(scene) {
   const width = sprite ? sprite.displayWidth * 0.7 : HIGHLIGHT_FALLBACK_WIDTH * 0.7;
   const height = width * 0.35;
   const x = sprite ? sprite.x : best.x;
-  const y = sprite ? sprite.y : best.y;
+  // sprite.y é o pé de VERDADE só se a arte não tiver margem transparente
+  // embaixo — medido direto nos arquivos (Python, contagem de pixel por
+  // alpha): village-chest-closed.png sobra 16% de altura vazia embaixo
+  // (provável reserva pro arco da tampa abrindo), village-chest-open.png
+  // 5%; barco e barraca de mercado ficam abaixo de 1.5%, imperceptível.
+  // Sem essa correção só o baú fechado (o estado mais comum, já que só
+  // abre quando o menu está aberto) ficava com o brilho visivelmente longe
+  // da base — ver HIGHLIGHT_VISUAL_BOTTOM_TRIM.
+  const trimFrac = sprite ? (HIGHLIGHT_VISUAL_BOTTOM_TRIM[sprite.texture.key] ?? 0) : 0;
+  const y = (sprite ? sprite.y : best.y) - (sprite ? sprite.displayHeight : 0) * trimFrac;
   scene.highlightGlow
     .setPosition(x, y)
     .setSize(width, height)
