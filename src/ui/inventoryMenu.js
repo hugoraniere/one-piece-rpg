@@ -75,20 +75,20 @@ function renderItemsTab(ctx) {
         <h4>Equipado</h4>
         <div class="paperdoll-silhouette"></div>
         <div class="eq-slots">
-          <div class="eq-slot">
+          <div class="eq-slot" title="Arma ou ferramenta equipada">
             <div class="icon-badge"><img class="icon pixel-icon" src="${equippedIcon(equipState)}" alt="${equippedLabel(equipState)}"></div>
             <div><div class="label">Mão</div><div class="value">${equippedLabel(equipState)}</div></div>
           </div>
-          <div class="eq-slot">
+          <div class="eq-slot" title="Roupa/armadura (em breve)">
             <div class="icon-badge">${iconSvg('roupa')}</div>
             <div><div class="label">Roupa</div><div class="value">Vazio</div></div>
           </div>
-          <div class="eq-slot">
+          <div class="eq-slot" title="Acessório especial (em breve)">
             <div class="icon-badge">${iconSvg('vazio')}</div>
             <div><div class="label">Acessório</div><div class="value">Vazio</div></div>
           </div>
         </div>
-        <button class="hotbar-edit-toggle${hotbarEditMode ? ' active' : ''}" id="inv-hotbar-edit-toggle">
+        <button class="hotbar-edit-toggle${hotbarEditMode ? ' active' : ''}" id="inv-hotbar-edit-toggle" title="Clique para atribuir items aos slots de atalho (1-9, 0)">
           ${hotbarEditMode ? 'Organizando Hotbar ✕' : 'Organizar Hotbar'}
         </button>
         ${
@@ -103,12 +103,12 @@ function renderItemsTab(ctx) {
       </div>
       <div class="inv-main">
         <div class="filters">
-          <button class="filter-pill active" data-cat="tudo">Tudo</button>
-          <button class="filter-pill" data-cat="armas">Armas</button>
-          <button class="filter-pill" data-cat="ferramentas">Ferramentas</button>
-          <button class="filter-pill" data-cat="comida">Comida</button>
-          <button class="filter-pill" data-cat="materiais">Materiais</button>
-          <button class="filter-pill" data-cat="missao">Missão</button>
+          <button class="filter-pill active" data-cat="tudo" title="Mostra todos os itens do inventário">Tudo</button>
+          <button class="filter-pill" data-cat="armas" title="Armas para combate">Armas</button>
+          <button class="filter-pill" data-cat="ferramentas" title="Ferramentas para coleta e pesca">Ferramentas</button>
+          <button class="filter-pill" data-cat="comida" title="Alimentos para vender">Comida</button>
+          <button class="filter-pill" data-cat="materiais" title="Materiais para fabricação">Materiais</button>
+          <button class="filter-pill" data-cat="missao" title="Itens de missão">Missão</button>
         </div>
         <div class="inv-grid">${slots}</div>
         <div class="inv-footer">
@@ -149,7 +149,8 @@ function renderCraftTab(ctx) {
 }
 
 function buildInventoryHtml(ctx) {
-  const tabButtons = TABS.map((t, i) => `<button class="char-tab${i === 0 ? ' active' : ''}" data-tab="${t.key}">${t.label}</button>`).join('');
+  const tabTitles = { itens: 'Ver e gerenciar seus itens', fabricar: 'Combinar itens para criar novos' };
+  const tabButtons = TABS.map((t, i) => `<button class="char-tab${i === 0 ? ' active' : ''}" data-tab="${t.key}" title="${tabTitles[t.key]}">${t.label}</button>`).join('');
   const renderers = { itens: renderItemsTab, fabricar: renderCraftTab };
   const pages = TABS.map((t, i) => `<div class="char-page${i === 0 ? ' active' : ''}" data-page="${t.key}">${renderers[t.key](ctx)}</div>`).join('');
 
