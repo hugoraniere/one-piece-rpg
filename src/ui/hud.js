@@ -50,9 +50,34 @@ function shortcutBadge(shortcut) {
   return `<span class="shortcut-badge">${shortcut}</span>`;
 }
 
+// Barra de vida/energia — moldura em 3 partes (assets/hud/<prefix>-cap-left,
+// -mid, -cap-right.png, ver hud.css) pra dar pra ajustar o comprimento sem
+// esticar o desenho: a peça do meio só repete quantas vezes precisar
+// (MID_TILES). O preenchimento colorido fica numa camada ATRÁS dessas 3
+// peças (ver .status-fill-wrap) — ele preenche a faixa toda (inclusive por
+// baixo do coto de trilho dentro das peças de ponta), mas só aparece onde a
+// arte da moldura tem o vão vazio de verdade; o medalhão e o suporte
+// dourado da ponta direita cobrem o resto por cima.
+const MID_TILES = 2;
+function buildStatusFrameHtml(prefix, fillId, numId, extraClass = '') {
+  const mid = Array.from({ length: MID_TILES }, () => `<div class="status-mid" style="background-image:url('/assets/hud/${prefix}-mid.png')"></div>`).join('');
+  return `
+    <div class="status-frame ${extraClass}">
+      <div class="status-fill-wrap"><div class="status-fill ${prefix}-fill" id="${fillId}"></div></div>
+      <div class="status-pieces">
+        <img class="status-cap-left" src="/assets/hud/${prefix}-cap-left.png" alt="">
+        ${mid}
+        <img class="status-cap-right" src="/assets/hud/${prefix}-cap-right.png" alt="">
+      </div>
+      <span class="status-num" id="${numId}"></span>
+    </div>`;
+}
+
 let hpFrameEl;
 let hpFillEl;
 let hpNumEl;
+let energyFillEl;
+let energyNumEl;
 let berriesFrameEl;
 let berriesEl;
 let moodleTrayEl;
@@ -73,29 +98,19 @@ export function initHud() {
 
   overlay.innerHTML = `
     <div class="hud-topleft">
-      <div class="hp-frame">
-        <span class="hp-label">Vida</span>
-        <div class="hp-bar"><div class="hp-fill" id="hud-hp-fill"></div></div>
-        <span class="hp-num" id="hud-hp-num"></span>
-      </div>
-      <div class="berries"><span class="coin"></span><span id="hud-berries">0</span></div>
+      ${buildStatusFrameHtml('hp', 'hud-hp-fill', 'hud-hp-num', 'hp-frame')}
+      ${buildStatusFrameHtml('energy', 'hud-energy-fill', 'hud-energy-num', 'energy-frame')}
+      <div class="berries"><img class="coin" src="/assets/hud/coin.png" alt=""><span id="hud-berries">0</span></div>
     </div>
     <div class="moodle-tray" id="hud-moodle-tray"></div>
     <div class="minimap-wrap">
       <div class="minimap-frame">
-        <div class="minimap-rivet" style="left:99px;top:54px"></div>
-        <div class="minimap-rivet" style="left:76.5px;top:93px"></div>
-        <div class="minimap-rivet" style="left:31.5px;top:93px"></div>
-        <div class="minimap-rivet" style="left:9px;top:54px"></div>
-        <div class="minimap-rivet" style="left:31.5px;top:15px"></div>
-        <div class="minimap-rivet" style="left:76.5px;top:15px"></div>
-        <div class="minimap"><div class="minimap-dot" id="hud-minimap-dot"></div></div>
+        <div class="minimap"><img class="minimap-dot" id="hud-minimap-dot" src="/assets/hud/minimap-marker.png" alt=""></div>
       </div>
     </div>
     <div class="menu-buttons" id="hud-menu-buttons">
       ${MENU_BUTTONS.map((btn) => `
-        <div class="menu-btn" data-menu="${btn.id}" title="${btn.title} (${btn.shortcut})">
-          <svg class="icon" aria-hidden="true"><use href="#i-${btn.iconSymbol}"></use></svg>
+        <div class="menu-btn" data-menu="${btn.id}" title="${btn.title} (${btn.shortcut})" style="background-image:url('/assets/hud/btn-${btn.id}.png')">
           ${shortcutBadge(btn.shortcut)}
         </div>
       `).join('')}
@@ -110,9 +125,11 @@ export function initHud() {
     </div>
   `;
 
-  hpFrameEl = overlay.querySelector('.hp-frame');
+  hpFrameEl = overlay.querySelector('.status-frame:not(.energy-frame)');
   hpFillEl = overlay.querySelector('#hud-hp-fill');
   hpNumEl = overlay.querySelector('#hud-hp-num');
+  energyFillEl = overlay.querySelector('#hud-energy-fill');
+  energyNumEl = overlay.querySelector('#hud-energy-num');
   berriesFrameEl = overlay.querySelector('.berries');
   berriesEl = overlay.querySelector('#hud-berries');
   moodleTrayEl = overlay.querySelector('#hud-moodle-tray');
@@ -123,6 +140,11 @@ export function initHud() {
   });
   lastHp = null;
   lastBerries = null;
+
+  // Energia ainda não existe como sistema de jogo (sem fonte de dado real
+  // ainda, ver conversa de design) — HUD nasce sempre cheio até alguém
+  // chamar setEnergy() de verdade.
+  setEnergy(100, 100);
 
   MOODLE_DEFS.forEach(({ key, severity, label }) => {
     const el = document.createElement('div');
@@ -149,6 +171,15 @@ export function setHp(current, max) {
   hpNumEl.textContent = `${current}/${max}`;
   if (lastHp !== null && current !== lastHp) pulse(hpFrameEl);
   lastHp = current;
+}
+
+// Sem sistema de energia/stamina de verdade ainda (ver nota em initHud) —
+// exportado pra já existir o gancho quando esse sistema nascer, mesma cara
+// de setHp acima.
+export function setEnergy(current, max) {
+  const pct = max > 0 ? Math.max(0, Math.min(100, (current / max) * 100)) : 0;
+  energyFillEl.style.width = `${pct}%`;
+  energyNumEl.textContent = `${current}/${max}`;
 }
 
 export function setBerries(amount) {

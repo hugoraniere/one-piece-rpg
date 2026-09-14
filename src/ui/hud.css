@@ -9,6 +9,17 @@
   z-index: 20;
   font-family: 'Archivo', sans-serif;
   cursor: none;
+  /* Escala geral do HUD, proporcional à largura da janela (não um valor
+     fixo) — pedido do Hugo pra aumentar minimapa/hotbar/botões "proporcional
+     à tela disponível". calc(100vw / 900px) cancela a unidade (vw ÷ px =
+     número puro, dá pra usar em scale()) e usa 900px como referência "1:1";
+     clamp trava entre 1.2x (nunca menor que isso, mesmo em janela estreita)
+     e 1.9x (não fica descomunal em monitor ultra-wide). Aplicado por
+     cluster (topleft/minimap/hotbar/menu-buttons) via transform: scale(),
+     não remexendo nas medidas internas de cada peça (HP bar, moldura do
+     minimapa etc.) — assim a matemática fina de alinhamento de cada uma
+     continua valendo, só o grupo inteiro cresce junto. */
+  --hud-scale: clamp(1.2, calc(100vw / 900px), 1.9);
 }
 
 #hud-overlay .icon {
@@ -32,44 +43,89 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
+  transform: scale(var(--hud-scale));
+  transform-origin: top left;
 }
 
-.hp-frame {
+/* Molduras de vida/energia — moldura em 3 partes de verdade agora
+   (assets/hud/<hp|energy>-cap-left/-mid/-cap-right.png, ver
+   buildStatusFrameHtml em hud.js), não mais uma imagem única esticada.
+   A peça do meio repete MID_TILES vezes — ajustar o comprimento da barra é
+   só mudar essa constante, sem esticar nada.
+
+   O preenchimento (.status-fill-wrap) fica numa camada ATRÁS das peças
+   (.status-pieces vem depois no HTML/z-index), cobrindo a faixa BAIXO do
+   medalhão esquerdo e do suporte direito também — some por trás deles
+   porque essas partes da arte são opacas, só aparece de verdade no vão
+   vazio das peças. Todo número abaixo (width/height/margin-top/left/top)
+   foi medido a partir da arte de origem (ver processo de corte) — se a
+   moldura for trocada de novo, remedir. */
+.status-frame {
+  position: relative;
+  width: 378px;
+  height: 28px;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.45));
+}
+.status-pieces {
+  position: absolute;
+  inset: 0;
   display: flex;
-  align-items: center;
-  gap: 8px;
-  background: linear-gradient(180deg, #8a5a34, #3b2415);
-  border: 1px solid #241708;
-  border-radius: 6px;
-  padding: 5px 9px;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
+  align-items: flex-start;
 }
-.hp-label {
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  color: #e6c66e;
-  text-transform: uppercase;
+.status-cap-left {
+  width: 76px;
+  height: 27px;
+  margin-top: 0;
+  image-rendering: pixelated;
 }
-.hp-bar {
-  width: 170px;
-  height: 14px;
-  background: #4a2020;
-  border-radius: 3px;
+.status-mid {
+  width: 122px;
+  height: 23px;
+  margin-top: 4px;
+  background-repeat: repeat-x;
+  background-size: 122px 23px;
+  image-rendering: pixelated;
+}
+.status-cap-right {
+  width: 58px;
+  height: 24px;
+  margin-top: 2px;
+  image-rendering: pixelated;
+}
+.status-fill-wrap {
+  position: absolute;
+  left: 24px;
+  top: 9px;
+  width: 344px;
+  height: 7px;
   overflow: hidden;
-  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.6);
+}
+.status-fill {
+  height: 100%;
+  transition: width 0.2s ease;
+  background-repeat: repeat-x;
+  image-rendering: pixelated;
 }
 .hp-fill {
-  height: 100%;
-  background: linear-gradient(180deg, #c94b4b, #9c2b2b);
-  transition: width 0.2s ease;
+  background-image: url('/assets/hud/fill-hp.png');
+  background-size: auto 100%;
 }
-.hp-num {
+.energy-fill {
+  background-image: url('/assets/hud/fill-energy.png');
+  background-size: auto 100%;
+}
+.status-num {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-size: 11px;
   font-variant-numeric: tabular-nums;
-  font-weight: 600;
+  font-weight: 700;
   color: #ece2c8;
-  min-width: 46px;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+  pointer-events: none;
 }
 
 .berries {
@@ -79,16 +135,14 @@
   background: linear-gradient(180deg, #8a5a34, #3b2415);
   border: 1px solid #241708;
   border-radius: 6px;
-  padding: 5px 10px;
+  padding: 4px 10px 4px 6px;
   width: fit-content;
   box-shadow: 0 3px 8px rgba(0, 0, 0, 0.4);
 }
 .coin {
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #e6c66e, #8a6a1f 75%);
-  box-shadow: 0 0 0 1px #5c4614;
+  width: 22px;
+  height: 22px;
+  image-rendering: pixelated;
 }
 .berries span:last-child {
   font-size: 12px;
@@ -114,7 +168,7 @@
     transform: scale(1);
   }
 }
-.hp-frame.pulse,
+.status-frame.pulse,
 .berries.pulse {
   animation: hud-pulse 0.5s ease;
 }
@@ -220,71 +274,60 @@
   right: 12px;
   display: flex;
   gap: 8px;
+  transform: scale(var(--hud-scale));
+  transform-origin: bottom right;
 }
+/* Medalhão redondo de verdade agora (assets/hud/btn-<id>.png — moldura de
+   madeira + rebites de latão com o ícone já desenhado dentro), no lugar do
+   círculo CSS + ícone SVG por cima. background-image é setado por botão no
+   próprio hud.js (cada id tem seu medalhão: personagem/inventario/mapa). */
 .menu-btn {
   pointer-events: auto;
   position: relative;
   width: 40px;
   height: 40px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 32% 28%, #f5ebc8, #e8d9b0 55%, #c7b280 100%);
-  border: 2px solid #3b2415;
-  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.45);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #3b2415;
+  background: center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   cursor: none;
-  transition: transform 0.1s ease, box-shadow 0.15s ease;
+  filter: drop-shadow(0 3px 5px rgba(0, 0, 0, 0.45));
+  transition: transform 0.1s ease, filter 0.15s ease;
 }
 .menu-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 5px 10px rgba(0, 0, 0, 0.5);
-}
-.menu-btn .icon {
-  width: 19px;
-  height: 19px;
+  filter: drop-shadow(0 5px 8px rgba(0, 0, 0, 0.5));
 }
 
-/* Minimapa — moldura de "vigia de latão" só em CSS (gradiente simulando
-   metal + rebites), mesmo tratamento rápido do resto do HUD. O fundo é uma
-   cor neutra de couro/pergaminho escuro (mesma paleta madeira já usada no
-   resto do HUD), não uma tentativa de simular o terreno pintado — duas
-   cores sólidas e saturadas (grama/água) ficavam destoando feio da arte
-   pintada e texturizada do chão de verdade. Só dá noção de "onde no mapa"
-   até existir mais de uma localização (ver conversa de design: baixa
-   prioridade por ora) e uma câmera/render de minimapa de verdade. Canto
-   inferior esquerdo, único que ainda estava livre. */
+/* Minimapa — moldura de vigia de navio em pixel art de verdade agora
+   (assets/hud/minimap-frame.png, já vem com o buraco central transparente
+   de verdade — não precisou recorte por cor dessa vez). O fundo escuro
+   continua CSS (não existe câmera/render de minimapa de verdade ainda,
+   ver conversa de design), só o diâmetro foi remedido pro buraco real da
+   moldura nova (~60% da largura da moldura). Canto inferior esquerdo,
+   único que ainda estava livre. */
 .minimap-wrap {
   position: absolute;
   bottom: 40px;
   left: 12px;
+  transform: scale(var(--hud-scale));
+  transform-origin: bottom left;
 }
 .minimap-frame {
   position: relative;
   width: 108px;
   height: 108px;
-  border-radius: 50%;
-  padding: 9px;
-  background: radial-gradient(circle at 32% 26%, #f0d9a0, #b8863f 42%, #6b4a22 76%, #422e14 100%);
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5), inset 0 0 0 2px rgba(0, 0, 0, 0.35), inset 0 2px 4px rgba(255, 255, 255, 0.4);
-}
-.minimap-rivet {
-  position: absolute;
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #f5deb0, #8a6a30 70%);
-  box-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
-  transform: translate(-50%, -50%);
+  background: url('/assets/hud/minimap-frame.png') no-repeat center / 100% 100%;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.5));
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 .minimap {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 65px;
+  height: 65px;
   border-radius: 50%;
   background: radial-gradient(circle at 40% 35%, #4a3524, #241708 88%);
-  box-shadow: inset 0 0 0 3px #2a1c0e, inset 0 0 14px rgba(0, 0, 0, 0.55);
+  box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 .minimap::after {
@@ -297,13 +340,12 @@
 }
 .minimap-dot {
   position: absolute;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #e6c66e;
-  box-shadow: 0 0 0 2px #3b2415, 0 0 4px rgba(0, 0, 0, 0.6);
+  width: 12px;
+  height: auto;
+  image-rendering: pixelated;
   transform: translate(-50%, -50%);
   transition: left 0.1s linear, top 0.1s linear;
+  filter: drop-shadow(0 0 3px rgba(0, 0, 0, 0.7));
 }
 
 /* Hotbar — troca rápida do que está na mão, sem abrir o Inventário. 10
@@ -315,7 +357,8 @@
   position: absolute;
   bottom: 12px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(var(--hud-scale));
+  transform-origin: bottom center;
   display: flex;
   gap: 7px;
   flex-wrap: wrap;
@@ -323,21 +366,25 @@
   max-width: calc(100vw - 24px);
   padding: 0 12px;
 }
+/* Moldura de verdade (assets/hud/slot-normal.png — madeira + cantoneira de
+   latão sobre pergaminho) no lugar do gradiente CSS antigo. `equipped` e
+   `locked` trocam a imagem inteira (ver abaixo) em vez de só mudar
+   box-shadow/background — o brilho dourado do equipped e o desgaste do
+   locked já vêm desenhados na própria arte agora. */
 .hotbar-slot {
   pointer-events: auto;
   position: relative;
   width: 46px;
   height: 46px;
-  background: linear-gradient(180deg, #e8d9b0, #c7b280);
-  border: 1px solid #3b2415;
-  border-radius: 7px;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15), 0 3px 6px rgba(0, 0, 0, 0.4);
+  background: url('/assets/hud/slot-normal.png') center / 100% 100% no-repeat;
+  image-rendering: pixelated;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #3b2415;
   cursor: none;
-  transition: box-shadow 0.15s ease, transform 0.1s ease, opacity 0.15s ease;
+  filter: drop-shadow(0 3px 4px rgba(0, 0, 0, 0.4));
+  transition: transform 0.1s ease, opacity 0.15s ease;
   flex-shrink: 0;
 }
 
@@ -414,15 +461,17 @@
 .hotbar-slot:hover {
   transform: translateY(-2px);
 }
+/* Moldura com brilho dourado já desenhado na própria arte (era um
+   box-shadow em anel por cima da moldura normal antes). */
 .hotbar-slot.equipped {
-  box-shadow: 0 0 0 3px #b8752e, inset 0 0 0 1px rgba(255, 255, 255, 0.25), inset 0 2px 4px rgba(0, 0, 0, 0.15);
+  background-image: url('/assets/hud/slot-equipped.png');
 }
 /* "Empty" — slot sem nenhum item atribuído ainda (ver hotbarAssignments
    em state/playerState.js). Continua CLICÁVEL (precisa receber uma
    atribuição no modo "Organizar Hotbar" do Inventário) — visual claro
    sempre visível. */
 .hotbar-slot.empty {
-  opacity: 0.7;
+  opacity: 0.85;
 }
 .hotbar-slot.empty::after {
   content: '+';
@@ -437,11 +486,13 @@
    (pra lembrar o que estava ali) esmaecido/tosco, não deixa equipar até
    ter de novo ou reatribuir outro item. Continua clicável (o clique dá o
    aviso certo — ver onHotbarSlotClick em islandScene.js — ou recebe uma
-   nova atribuição no modo de organizar).*/
+   nova atribuição no modo de organizar). Moldura desgastada/enferrujada já
+   vem desenhada na própria arte (slot-locked.png) — era um
+   repeating-linear-gradient escuro antes. */
 .hotbar-slot.locked {
-  background: repeating-linear-gradient(45deg, #1f1a14, #1f1a14 3px, #12100c 3px, #12100c 6px) !important;
+  background-image: url('/assets/hud/slot-locked.png');
   color: #3a3430;
-  opacity: 0.55;
+  opacity: 0.7;
 }
 .hotbar-slot.locked .icon {
   filter: grayscale(1);
