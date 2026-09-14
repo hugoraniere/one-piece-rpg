@@ -59,8 +59,20 @@ export const SHADOW_SCALE_Y = 0.4;
 export const WORLD_WIDTH = 2560;
 export const WORLD_HEIGHT = 1920;
 
-// Ainda usado pelo grid do editor e pela pintura de terreno.
-export const TILE_SIZE = 120;
+// Ainda usado pelo grid do editor e pela pintura de terreno. 2026-09-13:
+// migrado de 120 pra 32 — Hugo vai gerar o novo tileset direto em 32px por
+// tile (ver ground_v2/), então o jogo para de forçar upscale artificial
+// (setDisplaySize em ground.js/editorMode.js) e passa a exibir a arte
+// praticamente no tamanho nativo. CHAR_SCALE (acima) ficou intocado de
+// propósito: com o personagem já fixado em 64px de mundo (2026-09-13,
+// mesma conversa) e o tile agora em 32px, a proporção personagem:tile vira
+// 2:1 — limpa e provavelmente o que o Hugo já tinha em mente ao pedir os
+// dois números nessa ordem. CAMERA_ZOOM também ficou como estava (0.5) até
+// dar pra testar com a arte de tile nova de verdade — com o tileset ANTIGO
+// (512x512 forçado pra 32x32) o mundo vai parecer bem mais "zoomado pra
+// fora"/os tiles bem pequenos na tela; ajustar zoom depois de ver a arte
+// nova ou se o Hugo pedir.
+export const TILE_SIZE = 32;
 
 // Combate por turnos (estilo tático, grade sobre o mundo livre) — a grade
 // só existe enquanto uma luta está ativa; fora de combate o mundo continua
