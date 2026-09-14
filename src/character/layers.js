@@ -483,6 +483,19 @@ const ALL_MODES = ['idle', 'walk', 'run', 'attack'];
 // "grudar" no personagem em vez de precisar de coordenadas calculadas por
 // direção. `mode` é 'idle' | 'walk' | 'attack', igual em character.js.
 export function updateLayerVisual(layerSprite, state, bodySprite, delta, mode, facing) {
+  // DESLIGADO 2026-09-13: os anchors acima (gripX/gripY, PLACEHOLDER_CANVAS_SIZE)
+  // foram medidos à mão contra o corpo ANTIGO, que vivia num canvas ~32x32
+  // fixo por frame. O lote de personagem novo (ver races.js/outfits.js,
+  // mesma conversa) recorta cada frame bem justo ao conteúdo — cada pose
+  // tem um canvas de tamanho DIFERENTE agora — então esses pontos de
+  // cintura/mão fixos não caem mais no lugar certo: a arma placeholder
+  // aparecia como um bloco solto flutuando do lado do corpo (reportado como
+  // "o personagem tá apagado/quebrado"). Recalibrar isso exige medir os
+  // anchors de novo pose a pose contra o novo recorte — fora do escopo
+  // desse fix. Até lá, a camada de arma fica invisível (o personagem sem
+  // ela já é o comportamento correto, só sem o placeholder).
+  layerSprite.setVisible(false);
+  return;
   // Os frames de golpe do CORPO (gerados via PixelLab, ver races.js) já
   // vêm com a espada desenhada na mão — mostrar a camada de equipamento
   // (espada "embainhada" no quadril) por cima duplicaria a arma durante o
