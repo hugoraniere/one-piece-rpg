@@ -708,19 +708,17 @@
   position: relative;
   overflow: hidden;
 }
+/* parchment_bg.png já vem com sua própria moldura de madeira + rebites
+   pintada na arte (cantos, gemas, parafusos) — a moldura genérica de
+   .menu-frame (gradiente marrom liso + padding) por trás dela só duplicava
+   o contorno, ficando uma borda dupla/deslocada. Reseta pro mapa. */
+.menu-frame:has(.menu-panel.map-mode) {
+  background: none;
+  padding: 0;
+  border-radius: 8px;
+}
 .menu-panel.map-mode img {
   image-rendering: pixelated;
-}
-
-/* Halo de água — o background de verdade vem inline (ver buildOceanHalos
-   em mapMenu.js): uma lista de radial-gradient, uma por ilha JÁ
-   DESCOBERTA. Estilo Civilization — a área revelada acompanha o que o
-   jogador visitou, não uma névoa decorativa numa posição fixa. Fora dos
-   círculos não tem nada pintado aqui, então o pergaminho (parchment_bg.png
-   no .menu-panel.map-mode) aparece por baixo normalmente. */
-.map-ocean {
-  position: absolute;
-  inset: 0;
 }
 
 /* Rotas de navegação — linha tracejada tipo tinta entre a ilha atual e cada
@@ -890,23 +888,31 @@
 .map-header .menu-hint {
   color: rgba(43, 27, 18, 0.65);
 }
+/* Antes era um círculo quase transparente (rgba .14) — sumia contra a
+   arte do pergaminho/moldura de madeira, que agora tem muito mais detalhe
+   e contraste do que o gradiente liso de antes. Fundo sólido + anel
+   dourado + sombra pra sempre destacar, não importa o que tiver atrás. */
 .map-close {
   font: inherit;
-  font-size: 15px;
+  font-size: 16px;
+  font-weight: 700;
   line-height: 1;
-  width: 22px;
-  height: 22px;
-  border: none;
+  width: 26px;
+  height: 26px;
+  border: 2px solid #8a5a2c;
   border-radius: 50%;
-  background: rgba(43, 27, 18, 0.14);
-  color: #2b1b12;
+  background: #2b1b12;
+  color: #f5ebc8;
   cursor: none;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+  transition: background 0.15s ease, transform 0.15s ease;
 }
 .map-close:hover {
-  background: rgba(43, 27, 18, 0.26);
+  background: #4a2f1a;
+  transform: scale(1.1);
 }
 .menu-close {
   font: inherit;

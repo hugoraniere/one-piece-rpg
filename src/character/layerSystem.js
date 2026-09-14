@@ -24,14 +24,14 @@ export const LAYERS = {
       },
     },
     assets: [
-      { key: "item-sword-idle-south", path: "assets/characters/pixel/sword-idle-south.png" },
-      { key: "item-sword-idle-north", path: "assets/characters/pixel/sword-idle-north.png" },
-      { key: "item-sword-idle-east", path: "assets/characters/pixel/sword-idle-east.png" },
-      { key: "item-sword-idle-west", path: "assets/characters/pixel/sword-idle-west.png" },
-      { key: "item-sword-attack-south", path: "assets/characters/pixel/sword-attack-south.png" },
-      { key: "item-sword-attack-north", path: "assets/characters/pixel/sword-attack-north.png" },
-      { key: "item-sword-attack-east", path: "assets/characters/pixel/sword-attack-east.png" },
-      { key: "item-sword-attack-west", path: "assets/characters/pixel/sword-attack-west.png" },
+      { key: "item-sword-idle-south", path: "assets/characters/sword-idle-south.png" },
+      { key: "item-sword-idle-north", path: "assets/characters/sword-idle-north.png" },
+      { key: "item-sword-idle-east", path: "assets/characters/sword-idle-east.png" },
+      { key: "item-sword-idle-west", path: "assets/characters/sword-idle-west.png" },
+      { key: "item-sword-attack-south", path: "assets/characters/sword-attack-south.png" },
+      { key: "item-sword-attack-north", path: "assets/characters/sword-attack-north.png" },
+      { key: "item-sword-attack-east", path: "assets/characters/sword-attack-east.png" },
+      { key: "item-sword-attack-west", path: "assets/characters/sword-attack-west.png" },
     ],
   },
 
@@ -57,10 +57,10 @@ export const LAYERS = {
       },
     },
     assets: [
-      { key: "item-rod-idle-south", path: "assets/characters/pixel/rod-idle-south.png" },
-      { key: "item-rod-idle-north", path: "assets/characters/pixel/rod-idle-north.png" },
-      { key: "item-rod-idle-east", path: "assets/characters/pixel/rod-idle-east.png" },
-      { key: "item-rod-idle-west", path: "assets/characters/pixel/rod-idle-west.png" },
+      { key: "item-rod-idle-south", path: "assets/characters/rod-idle-south.png" },
+      { key: "item-rod-idle-north", path: "assets/characters/rod-idle-north.png" },
+      { key: "item-rod-idle-east", path: "assets/characters/rod-idle-east.png" },
+      { key: "item-rod-idle-west", path: "assets/characters/rod-idle-west.png" },
       // Pesca será adicionada quando gerar os sprites
     ],
   },
@@ -80,7 +80,7 @@ export const LAYERS = {
     },
     assets: [
       // Placeholder - sera criado depois
-      // { key: "item-hat-default", path: "assets/characters/pixel/hat-default.png" },
+      // { key: "item-hat-default", path: "assets/characters/hat-default.png" },
     ],
   },
 };

@@ -85,31 +85,6 @@ function pct(value) {
   return parseFloat(value);
 }
 
-const OCEAN_COLOR = '#2e6887';
-
-// Halo de água azul ao redor de CADA ilha já descoberta — estilo
-// Civilization: a área revelada acompanha o que o jogador realmente já
-// visitou (context.discoveredIslands), não um raio decorativo fixo em cima
-// da posição atual. Ilha nunca visitada não ganha halo nenhum (continua só
-// pergaminho por trás da silhueta). Implementado como uma lista de
-// radial-gradient (um por ilha conhecida) direto no background do
-// `.map-ocean` — mais simples que máscara+PNG e não precisa de asset extra.
-function buildOceanHalos(knownCount) {
-  const slots = KNOWN_SLOTS.slice(0, knownCount);
-  return slots
-    .map((pos) => {
-      // Desloca o centro do halo do canto superior-esquerdo da ilha (onde
-      // `top`/`left` ancoram, ver .map-island) pro centro visual da arte.
-      const cx = pct(pos.left) + 6;
-      const cy = pct(pos.top) + 8;
-      // Mesmo raio nos dois stops = sem faixa de transição (gradiente de
-      // verdade), borda dura de círculo — pixel art não usa opacidade
-      // degradê, é cor chapada até a borda.
-      return `radial-gradient(circle at ${cx}% ${cy}%, ${OCEAN_COLOR} 0, ${OCEAN_COLOR} 78px, transparent 78px)`;
-    })
-    .join(', ');
-}
-
 // Linhas de rota tracejadas, tipo tinta, ligando a ilha atual (sempre slot
 // 0) a cada outra ilha já descoberta no mapa — reforça a leitura de "carta
 // de navegação" em vez de ícones soltos no vazio. `viewBox="0 0 100 100"`
@@ -169,7 +144,6 @@ function buildMapHtml() {
         <button type="button" class="map-close" data-action="close" aria-label="Fechar mapa">×</button>
       </div>
     </div>
-    <div class="map-ocean" style="background: ${buildOceanHalos(knownIds.length)}"></div>
     ${buildRoutesHtml(knownIds.length)}
     ${islandsHtml}
     ${unknownHtml}

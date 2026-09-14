@@ -4,7 +4,7 @@
 // outro código (character.js, layers.js, villageScene.js) precisa mudar.
 //
 // TESTE de estilo pixel art (gerado no PixelLab, ver
-// assets/characters/pixel/ — 8 direções exportadas mas só as 4 cardeais
+// assets/characters/ — 8 direções exportadas mas só as 4 cardeais
 // estão em uso aqui, mesma limitação de sempre do sistema de facing).
 // Substituiu a arte "pintada" anterior (200x200) — ver git log pra
 // recuperar os arquivos antigos se o teste não agradar.
@@ -32,14 +32,16 @@ function poseFrames(prefix, dir, count) {
 function poseAssets(prefix, dir, count) {
   return poseFrames(prefix, dir, count).map((key, i) => ({
     key,
-    path: `assets/characters/pixel/${prefix}_${dir}_${String(i + 1).padStart(2, '0')}.png`,
+    path: `assets/characters/${prefix}_${dir}_${String(i + 1).padStart(2, '0')}.png`,
   }));
 }
 
 const IDLE_FRAME_COUNT = 4;
-const WALK_FRAME_COUNT = 8;
+const WALK_FRAME_COUNT = 4;
 const RUN_FRAME_COUNT = 8;
 const ATTACK_FRAME_COUNT = 4;
+const CHOP_FRAME_COUNT = 4;
+const FISH_FRAME_COUNT = 4;
 
 export const RACES = {
   human: {
@@ -60,6 +62,14 @@ export const RACES = {
       ...poseAssets('attack', 'north', ATTACK_FRAME_COUNT),
       ...poseAssets('attack', 'east', ATTACK_FRAME_COUNT),
       ...poseAssets('attack', 'west', ATTACK_FRAME_COUNT),
+      ...poseAssets('chop', 'south', CHOP_FRAME_COUNT),
+      ...poseAssets('chop', 'north', CHOP_FRAME_COUNT),
+      ...poseAssets('chop', 'east', CHOP_FRAME_COUNT),
+      ...poseAssets('chop', 'west', CHOP_FRAME_COUNT),
+      ...poseAssets('fish', 'south', FISH_FRAME_COUNT),
+      ...poseAssets('fish', 'north', FISH_FRAME_COUNT),
+      ...poseAssets('fish', 'east', FISH_FRAME_COUNT),
+      ...poseAssets('fish', 'west', FISH_FRAME_COUNT),
     ],
     frames: {
       down: {
@@ -67,27 +77,37 @@ export const RACES = {
         walk: poseFrames('walk', 'south', WALK_FRAME_COUNT),
         run: poseFrames('run', 'south', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'south', ATTACK_FRAME_COUNT),
+        chop: poseFrames('chop', 'south', CHOP_FRAME_COUNT),
+        fish: poseFrames('fish', 'south', FISH_FRAME_COUNT),
       },
       up: {
         idle: poseFrames('idle', 'north', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'north', WALK_FRAME_COUNT),
         run: poseFrames('run', 'north', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'north', ATTACK_FRAME_COUNT),
+        chop: poseFrames('chop', 'north', CHOP_FRAME_COUNT),
+        fish: poseFrames('fish', 'north', FISH_FRAME_COUNT),
       },
       // Sem espelhar mais nada — o export trouxe leste E oeste de verdade
       // (ao contrário da arte antiga, que só tinha um perfil e espelhava
-      // pra virar o outro lado).
+      // pra virar o outro lado). Exceção: chop/fish só vieram sul/leste/
+      // norte do artista — oeste é leste espelhado no pré-processamento
+      // (ver conversa de 2026-09-13), igual walk/fishing.
       left: {
         idle: poseFrames('idle', 'west', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'west', WALK_FRAME_COUNT),
         run: poseFrames('run', 'west', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'west', ATTACK_FRAME_COUNT),
+        chop: poseFrames('chop', 'west', CHOP_FRAME_COUNT),
+        fish: poseFrames('fish', 'west', FISH_FRAME_COUNT),
       },
       right: {
         idle: poseFrames('idle', 'east', IDLE_FRAME_COUNT),
         walk: poseFrames('walk', 'east', WALK_FRAME_COUNT),
         run: poseFrames('run', 'east', RUN_FRAME_COUNT),
         attack: poseFrames('attack', 'east', ATTACK_FRAME_COUNT),
+        chop: poseFrames('chop', 'east', CHOP_FRAME_COUNT),
+        fish: poseFrames('fish', 'east', FISH_FRAME_COUNT),
       },
     },
   },
